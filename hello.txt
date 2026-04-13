@@ -1,2 +1,0 @@
-Chào bạn! Đây là file hello.txt được tạo theo yêu cầu của bạn.
-Hello! This is hello.txt created as you requested.
