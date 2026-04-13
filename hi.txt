@@ -1,0 +1,2 @@
+Hi there! This is hi.txt.
+Xin chào! Đây là file hi.txt.

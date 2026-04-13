@@ -7,7 +7,17 @@ HOOK_FILE=".git/hooks/pre-push"
 cat > "$HOOK_FILE" << 'EOF'
 #!/bin/bash
 # Submit AI logs to grading server before push
-python3 scripts/submit_log.py
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+if [ -f "$REPO_ROOT/.env" ]; then
+  while IFS= read -r line; do
+    export "$line"
+  done < <(grep '^AI_LOG_' "$REPO_ROOT/.env" || true)
+fi
+
+python3 "$REPO_ROOT/scripts/submit_log.py"
 exit 0  # Never block push
 EOF
 
