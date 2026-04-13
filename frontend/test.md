@@ -1,2 +1,3 @@
-test ai log
-hello
+- Clone Project
+- Setup UV
+- Setup Next FE
