@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ClientShell } from "@/components/layout/ClientShell";
 
 const beVietnamPro = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -29,7 +30,9 @@ export default function RootLayout({
       className={`${beVietnamPro.variable} ${jetbrainsMono.variable} antialiased h-full`}
     >
       <body className="h-full flex flex-col text-text bg-bg font-sans overflow-x-hidden">
-        {children}
+        <ClientShell>
+          {children}
+        </ClientShell>
       </body>
     </html>
   );
