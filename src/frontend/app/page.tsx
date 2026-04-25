@@ -9,7 +9,8 @@ import {
   Settings, 
   Video, 
   Radio, 
-  Accessibility 
+  Accessibility,
+  FileText
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -107,7 +108,7 @@ export default function LandingPage() {
         {/* How it works - MVP Features */}
         <section className="w-full">
           <h2 className="text-2xl font-bold text-center mb-10">Tính năng cốt lõi (MVP)</h2>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-4 gap-6">
             <div className="p-6 bg-bg border border-border rounded-xl">
               <div className="flex items-center gap-3 mb-4">
                 <Video className="text-primary" size={24} />
@@ -135,6 +136,16 @@ export default function LandingPage() {
               </div>
               <p className="text-neutral">
                 Cung cấp font cực lớn, tương phản cao, auto-scroll, dark mode — thiết kế thân thiện, dễ nhìn cho từng học sinh.
+              </p>
+            </div>
+
+            <div className="p-6 bg-bg border border-border rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <FileText className="text-blue-500" size={24} />
+                <h3 className="text-lg font-semibold">Document-to-Audio</h3>
+              </div>
+              <p className="text-neutral">
+                Tự động chuyển đổi tài liệu (PDF, DOCX) thành Audio (MP3) với giọng đọc AI tự nhiên, hỗ trợ sinh viên khiếm thị và nghe thụ động.
               </p>
             </div>
           </div>

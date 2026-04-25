@@ -37,9 +37,9 @@ export function AppSidebar() {
 
   const menuItems = {
     teacher: [
-      { icon: Upload, label: 'Tải lên', href: '/teacher/upload' },
+      { icon: Upload, label: 'Tải lên video', href: '/teacher/upload' },
+      { icon: FileText, label: 'Chuyển đổi tài liệu (PDF/DOCX)', href: '/teacher/documents' },
       { icon: Library, label: 'Thư viện bài giảng', href: '/teacher/library' },
-      { icon: Radio, label: 'Buổi học trực tiếp', href: '/teacher/sessions/new' },
       { icon: FileText, label: 'Transcript sau buổi học', href: '/teacher/transcripts' },
       { icon: BarChart3, label: 'Thống kê', href: '/teacher/analytics' },
       { icon: Settings, label: 'Cài đặt', href: '/teacher/settings' },
