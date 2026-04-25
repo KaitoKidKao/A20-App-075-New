@@ -16,4 +16,5 @@ build/
 .DS_Store
 
 # AI logs — tracked structure, ignored content
-.ai-log/*.jsonl
+.ai-log/*.jsonltemp/
+data/
