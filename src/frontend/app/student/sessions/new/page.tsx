@@ -29,7 +29,7 @@ export default function NewSessionPage() {
   });
 
   const handleStart = () => {
-    router.push('/teacher/sessions/demo-live-123/live');
+    router.push('/student/sessions/demo-live-123/live');
   };
 
   return (

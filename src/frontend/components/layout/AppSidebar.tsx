@@ -4,23 +4,15 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  LayoutDashboard, 
-  Upload, 
   Library, 
-  Radio, 
+  Upload, 
   FileText, 
   BarChart3, 
   Settings,
-  Home,
-  BookOpen,
-  PlayCircle,
-  History,
-  Users,
-  Terminal,
-  Activity,
   ChevronLeft,
   ChevronRight,
-  Accessibility
+  Accessibility,
+  BookOpen
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -35,82 +27,77 @@ export function AppSidebar() {
   const { currentRole } = useAppStore();
   const [collapsed, setCollapsed] = useState(false);
 
+  // Focus on the "Học sinh" (formerly teacher) role as the primary experience
   const menuItems = {
     teacher: [
-      { icon: Upload, label: 'Tải lên video', href: '/teacher/upload' },
-      { icon: FileText, label: 'Chuyển đổi tài liệu (PDF/DOCX)', href: '/teacher/documents' },
-      { icon: Library, label: 'Thư viện bài giảng', href: '/teacher/library' },
-      { icon: FileText, label: 'Transcript sau buổi học', href: '/teacher/transcripts' },
-      { icon: BarChart3, label: 'Thống kê', href: '/teacher/analytics' },
-      { icon: Settings, label: 'Cài đặt', href: '/teacher/settings' },
-    ],
-    student: [
-      { icon: Home, label: 'Trang chủ', href: '/' },
-      { icon: BookOpen, label: 'Thư viện học liệu', href: '/student/library' },
-      { icon: PlayCircle, label: 'Đang học', href: '/student/learning' },
-      { icon: History, label: 'Replay & Transcript', href: '/student/history' },
-      { icon: Accessibility, label: 'Tùy chọn hiển thị', href: '/student/accessibility' },
+      { icon: Library, label: 'Thư viện bài giảng', href: '/student/library' },
+      { icon: Upload, label: 'Tải lên bài giảng', href: '/student/upload' },
+      { icon: FileText, label: 'Bản ghi sau buổi học', href: '/student/transcripts' },
+      { icon: BarChart3, label: 'Tiến độ học tập', href: '/student/analytics' },
+      { icon: Settings, label: 'Cài đặt cá nhân', href: '/student/settings' },
     ],
     admin: [
-      { icon: LayoutDashboard, label: 'Dashboard hệ thống', href: '/admin' },
-      { icon: Users, label: 'Quản lý người dùng', href: '/admin/users' },
-      { icon: Terminal, label: 'Cấu hình model', href: '/admin/config' },
-      { icon: Activity, label: 'Audit log', href: '/admin/audit' },
-      { icon: BarChart3, label: 'Metrics & jobs', href: '/admin/metrics' },
+      { icon: BookOpen, label: 'Dashboard hệ thống', href: '/admin' },
+      { icon: Settings, label: 'Cấu hình model', href: '/admin/config' },
     ],
-  }[currentRole];
+  }[currentRole === 'admin' ? 'admin' : 'teacher'];
 
   return (
     <aside 
       className={cn(
         "flex flex-col bg-card border-r border-border transition-all duration-300 relative h-full",
-        collapsed ? "w-[70px]" : "w-[260px]"
+        collapsed ? "w-[72px]" : "w-[280px]"
       )}
     >
       {/* Brand Header */}
-      <div className="p-6 flex items-center gap-3 overflow-hidden whitespace-nowrap">
-        <div className="bg-primary text-white p-2 rounded-lg shrink-0">
-          <Accessibility size={20} />
+      <div className="h-20 flex items-center px-6 gap-3 overflow-hidden whitespace-nowrap">
+        <div className="bg-primary text-white p-2.5 rounded-xl shrink-0 shadow-sm">
+          <Accessibility size={22} strokeWidth={2.5} />
         </div>
         {!collapsed && (
-          <span className="font-bold text-lg tracking-tight">UDL Hearing</span>
+          <span className="font-bold text-xl tracking-tight text-primary">UDL Hearing</span>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {menuItems.map((item) => {
+      <nav className="flex-1 px-4 py-6 space-y-2">
+        {menuItems?.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link 
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group",
+                "flex items-center gap-4 px-4 py-3 rounded-xl transition-all group",
                 isActive 
-                  ? "bg-primary-soft text-primary font-semibold" 
-                  : "text-neutral hover:bg-slate-50 hover:text-text"
+                  ? "bg-secondary-bg text-primary font-bold" 
+                  : "text-neutral hover:bg-slate-50 hover:text-primary font-medium"
               )}
             >
-              <item.icon size={20} className={cn("shrink-0", isActive ? "text-primary" : "group-hover:text-text")} />
+              <item.icon size={22} className={cn("shrink-0 transition-colors", isActive ? "text-primary" : "group-hover:text-primary")} />
               {!collapsed && (
-                <span className="text-sm truncate">{item.label}</span>
+                <span className="text-[15px] truncate">{item.label}</span>
               )}
               {isActive && !collapsed && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
               )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom Profile/Settings Placeholder */}
-      <div className="p-4 border-t border-border">
+      {/* Collapse Toggle */}
+      <div className="p-4 border-t border-border/50">
         <button 
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center p-2 rounded-lg text-neutral hover:bg-slate-50 hover:text-text transition-colors"
+          className="w-full flex items-center justify-center p-3 rounded-xl text-neutral hover:bg-slate-50 hover:text-primary transition-colors"
         >
-          {collapsed ? <ChevronRight size={20} /> : <div className="flex items-center gap-2"><ChevronLeft size={20} /><span className="text-sm">Thu gọn menu</span></div>}
+          {collapsed ? <ChevronRight size={22} /> : (
+            <div className="flex items-center gap-3 w-full px-2">
+              <ChevronLeft size={20} />
+              <span className="text-sm font-semibold">Thu gọn menu</span>
+            </div>
+          )}
         </button>
       </div>
     </aside>

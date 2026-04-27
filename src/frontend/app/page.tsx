@@ -5,153 +5,94 @@ import { useRouter } from 'next/navigation';
 import { useAppStore } from '../store/useAppStore';
 import { 
   GraduationCap, 
-  Presentation, 
-  Settings, 
-  Video, 
-  Radio, 
+  ArrowRight,
   Accessibility,
-  FileText
+  CheckCircle2
 } from 'lucide-react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cx(...inputs: (string | undefined | null | false)[]) {
-  return twMerge(clsx(inputs));
-}
 
 export default function LandingPage() {
   const router = useRouter();
   const { setRole } = useAppStore();
 
-  const handleRoleSelect = (role: 'teacher' | 'student' | 'admin', path: string) => {
-    setRole(role);
-    router.push(path);
+  const handleStart = () => {
+    setRole('teacher'); // This is our main "Học sinh" role with advanced features
+    router.push('/student/library');
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-bg text-text selection:bg-primary-soft selection:text-primary">
-      {/* Header section (Simple, for landing) */}
-      <header className="flex items-center justify-between px-8 py-6 border-b border-border bg-card">
+    <div className="flex flex-col min-h-screen bg-bg text-text selection:bg-accent/10 selection:text-accent">
+      {/* Quiet Header */}
+      <header className="px-8 py-8 md:px-12">
         <div className="flex items-center gap-3">
-          <div className="bg-primary/10 p-2 rounded-lg text-primary">
-            <Accessibility size={28} aria-hidden="true" />
+          <div className="text-primary">
+            <Accessibility size={28} strokeWidth={2.5} />
           </div>
-          <h1 className="text-xl font-bold tracking-tight">UDL Nền tảng Hỗ trợ</h1>
+          <span className="text-xl font-bold tracking-tight text-primary">UDL Hearing</span>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center px-4 py-12 md:py-20 max-w-[1100px] mx-auto w-full">
-        
-        {/* Hero Section */}
-        <div className="text-center w-full mb-16 space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-soft text-primary font-semibold rounded-full text-sm">
-            <span>AI20K-200 · Universal Design for Learning</span>
+      {/* Focused Entry Section */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-12 -mt-16">
+        <div className="max-w-3xl w-full text-center space-y-12">
+          
+          {/* Calm Hero Text */}
+          <div className="space-y-6">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-primary">
+              Học tập trung hơn. <br/> Hiểu bài rõ ràng hơn.
+            </h1>
+            <p className="text-xl md:text-2xl text-neutral max-w-2xl mx-auto font-medium leading-relaxed">
+              Công cụ hỗ trợ đọc bài giảng và chuyển đổi học liệu chuyên sâu cho học sinh.
+            </p>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold leading-tight max-w-4xl mx-auto tracking-normal">
-            Hỗ trợ học sinh khiếm thính <br className="hidden md:block"/> theo kịp bài giảng
-          </h1>
-          <p className="text-xl text-neutral max-w-2xl mx-auto leading-relaxed">
-            Tự động tạo caption, transcript và tóm tắt bài giảng — realtime và từ video — cho mọi lớp học hòa nhập.
-          </p>
+
+          {/* Single Intentional Entry Point */}
+          <div className="flex flex-col items-center space-y-8">
+            <button
+              onClick={handleStart}
+              className="group flex items-center gap-4 bg-primary text-white px-10 py-5 rounded-2xl text-xl font-bold shadow-elevated hover:bg-slate-700 transition-all active:scale-[0.98]"
+            >
+              <span>Bắt đầu học tập ngay</span>
+              <ArrowRight className="group-hover:translate-x-1 transition-transform" size={24} />
+            </button>
+
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-neutral font-medium">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-accent" />
+                <span>Phụ đề AI chính xác</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-accent" />
+                <span>Tóm tắt bài giảng tự động</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-accent" />
+                <span>Giao diện đọc tối ưu</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Action Call to Role (Moved up slightly to highlight Student first for accessibility) */}
-        <section className="w-full mb-20">
-          <h2 className="text-3xl font-bold text-center mb-8">Bạn là ai?</h2>
-          <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl mx-auto">
-            {/* Student Card - Highly emphasized for accessibility */}
-            <button
-              onClick={() => handleRoleSelect('student', '/student/library')}
-              className={cx(
-                "group relative flex flex-col p-8 bg-card rounded-2xl border-2 border-primary shadow-elevated focus:outline-none focus:ring-4 focus:ring-primary focus:ring-offset-4 overflow-hidden text-left transition-transform hover:-translate-y-1"
-              )}
-              aria-label="Chọn vai trò: Học sinh khiếm thính"
-            >
-              <div className="absolute top-0 right-0 p-4 opacity-10">
-                <GraduationCap size={120} />
-              </div>
-              <div className="bg-primary text-white p-4 rounded-xl w-16 h-16 flex items-center justify-center mb-6">
-                <GraduationCap size={32} />
-              </div>
-              <h3 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">Học sinh khiếm thính</h3>
-              <p className="text-neutral text-lg mb-6 leading-relaxed">
-                Xem bài giảng có phụ đề lớn, tùy chỉnh độ tương phản, chữ lớn dễ dọc và tự động cuộn chữ.
-              </p>
-              <div className="mt-auto inline-flex items-center text-primary font-bold text-lg">
-                Vào Demo Sinh viên <span className="ml-2">→</span>
-              </div>
-            </button>
-
-            {/* Teacher Card */}
-            <button
-              onClick={() => handleRoleSelect('teacher', '/teacher/library')}
-              className="group flex flex-col p-6 bg-card rounded-2xl border border-border shadow-card hover:shadow-elevated hover:border-primary/50 focus:outline-none focus:ring-4 focus:ring-primary focus:ring-offset-4 text-left transition-all"
-              aria-label="Chọn vai trò: Giáo viên / Cán bộ hỗ trợ"
-            >
-              <div className="bg-neutral/10 text-neutral p-4 rounded-xl w-16 h-16 flex items-center justify-center mb-6 group-hover:bg-primary-soft group-hover:text-primary transition-colors">
-                <Presentation size={32} />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Giáo viên / Cán bộ</h3>
-              <p className="text-neutral mb-6">
-                Tải lên video bài giảng để tạo phụ đề tự động hoặc bắt đầu lớp học LIVE có live-caption.
-              </p>
-              <div className="mt-auto inline-flex items-center text-neutral group-hover:text-primary font-medium transition-colors">
-                Vào Demo Giáo viên <span className="ml-2">→</span>
-              </div>
-            </button>
-
-
+        {/* Minimal Support Info */}
+        <section className="mt-24 w-full max-w-4xl grid md:grid-cols-2 gap-12 border-t border-border pt-16">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold">Dành cho việc học trên lớp</h2>
+            <p className="text-neutral">
+              Tải lên video bài giảng để nhận ngay bản ghi văn bản (transcript) và tóm tắt theo từng ý chính. Giúp bạn không bỏ lỡ bất kỳ thông tin quan trọng nào từ giáo viên.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold">Môi trường đọc yên tĩnh</h2>
+            <p className="text-neutral">
+              Giao diện được thiết kế để giảm tải áp lực tâm lý. Mọi thứ tập trung vào việc đọc và hiểu, với phông chữ rõ ràng và bố cục không gây xao nhãng.
+            </p>
           </div>
         </section>
-
-        {/* How it works - MVP Features */}
-        <section className="w-full">
-          <h2 className="text-2xl font-bold text-center mb-10">Tính năng cốt lõi (MVP)</h2>
-          <div className="grid md:grid-cols-4 gap-6">
-            <div className="p-6 bg-bg border border-border rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <Video className="text-primary" size={24} />
-                <h3 className="text-lg font-semibold">Video Caption + Summary</h3>
-              </div>
-              <p className="text-neutral">
-                Upload bài giảng → hệ thống AI xử lý ngay lập tức để nhận caption VTT, transcript đầy đủ và tóm tắt bullet points.
-              </p>
-            </div>
-            
-            <div className="p-6 bg-bg border border-border rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <Radio className="text-success" size={24} />
-                <h3 className="text-lg font-semibold">Live Class Transcription</h3>
-              </div>
-              <p className="text-neutral">
-                Sử dụng micro giáo viên → caption realtime hiển thị với độ trễ &lt; 2 giây ngay trên thiết bị điện thoại, máy tính của học sinh.
-              </p>
-            </div>
-            
-            <div className="p-6 bg-bg border border-border rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <Accessibility className="text-warning" size={24} />
-                <h3 className="text-lg font-semibold">Cá nhân hóa tối đa</h3>
-              </div>
-              <p className="text-neutral">
-                Cung cấp font cực lớn, tương phản cao, auto-scroll, dark mode — thiết kế thân thiện, dễ nhìn cho từng học sinh.
-              </p>
-            </div>
-
-            <div className="p-6 bg-bg border border-border rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <FileText className="text-blue-500" size={24} />
-                <h3 className="text-lg font-semibold">Document-to-Audio</h3>
-              </div>
-              <p className="text-neutral">
-                Tự động chuyển đổi tài liệu (PDF, DOCX) thành Audio (MP3) với giọng đọc AI tự nhiên, hỗ trợ sinh viên khiếm thị và nghe thụ động.
-              </p>
-            </div>
-          </div>
-        </section>
-
       </main>
+
+      {/* Simple Footer */}
+      <footer className="py-12 px-8 text-center text-sm text-neutral/60 font-medium">
+        <span>© 2026 UDL Learning Tool · Designed for Accessibility</span>
+      </footer>
     </div>
   );
 }

@@ -1,41 +1,35 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-primary: #0F766E; /* Teal 700 */
-  --color-primary-soft: #CCFBF1; /* Teal 100 */
-  --color-success: #15803D; /* Green 700 */
-  --color-warning: #D97706;
-  --color-danger: #DC2626;
-  --color-neutral: #64748B;
-  --color-bg: #F8FAFC;
+  /* Student-First Premium Palette (Quiet & Calm) */
+  --color-primary: #1E293B; /* Slate 800 - Soft Navy */
+  --color-accent: #3B82F6;  /* Blue 600 - Muted blue for focus */
+  --color-success: #059669; /* Emerald 600 */
+  --color-warning: #D97706; /* Amber 600 */
+  --color-danger: #DC2626;  /* Red 600 */
+  --color-neutral: #64748B; /* Slate 500 */
+  --color-bg: #F8FAFC;      /* Slate 50 - Off-white reading surface */
+  --color-secondary-bg: #F1F5F9; /* Slate 100 */
   --color-card: #FFFFFF;
-  --color-border: #E2E8F0;
-  --color-text: #0F172A;
-  --color-text-muted: #94A3B8;
+  --color-border: #E2E8F0;  /* Slate 200 */
+  --color-text: #0F172A;    /* Slate 900 - Deep slate for readability */
+  --color-text-muted: #64748B; /* Slate 500 */
 
   --font-sans: var(--font-sans), Inter, system-ui, sans-serif;
   --font-mono: var(--font-mono), monospace;
 
-  /* Spacing Scale */
-  --spacing-1: 4px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-6: 24px;
-  --spacing-8: 32px;
-  --spacing-12: 48px;
-  --spacing-16: 64px;
-  --spacing-24: 96px;
-
-  /* Custom Box Shadows */
-  --shadow-card: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
-  --shadow-elevated: 0 4px 24px rgba(0,0,0,0.10);
+  /* Intentional, Subtle Shadows (No heavy SaaS stacks) */
+  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-elevated: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
 :root {
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -45,10 +39,48 @@
 body {
   margin: 0;
   padding: 0;
+  line-height: 1.6;
+}
+
+/* Reading Surface Typography */
+h1, h2, h3, h4 {
+  color: var(--color-text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+p {
+  line-height: 1.7;
+}
+
+/* Custom Scrollbar for Reading */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral);
 }
 
 /* Accessibility Focus Rings */
 *:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+.reading-surface {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-subtle);
 }

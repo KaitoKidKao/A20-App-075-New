@@ -51,7 +51,7 @@ export default function TeacherUploadPage() {
     // Giả lập API gọi lên server
     setTimeout(() => {
       // Chuyển hướng sang trang Processing Status (Page 3)
-      router.push(`/teacher/videos/demo-vid-123/processing`);
+      router.push(`/student/videos/demo-vid-123/processing`);
     }, 800);
   };
 

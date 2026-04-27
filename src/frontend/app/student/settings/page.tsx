@@ -40,7 +40,7 @@ export default function SettingsPage() {
           <div className="space-y-6">
             <div className="flex items-center gap-6 pb-6 border-b border-border">
               <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center text-2xl font-bold">
-                GV
+                HS
               </div>
               <div>
                 <button className="px-4 py-2 border border-border rounded-lg text-sm font-semibold hover:bg-neutral/5 transition-colors">
@@ -52,17 +52,17 @@ export default function SettingsPage() {
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-neutral">Họ và tên</label>
-                <input type="text" defaultValue="Nguyễn Minh Giáo Viên" className="w-full px-4 py-2 bg-neutral/5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+                <input type="text" defaultValue="Nguyễn Minh" className="w-full px-4 py-2 bg-neutral/5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-neutral">Chức vụ</label>
-                <input type="text" defaultValue="Giảng viên" disabled className="w-full px-4 py-2 bg-neutral/10 border border-border rounded-lg text-neutral cursor-not-allowed" />
+                <label className="text-sm font-medium text-neutral">Vai trò</label>
+                <input type="text" defaultValue="Học sinh" disabled className="w-full px-4 py-2 bg-neutral/10 border border-border rounded-lg text-neutral cursor-not-allowed" />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-neutral">Email liên hệ</label>
-              <input type="email" defaultValue="teacher@udl.edu.vn" className="w-full px-4 py-2 bg-neutral/5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+              <input type="email" defaultValue="student@udl.edu.vn" className="w-full px-4 py-2 bg-neutral/5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
             </div>
 
             <div className="pt-6">

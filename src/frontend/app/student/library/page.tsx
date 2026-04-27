@@ -1,176 +1,179 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Filter, Play, Clock, BookOpen, GraduationCap } from 'lucide-react';
-import { mockLectures } from '@/lib/mockData';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import Link from 'next/link';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { 
+  Video, 
+  Search, 
+  Filter, 
+  MoreHorizontal, 
+  Download, 
+  Eye, 
+  Trash2,
+  Clock,
+  PlayCircle,
+  FileText,
+  BarChart2,
+  TrendingUp,
+  BookOpen
+} from 'lucide-react';
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export default function TeacherLibrary() {
+  const [activeTab, setActiveTab] = useState('videos');
 
-export default function StudentLibraryPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('Tất cả');
+  const stats = [
+    { label: 'Bài giảng đã lưu', value: '24', icon: BookOpen, color: 'text-primary' },
+    { label: 'Thời gian học tập', value: '12.5h', icon: Clock, color: 'text-blue-500' },
+    { label: 'Độ chính xác caption', value: '98%', icon: BarChart2, color: 'text-emerald-500' },
+    { label: 'Tiến độ tuần', value: '+12%', icon: TrendingUp, color: 'text-amber-500' },
+  ];
 
-  const filteredLectures = mockLectures.filter(lecture => {
-    const matchesSearch = lecture.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = selectedSubject === 'Tất cả' || lecture.subject === selectedSubject;
-    return matchesSearch && matchesSubject;
-  });
-
-  const subjects = ['Tất cả', 'Toán', 'Lý', 'Hóa', 'Văn', 'Anh'];
+  const videos = [
+    { id: 1, title: 'Đạo hàm và vi phân — Toán học 12', subject: 'Toán học', status: 'Sẵn sàng', views: 65, date: '22/04/2026', duration: '45:20' },
+    { id: 2, title: 'Phương trình hóa học — Hóa hữu cơ', subject: 'Hóa học', status: 'Đang xử lý', views: 0, date: '22/04/2026', duration: '38:15' },
+    { id: 3, title: 'Văn học hiện đại Việt Nam', subject: 'Ngữ văn', status: 'Sẵn sàng', views: 47, date: '22/04/2026', duration: '62:00' },
+    { id: 4, title: 'Vật lý lượng tử cơ bản', subject: 'Vật lý', status: 'Lỗi', views: 87, date: '22/04/2026', duration: '55:00' },
+  ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header & Stats */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-10 pb-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
+      
+      {/* Welcome & Study Action */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Thư viện học liệu</h1>
-          <p className="text-neutral mt-1">Chào mừng bạn quay lại! Hãy tiếp tục hành trình học tập của mình.</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Thư viện bài giảng</h1>
+          <p className="text-neutral text-lg font-medium">Chào buổi tối, Nguyễn Minh. Bạn muốn học bài nào hôm nay?</p>
         </div>
-        <div className="flex items-center gap-4 bg-card p-4 rounded-2xl border shadow-sm">
-          <div className="bg-primary/10 text-primary p-3 rounded-xl">
-            <BookOpen size={24} />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">12</p>
-            <p className="text-xs text-neutral font-medium uppercase tracking-wider">Bài giảng đã xem</p>
-          </div>
-        </div>
+        
+        <Link href="/student/upload" className="flex items-center gap-3 bg-primary text-white px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-700 transition-all">
+          <Video size={20} />
+          <span>Tải bài giảng mới</span>
+        </Link>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral" />
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm bài giảng, giảng viên..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-card border border-border focus:ring-4 focus:ring-primary/5 focus:border-primary rounded-2xl outline-none transition-all shadow-sm"
-          />
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-          {subjects.map(subject => (
-            <button
-              key={subject}
-              onClick={() => setSelectedSubject(subject)}
-              className={cn(
-                "px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all border",
-                selectedSubject === subject 
-                  ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105" 
-                  : "bg-card text-neutral border-border hover:border-primary/50 hover:text-primary"
-              )}
+      {/* Simplified Study Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, i) => (
+          <div key={i} className="bg-card p-6 rounded-2xl border border-border/60 shadow-subtle flex flex-col gap-3">
+            <div className={`${stat.color} bg-slate-50 w-10 h-10 rounded-lg flex items-center justify-center`}>
+              <stat.icon size={20} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-text">{stat.value}</p>
+              <p className="text-sm text-neutral font-semibold">{stat.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Content Area - Focused Reading Library */}
+      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="px-8 py-6 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-1 bg-secondary-bg p-1 rounded-xl">
+            <button 
+              onClick={() => setActiveTab('videos')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'videos' ? 'bg-white text-primary shadow-sm' : 'text-neutral hover:text-text'}`}
             >
-              {subject}
+              Video Bài Giảng
             </button>
-          ))}
+            <button 
+              onClick={() => setActiveTab('docs')}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'docs' ? 'bg-white text-primary shadow-sm' : 'text-neutral hover:text-text'}`}
+            >
+              Tài Liệu Đọc
+            </button>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral" size={16} />
+              <input 
+                type="text" 
+                placeholder="Tìm nội dung học tập..." 
+                className="pl-10 pr-4 py-2 bg-bg border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all w-[240px]"
+              />
+            </div>
+            <button className="p-2 border border-border rounded-lg hover:bg-bg transition-colors text-neutral">
+              <Filter size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 text-neutral text-xs font-bold uppercase tracking-wider">
+                <th className="px-8 py-4">Tên bài giảng</th>
+                <th className="px-4 py-4">Môn học</th>
+                <th className="px-4 py-4 text-center">Trạng thái AI</th>
+                <th className="px-4 py-4 text-center">Thời lượng</th>
+                <th className="px-8 py-4 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {videos.map((video) => (
+                <tr key={video.id} className="group hover:bg-slate-50/80 transition-colors">
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-12 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-border group-hover:border-primary/20">
+                        <PlayCircle size={24} className="text-neutral group-hover:text-primary transition-colors" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-text group-hover:text-primary transition-colors">{video.title}</p>
+                        <p className="text-xs text-neutral font-medium">{video.date}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-5">
+                    <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold uppercase">
+                      {video.subject}
+                    </span>
+                  </td>
+                  <td className="px-4 py-5 text-center">
+                    <div className="flex justify-center">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                        video.status === 'Sẵn sàng' ? 'bg-emerald-50 text-emerald-700' : 
+                        video.status === 'Đang xử lý' ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'
+                      }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          video.status === 'Sẵn sàng' ? 'bg-emerald-600' : 
+                          video.status === 'Đang xử lý' ? 'bg-blue-600 animate-pulse' : 'bg-red-600'
+                        }`} />
+                        {video.status}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-5 text-center text-sm font-medium text-neutral">
+                    {video.duration}
+                  </td>
+                  <td className="px-8 py-5 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button className="p-2 hover:bg-white hover:text-primary rounded-lg transition-all hover:shadow-sm" title="Xem bài giảng">
+                        <Eye size={18} />
+                      </button>
+                      <button className="p-2 hover:bg-white hover:text-primary rounded-lg transition-all hover:shadow-sm" title="Tải tài liệu">
+                        <Download size={18} />
+                      </button>
+                      <button className="p-2 hover:bg-white hover:text-red-600 rounded-lg transition-all hover:shadow-sm" title="Xóa">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="px-8 py-5 border-t border-border bg-slate-50/30 flex items-center justify-between">
+          <p className="text-sm text-neutral font-medium">Đang hiển thị 1 – 4 của 24 bài giảng</p>
+          <div className="flex items-center gap-2">
+            <button className="px-4 py-2 border border-border rounded-lg text-sm font-bold text-neutral hover:bg-white disabled:opacity-50" disabled>Trước</button>
+            <button className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-sm">1</button>
+            <button className="px-4 py-2 border border-border rounded-lg text-sm font-bold text-neutral hover:bg-white">Sau</button>
+          </div>
         </div>
       </div>
-
-      {/* Content Grid */}
-      {filteredLectures.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredLectures.map((lecture) => (
-            <Link 
-              key={lecture.id} 
-              href={lecture.status === 'ready' ? `/videos/${lecture.id}` : '#'}
-              className={cn(
-                "group flex flex-col bg-card rounded-2xl border border-border shadow-sm hover:shadow-elevated transition-all overflow-hidden",
-                lecture.status !== 'ready' && "opacity-80 cursor-not-allowed"
-              )}
-            >
-              {/* Thumbnail Area */}
-              <div className="aspect-video relative overflow-hidden bg-slate-100">
-                {lecture.thumbnail ? (
-                  <img 
-                    src={lecture.thumbnail} 
-                    alt={lecture.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <GraduationCap size={48} className="text-neutral/20" />
-                  </div>
-                )}
-                
-                {/* Overlay on ready */}
-                {lecture.status === 'ready' && (
-                  <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="bg-white text-primary p-4 rounded-full shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                      <Play size={24} fill="currentColor" />
-                    </div>
-                  </div>
-                )}
-
-                <div className="absolute top-3 left-3">
-                  <StatusBadge status={lecture.status} />
-                </div>
-                
-                <div className="absolute bottom-3 right-3 bg-black/70 text-white text-[10px] font-mono px-2 py-0.5 rounded backdrop-blur-sm">
-                  {lecture.duration}
-                </div>
-
-                {lecture.status === 'processing' && (
-                  <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex flex-col items-center justify-center p-6">
-                    <div className="w-full max-w-[120px] h-1.5 bg-white/20 rounded-full overflow-hidden mb-2">
-                      <div className="h-full bg-primary animate-progress" style={{ width: `${lecture.progress}%` }} />
-                    </div>
-                    <span className="text-[10px] font-bold text-white uppercase tracking-widest">Đang xử lý {lecture.progress}%</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Info Area */}
-              <div className="p-5 flex-1 flex flex-col">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-black tracking-widest uppercase px-2 py-0.5 bg-slate-100 text-slate-500 rounded">
-                    {lecture.subject}
-                  </span>
-                  <span className="text-[10px] font-bold text-neutral">
-                    {lecture.classGroup}
-                  </span>
-                </div>
-                <h3 className="font-bold text-text mb-3 leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                  {lecture.title}
-                </h3>
-                
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
-                      <GraduationCap size={12} className="text-slate-500" />
-                    </div>
-                    <span className="text-xs text-neutral">{lecture.lecturer}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-neutral">
-                    <Clock size={12} />
-                    <span className="text-[10px] font-medium">Hôm qua</span>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-24 bg-card rounded-3xl border border-dashed border-border">
-          <div className="bg-slate-50 p-6 rounded-full mb-6">
-            <Search size={48} className="text-neutral/20" />
-          </div>
-          <h3 className="text-xl font-bold">Không tìm thấy bài giảng nào</h3>
-          <p className="text-neutral mt-2">Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc.</p>
-          <button 
-            onClick={() => {setSearchQuery(''); setSelectedSubject('Tất cả');}}
-            className="mt-6 text-primary font-bold hover:underline"
-          >
-            Xóa tất cả bộ lọc
-          </button>
-        </div>
-      )}
     </div>
   );
 }
