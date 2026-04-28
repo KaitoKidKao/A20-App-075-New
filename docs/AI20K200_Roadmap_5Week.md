@@ -369,12 +369,15 @@ Phần này ghi lại các thay đổi thực tế và quyết định quan tr�
 ### **2. Giao diện & Trải nghiệm (UI/UX Redesign)**
 *   **Hoàn thiện Figma Core Functions:** Đã thiết kế xong luồng trải nghiệm lõi cho học sinh khiếm thính trên Figma (bao gồm màn hình Dashboard, Video Player với Caption/Transcript, và Review Summary).
 *   **Triết lý "Quiet Premium":** Thay thế giao diện SaaS hào nhoáng bằng phong cách "Học thuật tĩnh lặng". Sử dụng bảng màu Soft Navy/Slate và font chữ chuyên dụng cho việc đọc dài hạn.
+*   **Tinh chỉnh Bố cục Tổng thể (Layout Structure):** Cấu trúc lại toàn bộ hệ thống layout. Chuyển đổi từ mô hình Sidebar tràn toàn màn hình sang cấu trúc Top-down: TopBar cố định trên cùng -> Thanh Profile Header (tràn viền) -> Sidebar (rút gọn, chỉ chứa Main Menu) & Main Content căn giữa. Cấu trúc này tối ưu không gian hiển thị, thân thiện với thiết kế của trang mẫu.
+*   **Làm sạch TopBar & Sidebar:** Xóa bỏ hoàn toàn thanh Utility đen, đẩy TopBar lên mức ưu tiên cao nhất (z-index) để tránh lỗi đè lấp khi cuộn. Thu gọn Menu Sidebar, loại bỏ các thành phần thừa (như Logo/Brand Header), chỉ tập trung hiển thị các module lõi (Dashboard, Enrolled Courses, Upload Video, Settings, My Profile).
 *   **Study Desk Layout:** Chuyển đổi từ Dashboard quản trị sang bố cục "Bàn học" với cấu trúc thẻ Notebook, ưu tiên nội dung bài giảng thay vì các chỉ số hệ thống.
 *   **Thiết kế hỗ trợ học tập:** Bổ sung khối "Continue Learning" và "Missed Moments" (Khoảnh khắc bỏ lỡ) giúp học sinh dễ dàng bắt kịp bài giảng.
 
 ### **3. Kỹ thuật & Hạ tầng (Frontend Architecture)**
 *   **Refactor Routes:** Chuyển đổi toàn bộ hệ thống routing từ `/teacher/*` sang `/student/*` để đồng bộ với định hướng sản phẩm mới.
-*   **Fix Core Bugs:** Xử lý triệt để lỗi "infinite refresh loop" trên Next.js và lỗi mất trạng thái (state reset) khi chuyển trang.
+*   **Tối ưu Layout Components:** Thay vì gọi component `Footer` và `ProfileHeader` rải rác trên từng trang, hệ thống đã gom cụm vào lớp bao bọc Layout tổng (`ClientShell`), đảm bảo tính nhất quán trên toàn ứng dụng.
+*   **Fix Core Bugs:** Xử lý triệt để lỗi "infinite refresh loop" trên Next.js và lỗi mất trạng thái (state reset) khi chuyển trang. Sửa lỗi Next Image liên quan đến SVG Placeholder.
 *   **AI Observability:** Tích hợp thành công `log_hook.py` để theo dõi và báo cáo mọi hoạt động của AI lên hệ thống giám sát.
 
 ---
