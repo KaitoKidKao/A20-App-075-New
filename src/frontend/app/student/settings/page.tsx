@@ -1,75 +1,75 @@
 'use client';
 
 import React from 'react';
-import { Settings, User, Bell, Shield, Key } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 
-export default function SettingsPage() {
+export default function StudentProfile() {
+  const profileData = {
+    firstName: 'Ronald',
+    lastName: 'Richard',
+    regDate: '16 Jan 2024, 11:15 AM',
+    userName: 'studentdemo',
+    phone: '90154-91036',
+    email: 'studentdemo@example.com',
+    gender: 'Male',
+    dob: '16 Jan 2020',
+    bio: "Hello! I'm Ronald Richard. I'm passionate about developing innovative software solutions, analyzing classic literature. I aspire to become a software developer, work as an editor. In my free time, I enjoy coding, reading, hiking etc."
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <div className="bg-primary/10 text-primary p-2 rounded-lg">
-            <Settings size={28} />
+    <div className="min-h-screen">
+      <div className="px-8 md:px-12 py-8">
+
+        <div className="card-premium p-10 max-w-5xl">
+          <div className="flex items-center justify-between mb-10 pb-6 border-b border-slate-100">
+            <h2 className="text-2xl font-extrabold tracking-tight">My Profile</h2>
+            <button className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary rounded-lg transition-colors border border-slate-200">
+              <Pencil size={18} />
+            </button>
           </div>
-          Cài đặt hệ thống
-        </h1>
-        <p className="text-neutral mt-2">Quản lý tài khoản và cấu hình hệ thống trợ năng cá nhân.</p>
-      </div>
 
-      <div className="grid md:grid-cols-4 gap-6">
-        {/* Menu cài đặt */}
-        <div className="md:col-span-1 space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 bg-primary-soft text-primary font-semibold rounded-xl text-left">
-            <User size={18} /> Hồ sơ cá nhân
-          </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-neutral hover:bg-neutral/5 hover:text-text rounded-xl text-left transition-all">
-            <Bell size={18} /> Thông báo
-          </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-neutral hover:bg-neutral/5 hover:text-text rounded-xl text-left transition-all">
-            <Shield size={18} /> Quyền riêng tư
-          </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-neutral hover:bg-neutral/5 hover:text-text rounded-xl text-left transition-all">
-            <Key size={18} /> Đổi mật khẩu
-          </button>
-        </div>
-
-        {/* Nội dung cài đặt */}
-        <div className="md:col-span-3 bg-card border border-border rounded-2xl p-8 shadow-sm">
-          <h2 className="text-xl font-bold mb-6">Thông tin tài khoản</h2>
-          
-          <div className="space-y-6">
-            <div className="flex items-center gap-6 pb-6 border-b border-border">
-              <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center text-2xl font-bold">
-                HS
-              </div>
-              <div>
-                <button className="px-4 py-2 border border-border rounded-lg text-sm font-semibold hover:bg-neutral/5 transition-colors">
-                  Thay đổi ảnh đại diện
-                </button>
-              </div>
+          <div className="grid md:grid-cols-3 gap-y-10 gap-x-12">
+            <div>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">First Name</p>
+              <p className="font-semibold text-slate-700">{profileData.firstName}</p>
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">Last Name</p>
+              <p className="font-semibold text-slate-700">{profileData.lastName}</p>
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">Registration Date</p>
+              <p className="font-semibold text-slate-700">{profileData.regDate}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-neutral">Họ và tên</label>
-                <input type="text" defaultValue="Nguyễn Minh" className="w-full px-4 py-2 bg-neutral/5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-neutral">Vai trò</label>
-                <input type="text" defaultValue="Học sinh" disabled className="w-full px-4 py-2 bg-neutral/10 border border-border rounded-lg text-neutral cursor-not-allowed" />
-              </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">User Name</p>
+              <p className="font-semibold text-slate-700">{profileData.userName}</p>
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">Phone Number</p>
+              <p className="font-semibold text-slate-700">{profileData.phone}</p>
+            </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">Email</p>
+              <p className="font-semibold text-slate-700">{profileData.email}</p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-neutral">Email liên hệ</label>
-              <input type="email" defaultValue="student@udl.edu.vn" className="w-full px-4 py-2 bg-neutral/5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" />
+            <div>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">Gender</p>
+              <p className="font-semibold text-slate-700">{profileData.gender}</p>
             </div>
+            <div>
+              <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">DOB</p>
+              <p className="font-semibold text-slate-700">{profileData.dob}</p>
+            </div>
+          </div>
 
-            <div className="pt-6">
-              <button className="px-6 py-2 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all">
-                Lưu thay đổi
-              </button>
-            </div>
+          <div className="mt-12 pt-10 border-t border-slate-100">
+            <p className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-4">Bio</p>
+            <p className="font-medium text-slate-600 leading-relaxed max-w-4xl">
+              {profileData.bio}
+            </p>
           </div>
         </div>
       </div>

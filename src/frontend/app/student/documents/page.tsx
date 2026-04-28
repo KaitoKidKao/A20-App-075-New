@@ -1,202 +1,82 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { useDropzone, FileRejection } from 'react-dropzone';
-import { FileText, UploadCloud, X, Headphones, AlertCircle, CheckCircle2, Download } from 'lucide-react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import React from 'react';
+import { Heart, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import Image from 'next/image';
 
-function cx(...inputs: (string | undefined | null | false)[]) {
-  return twMerge(clsx(inputs));
-}
-
-export default function DocumentConversionPage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [resultAudioUrl, setResultAudioUrl] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
-    if (acceptedFiles.length > 0) {
-      setFile(acceptedFiles[0]);
-      setResultAudioUrl(null);
-      setErrorMsg(null);
-    }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-    },
-    maxSize: 50 * 1024 * 1024, // 50MB max for documents usually
-    maxFiles: 1,
-  });
-
-  const handleRemoveFile = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFile(null);
-    setResultAudioUrl(null);
-    setErrorMsg(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file) return;
-    
-    setIsSubmitting(true);
-    setErrorMsg(null);
-    
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      // Connect to the Backend API (FastAPI running on port 8000)
-      const response = await fetch('http://localhost:8000/api/convert', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || 'Đã có lỗi xảy ra khi chuyển đổi tài liệu.');
-      }
-
-      // Handle the audio blob response
-      const blob = await response.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      setResultAudioUrl(audioUrl);
-      
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Không thể kết nối tới server xử lý.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+export default function EnrolledCourses() {
+  const courses = [
+    { id: 1, title: 'Information About UI/UX Design Degree', instructor: 'David Benitez', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=UI/UX' },
+    { id: 2, title: 'Wordpress for Beginners - Master', instructor: 'Ana Reyes', cat: 'Wordpress', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Wordpress' },
+    { id: 3, title: 'Sketch from A to Z (2024):', instructor: 'Andrew Pirtle', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Sketch' },
+    { id: 4, title: 'Build Responsive Real World Websites', instructor: 'Christy Gamer', cat: 'Programming', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Programming' },
+    { id: 5, title: 'Learn JavaScript and Express to become', instructor: 'Justin Gregory', cat: 'Programming', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=JS' },
+    { id: 6, title: 'Introduction to Python Programming', instructor: 'Carolyn Hines', cat: 'Programming', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Python' },
+    { id: 7, title: 'Information About Photoshop Design', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Photoshop' },
+    { id: 8, title: 'Information About Photoshop Design', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Photoshop' },
+    { id: 9, title: 'Information About Photoshop Design', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Photoshop' },
+  ];
 
   return (
-    <div className="min-h-screen bg-bg text-text py-12 px-4 sm:px-6">
-      <div className="max-w-[800px] mx-auto">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
-            <FileText size={28} />
-          </div>
-          <h1 className="text-3xl font-bold">Chuyển đổi Tài Liệu sang Âm Thanh</h1>
-        </div>
-        <p className="text-neutral mb-8">
-          Hệ thống AI sẽ trích xuất văn bản từ file PDF/DOCX và tạo ra file Audio (MP3) với giọng đọc tự nhiên.
-        </p>
+    <div className="min-h-screen">
+      <div className="px-8 md:px-12 py-8">
 
-        {/* Upload Zone */}
-        <div className="mb-8 bg-card rounded-2xl shadow-card border border-border p-8">
-          <h2 className="text-xl font-semibold mb-4">1. Tải lên tài liệu *</h2>
-          
-          {!file ? (
-            <div 
-              {...getRootProps()} 
-              className={cx(
-                "w-full h-[260px] flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-colors outline-none",
-                isDragActive ? "border-blue-500 bg-blue-50 text-blue-600" : "border-border hover:border-blue-500/50 hover:bg-neutral/5"
-              )}
-            >
-              <input {...getInputProps()} />
-              <div className="bg-blue-100 text-blue-600 p-4 rounded-full mb-4">
-                <UploadCloud size={40} />
-              </div>
-              <p className="text-lg font-medium mb-2">
-                {isDragActive ? "Thả tài liệu vào đây..." : "Kéo thả file PDF hoặc DOCX vào đây"}
-              </p>
-              <p className="text-neutral text-sm">Hỗ trợ: PDF, DOCX — tối đa 50MB</p>
-              
-              <button 
-                type="button"
-                className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                onClick={(e) => e.preventDefault()}
-              >
-                Hoặc chọn tệp
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-4 p-4 border border-success/30 rounded-xl bg-success/5">
-              <div className="w-16 h-16 bg-white border rounded-lg flex items-center justify-center text-blue-600 shrink-0">
-                <FileText size={32} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-text truncate">{file.name}</p>
-                <p className="text-sm text-neutral mt-1">{(file.size / (1024 * 1024)).toFixed(1)} MB • Đã tải lên</p>
-              </div>
-              <button
-                type="button"
-                onClick={handleRemoveFile}
-                className="p-2 text-neutral hover:text-danger hover:bg-danger/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-danger"
-                aria-label="Xóa tệp"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          )}
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-extrabold tracking-tight">Enrolled</h2>
+          <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+            <button className="bg-[#FF5A1F] text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm">Enrolled (09)</button>
+            <button className="text-slate-500 px-5 py-2 rounded-lg text-xs font-bold hover:bg-white transition-all">Active (06)</button>
+            <button className="text-slate-500 px-5 py-2 rounded-lg text-xs font-bold hover:bg-white transition-all">Completed (03)</button>
+          </div>
         </div>
 
-        {/* Convert Button */}
-        <form onSubmit={handleSubmit} className="mb-8">
-          <button 
-            type="submit"
-            disabled={isSubmitting || !file || !!resultAudioUrl}
-            className={cx(
-              "w-full py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-card outline-none",
-              (file && !resultAudioUrl) ? "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.99] hover:shadow-elevated" : "bg-neutral/20 text-neutral/60 cursor-not-allowed"
-            )}
-          >
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Đang xử lý tài liệu qua Backend API...
-              </>
-            ) : "Bắt đầu chuyển đổi"}
-          </button>
-
-          {errorMsg && (
-            <div className="mt-4 p-4 rounded-xl bg-danger/10 text-danger flex items-center gap-2 text-sm font-medium">
-              <AlertCircle size={18} />
-              {errorMsg}
-            </div>
-          )}
-        </form>
-
-        {/* Result Area */}
-        {resultAudioUrl && (
-          <div className="bg-card rounded-2xl shadow-card border border-blue-500/30 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex items-center gap-3 mb-6">
-              <CheckCircle2 className="text-success" size={24} />
-              <h2 className="text-xl font-semibold">Chuyển đổi hoàn tất!</h2>
-            </div>
-            
-            <div className="bg-neutral/5 p-6 rounded-xl flex flex-col gap-4">
-              <div className="flex items-center gap-3 text-blue-600 font-medium">
-                <Headphones size={24} />
-                <span>Audio đã sẵn sàng</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {courses.map((course) => (
+            <div key={course.id} className="card-premium group hover:shadow-xl transition-all duration-300">
+              <div className="relative aspect-video bg-slate-100 overflow-hidden">
+                <Image src={course.thumb} alt={course.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90" />
+                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-slate-400 hover:text-rose-500 transition-colors">
+                  <Heart size={16} />
+                </div>
               </div>
-              
-              <audio controls className="w-full" src={resultAudioUrl}>
-                Trình duyệt của bạn không hỗ trợ thẻ audio.
-              </audio>
-
-              <a 
-                href={resultAudioUrl} 
-                download={`Audio_${file?.name.replace(/\.[^/.]+$/, "")}.mp3`}
-                className="mt-2 flex items-center justify-center gap-2 px-6 py-3 bg-white border border-border text-text font-semibold rounded-lg hover:bg-neutral/5 transition-colors"
-              >
-                <Download size={18} />
-                Tải xuống MP3
-              </a>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
+                      <User size={12} className="text-slate-400" />
+                    </div>
+                    <span className="text-[13px] font-bold text-slate-400">{course.instructor}</span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border rounded">
+                    {course.cat}
+                  </span>
+                </div>
+                <h4 className="font-extrabold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                  {course.title}
+                </h4>
+                <button className="bg-slate-900 text-white text-[12px] font-bold px-4 py-2 rounded-lg group-hover:bg-primary transition-colors">
+                  View Course
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
 
+        {/* Pagination */}
+        <div className="mt-12 flex items-center justify-between">
+          <p className="text-sm font-bold text-slate-400">Page 1 of 2</p>
+          <div className="flex items-center gap-2">
+            <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-primary transition-colors border border-slate-100">
+              <ChevronLeft size={20} />
+            </button>
+            <button className="w-10 h-10 rounded-lg bg-[#FF5A1F] text-white font-bold text-sm shadow-md">1</button>
+            <button className="w-10 h-10 rounded-lg bg-white text-slate-500 font-bold text-sm hover:bg-slate-50 border border-slate-100">2</button>
+            <button className="w-10 h-10 rounded-lg bg-white text-slate-500 font-bold text-sm hover:bg-slate-50 border border-slate-100">3</button>
+            <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-primary transition-colors border border-slate-100">
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,177 +1,171 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React from 'react';
 import { 
-  Video, 
-  Search, 
-  Filter, 
-  MoreHorizontal, 
-  Download, 
-  Eye, 
-  Trash2,
-  Clock,
-  PlayCircle,
-  FileText,
-  BarChart2,
-  TrendingUp,
-  BookOpen
+  BookOpen, 
+  Library, 
+  CheckCircle, 
+  Clock, 
+  Play, 
+  User, 
+  MoreHorizontal,
+  Star
 } from 'lucide-react';
+import Image from 'next/image';
 
-export default function TeacherLibrary() {
-  const [activeTab, setActiveTab] = useState('videos');
-
+export default function StudentDashboard() {
   const stats = [
-    { label: 'Bài giảng đã lưu', value: '24', icon: BookOpen, color: 'text-primary' },
-    { label: 'Thời gian học tập', value: '12.5h', icon: Clock, color: 'text-blue-500' },
-    { label: 'Độ chính xác caption', value: '98%', icon: BarChart2, color: 'text-emerald-500' },
-    { label: 'Tiến độ tuần', value: '+12%', icon: TrendingUp, color: 'text-amber-500' },
+    { label: 'Enrolled Courses', value: '12', icon: Library, bg: 'bg-indigo-50', text: 'text-indigo-600' },
+    { label: 'Active Courses', value: '03', icon: BookOpen, bg: 'bg-rose-50', text: 'text-rose-600' },
+    { label: 'Completed Courses', value: '10', icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-600' },
   ];
 
-  const videos = [
-    { id: 1, title: 'Đạo hàm và vi phân — Toán học 12', subject: 'Toán học', status: 'Sẵn sàng', views: 65, date: '22/04/2026', duration: '45:20' },
-    { id: 2, title: 'Phương trình hóa học — Hóa hữu cơ', subject: 'Hóa học', status: 'Đang xử lý', views: 0, date: '22/04/2026', duration: '38:15' },
-    { id: 3, title: 'Văn học hiện đại Việt Nam', subject: 'Ngữ văn', status: 'Sẵn sàng', views: 47, date: '22/04/2026', duration: '62:00' },
-    { id: 4, title: 'Vật lý lượng tử cơ bản', subject: 'Vật lý', status: 'Lỗi', views: 87, date: '22/04/2026', duration: '55:00' },
+  const recentEnrolled = [
+    { 
+      id: 1, 
+      title: 'Information About UI/UX Design Degree', 
+      instructor: 'David Benitez', 
+      category: 'Design', 
+      thumbnail: 'https://placehold.co/400x250/F1F5F9/64748B?text=Course+Thumbnail' 
+    },
+    { 
+      id: 2, 
+      title: 'Wordpress for Beginners - Master Wordpress Quickly', 
+      instructor: 'Ana Reyes', 
+      category: 'Wordpress', 
+      thumbnail: 'https://placehold.co/400x250/F1F5F9/64748B?text=Wordpress' 
+    },
+    { 
+      id: 3, 
+      title: 'Sketch from A to Z (2024): Become an app designer', 
+      instructor: 'Andrew Pirtle', 
+      category: 'Design', 
+      thumbnail: 'https://placehold.co/400x250/F1F5F9/64748B?text=Sketch' 
+    },
   ];
 
   return (
-    <div className="space-y-10 pb-12 animate-in fade-in slide-in-from-bottom-2 duration-700">
-      
-      {/* Welcome & Study Action */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Thư viện bài giảng</h1>
-          <p className="text-neutral text-lg font-medium">Chào buổi tối, Nguyễn Minh. Bạn muốn học bài nào hôm nay?</p>
-        </div>
-        
-        <Link href="/student/upload" className="flex items-center gap-3 bg-primary text-white px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-slate-700 transition-all">
-          <Video size={20} />
-          <span>Tải bài giảng mới</span>
-        </Link>
-      </div>
+    <div className="min-h-screen">
+      <div className="px-8 md:px-12 py-8">
 
-      {/* Simplified Study Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <div key={i} className="bg-card p-6 rounded-2xl border border-border/60 shadow-subtle flex flex-col gap-3">
-            <div className={`${stat.color} bg-slate-50 w-10 h-10 rounded-lg flex items-center justify-center`}>
-              <stat.icon size={20} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-text">{stat.value}</p>
-              <p className="text-sm text-neutral font-semibold">{stat.label}</p>
-            </div>
+        {/* Quiz Notification */}
+        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-10 shadow-sm">
+          <div>
+            <h3 className="font-bold text-slate-900">Quiz : Build Responsive Real World</h3>
+            <p className="text-sm text-slate-400 font-semibold mt-1 uppercase tracking-wider">Answered : 15/22</p>
           </div>
-        ))}
-      </div>
-
-      {/* Content Area - Focused Reading Library */}
-      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="px-8 py-6 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-1 bg-secondary-bg p-1 rounded-xl">
-            <button 
-              onClick={() => setActiveTab('videos')}
-              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'videos' ? 'bg-white text-primary shadow-sm' : 'text-neutral hover:text-text'}`}
-            >
-              Video Bài Giảng
-            </button>
-            <button 
-              onClick={() => setActiveTab('docs')}
-              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'docs' ? 'bg-white text-primary shadow-sm' : 'text-neutral hover:text-text'}`}
-            >
-              Tài Liệu Đọc
-            </button>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral" size={16} />
-              <input 
-                type="text" 
-                placeholder="Tìm nội dung học tập..." 
-                className="pl-10 pr-4 py-2 bg-bg border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 transition-all w-[240px]"
-              />
-            </div>
-            <button className="p-2 border border-border rounded-lg hover:bg-bg transition-colors text-neutral">
-              <Filter size={18} />
-            </button>
-          </div>
+          <button className="bg-[#4C40ED] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+            Continue Quiz
+          </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 text-neutral text-xs font-bold uppercase tracking-wider">
-                <th className="px-8 py-4">Tên bài giảng</th>
-                <th className="px-4 py-4">Môn học</th>
-                <th className="px-4 py-4 text-center">Trạng thái AI</th>
-                <th className="px-4 py-4 text-center">Thời lượng</th>
-                <th className="px-8 py-4 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {videos.map((video) => (
-                <tr key={video.id} className="group hover:bg-slate-50/80 transition-colors">
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-20 h-12 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden border border-border group-hover:border-primary/20">
-                        <PlayCircle size={24} className="text-neutral group-hover:text-primary transition-colors" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-text group-hover:text-primary transition-colors">{video.title}</p>
-                        <p className="text-xs text-neutral font-medium">{video.date}</p>
-                      </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {stats.map((stat, i) => (
+            <div key={i} className="card-premium p-8 flex items-center gap-6">
+              <div className={`${stat.bg} ${stat.text} w-16 h-16 rounded-xl flex items-center justify-center shrink-0`}>
+                <stat.icon size={32} strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                <h3 className="text-3xl font-extrabold text-slate-900">{stat.value}</h3>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Recently Enrolled Courses */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-extrabold tracking-tight">Recently Enrolled Courses</h2>
+            <button className="text-primary font-bold hover:underline">View All</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {recentEnrolled.map((course) => (
+              <div key={course.id} className="card-premium group cursor-pointer hover:shadow-xl transition-all duration-300">
+                <div className="relative aspect-video bg-slate-100 overflow-hidden">
+                  {/* Note for User: Chèn ảnh thumbnail khóa học vào đây */}
+                  <Image 
+                    src={course.thumbnail} 
+                    alt={course.title} 
+                    fill 
+                    unoptimized={true}
+                    className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-80" 
+                  />
+                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-slate-400 hover:text-rose-500 transition-colors">
+                    <Star size={16} />
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-slate-200" />
+                      <span className="text-[13px] font-bold text-slate-400">{course.instructor}</span>
                     </div>
-                  </td>
-                  <td className="px-4 py-5">
-                    <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold uppercase">
-                      {video.subject}
+                    <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border rounded">
+                      {course.category}
                     </span>
-                  </td>
-                  <td className="px-4 py-5 text-center">
-                    <div className="flex justify-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
-                        video.status === 'Sẵn sàng' ? 'bg-emerald-50 text-emerald-700' : 
-                        video.status === 'Đang xử lý' ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'
-                      }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${
-                          video.status === 'Sẵn sàng' ? 'bg-emerald-600' : 
-                          video.status === 'Đang xử lý' ? 'bg-blue-600 animate-pulse' : 'bg-red-600'
-                        }`} />
-                        {video.status}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-5 text-center text-sm font-medium text-neutral">
-                    {video.duration}
-                  </td>
-                  <td className="px-8 py-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button className="p-2 hover:bg-white hover:text-primary rounded-lg transition-all hover:shadow-sm" title="Xem bài giảng">
-                        <Eye size={18} />
-                      </button>
-                      <button className="p-2 hover:bg-white hover:text-primary rounded-lg transition-all hover:shadow-sm" title="Tải tài liệu">
-                        <Download size={18} />
-                      </button>
-                      <button className="p-2 hover:bg-white hover:text-red-600 rounded-lg transition-all hover:shadow-sm" title="Xóa">
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="px-8 py-5 border-t border-border bg-slate-50/30 flex items-center justify-between">
-          <p className="text-sm text-neutral font-medium">Đang hiển thị 1 – 4 của 24 bài giảng</p>
-          <div className="flex items-center gap-2">
-            <button className="px-4 py-2 border border-border rounded-lg text-sm font-bold text-neutral hover:bg-white disabled:opacity-50" disabled>Trước</button>
-            <button className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-sm">1</button>
-            <button className="px-4 py-2 border border-border rounded-lg text-sm font-bold text-neutral hover:bg-white">Sau</button>
+                  </div>
+                  <h4 className="font-extrabold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                    {course.title}
+                  </h4>
+                  <button className="bg-slate-900 text-white text-[12px] font-bold px-4 py-2 rounded-lg group-hover:bg-primary transition-colors">
+                    View Course
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
+        </section>
+
+        {/* Bottom Lists */}
+        <div className="grid lg:grid-cols-2 gap-10">
+          {/* Recent Courses */}
+          <section className="card-premium p-8">
+            <h3 className="text-xl font-bold mb-8">Recent Courses</h3>
+            <div className="space-y-6">
+              {[
+                { name: 'Build Responsive Real World Websites..', sub: 'Information About UI/UX Design Degree', prog: 95 },
+                { name: 'Wordpress for Beginners', sub: 'Wordpress for Beginners - Master Wordpress Quickly', prog: 85 },
+                { name: 'Information About UI/UX Design Degree', sub: 'Information About UI/UX Design Degree', prog: 85 },
+                { name: 'Sketch from A to Z (2024)', sub: 'Wordpress for Beginners - Master Wordpress Quickly', prog: 95 },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between gap-4 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+                  <div className="min-w-0">
+                    <p className="font-bold text-[15px] truncate">{item.name}</p>
+                    <p className="text-xs text-slate-400 font-medium truncate mt-0.5">{item.sub}</p>
+                  </div>
+                  <div className="w-10 h-10 shrink-0 border-4 border-emerald-500 border-t-transparent rounded-full flex items-center justify-center text-[10px] font-bold text-emerald-600">
+                    {item.prog}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Latest Quizzes */}
+          <section className="card-premium p-8">
+            <h3 className="text-xl font-bold mb-8">Latest Quizzes</h3>
+            <div className="space-y-6">
+              {[
+                { name: 'Sketch from A to Z (2024)', sub: 'Correct Answer : 15/22 • Date : 15 Jan 2025', prog: 95, color: 'text-emerald-500' },
+                { name: 'Build Responsive Real World', sub: 'Correct Answer : 18/22 • Date : 04 Jan 2025', prog: 98, color: 'text-emerald-500' },
+                { name: 'UI/UX Design Degree', sub: 'Correct Answer : 25/30 • Date : 26 Dec 2024', prog: 98, color: 'text-emerald-500' },
+                { name: 'Build Responsive Real World', sub: 'Correct Answer : 15/20 • Date : 10 Dec 2024', prog: 95, color: 'text-emerald-500' },
+                { name: 'Become an app designer', sub: 'Correct Answer : 12/20 • Date : 27 Nov 2024', prog: 26, color: 'text-rose-500' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between gap-4 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+                  <div className="min-w-0">
+                    <p className="font-bold text-[15px] truncate">{item.name}</p>
+                    <p className="text-xs text-slate-400 font-medium truncate mt-0.5">{item.sub}</p>
+                  </div>
+                  <div className={`w-10 h-10 shrink-0 border-4 border-current rounded-full flex items-center justify-center text-[10px] font-bold ${item.color}`}>
+                    {item.prog}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       </div>
     </div>

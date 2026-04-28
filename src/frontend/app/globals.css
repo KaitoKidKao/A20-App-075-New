@@ -1,86 +1,64 @@
 @import "tailwindcss";
 
-@theme inline {
-  /* Student-First Premium Palette (Quiet & Calm) */
-  --color-primary: #1E293B; /* Slate 800 - Soft Navy */
-  --color-accent: #3B82F6;  /* Blue 600 - Muted blue for focus */
-  --color-success: #059669; /* Emerald 600 */
-  --color-warning: #D97706; /* Amber 600 */
-  --color-danger: #DC2626;  /* Red 600 */
-  --color-neutral: #64748B; /* Slate 500 */
-  --color-bg: #F8FAFC;      /* Slate 50 - Off-white reading surface */
-  --color-secondary-bg: #F1F5F9; /* Slate 100 */
-  --color-card: #FFFFFF;
-  --color-border: #E2E8F0;  /* Slate 200 */
-  --color-text: #0F172A;    /* Slate 900 - Deep slate for readability */
-  --color-text-muted: #64748B; /* Slate 500 */
-
-  --font-sans: var(--font-sans), Inter, system-ui, sans-serif;
-  --font-mono: var(--font-mono), monospace;
-
-  /* Intentional, Subtle Shadows (No heavy SaaS stacks) */
-  --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-elevated: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+@theme {
+  /* DreamsLMS Design Tokens */
+  --color-primary: #4C40ED;
+  --color-primary-hover: #3B31D1;
+  --color-accent: #FF5A1F;
+  --color-success: #22C55E;
+  
+  --color-bg-main: #F5F7FA;
+  --color-text-main: #1E293B;
+  --color-text-muted: #64748B;
+  
+  --shadow-premium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-elevated: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
-:root {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  body {
+    @apply bg-bg-main text-text-main font-sans antialiased;
+  }
 }
 
-* {
-  box-sizing: border-box;
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-2.5 rounded-xl font-semibold transition-all hover:bg-primary-hover active:scale-95 shadow-premium;
+  }
+  
+  .card-premium {
+    @apply bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-text-muted hover:bg-slate-50 hover:text-primary;
+  }
+
+  .sidebar-item.active {
+    @apply bg-slate-100 text-accent font-bold;
+  }
+
+  .section-title {
+    @apply text-xl font-bold tracking-tight mb-6;
+  }
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  line-height: 1.6;
+/* Custom Profile Header Pattern */
+.profile-header-pattern {
+  background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-/* Reading Surface Typography */
-h1, h2, h3, h4 {
-  color: var(--color-text);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-p {
-  line-height: 1.7;
-}
-
-/* Custom Scrollbar for Reading */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-neutral);
-}
-
-/* Accessibility Focus Rings */
-*:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.reading-surface {
-  background-color: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-subtle);
+.profile-header-pattern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  /* Note for User: Chèn ảnh pattern geometric của DreamsLMS vào đây nếu có file thực tế */
+  background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 30%);
+  opacity: 0.8;
 }
