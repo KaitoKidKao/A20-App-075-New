@@ -369,16 +369,20 @@ Phần này ghi lại các thay đổi thực tế và quyết định quan tr�
 ### **2. Giao diện & Trải nghiệm (UI/UX Redesign)**
 *   **Hoàn thiện Figma Core Functions:** Đã thiết kế xong luồng trải nghiệm lõi cho học sinh khiếm thính trên Figma (bao gồm màn hình Dashboard, Video Player với Caption/Transcript, và Review Summary).
 *   **Triết lý "Quiet Premium":** Thay thế giao diện SaaS hào nhoáng bằng phong cách "Học thuật tĩnh lặng". Sử dụng bảng màu Soft Navy/Slate và font chữ chuyên dụng cho việc đọc dài hạn.
-*   **Tinh chỉnh Bố cục Tổng thể (Layout Structure):** Cấu trúc lại toàn bộ hệ thống layout. Chuyển đổi từ mô hình Sidebar tràn toàn màn hình sang cấu trúc Top-down: TopBar cố định trên cùng -> Thanh Profile Header (tràn viền) -> Sidebar (rút gọn, chỉ chứa Main Menu) & Main Content căn giữa. Cấu trúc này tối ưu không gian hiển thị, thân thiện với thiết kế của trang mẫu.
-*   **Làm sạch TopBar & Sidebar:** Xóa bỏ hoàn toàn thanh Utility đen, đẩy TopBar lên mức ưu tiên cao nhất (z-index) để tránh lỗi đè lấp khi cuộn. Thu gọn Menu Sidebar, loại bỏ các thành phần thừa (như Logo/Brand Header), chỉ tập trung hiển thị các module lõi (Dashboard, Enrolled Courses, Upload Video, Settings, My Profile).
 *   **Study Desk Layout:** Chuyển đổi từ Dashboard quản trị sang bố cục "Bàn học" với cấu trúc thẻ Notebook, ưu tiên nội dung bài giảng thay vì các chỉ số hệ thống.
 *   **Thiết kế hỗ trợ học tập:** Bổ sung khối "Continue Learning" và "Missed Moments" (Khoảnh khắc bỏ lỡ) giúp học sinh dễ dàng bắt kịp bài giảng.
 
 ### **3. Kỹ thuật & Hạ tầng (Frontend Architecture)**
 *   **Refactor Routes:** Chuyển đổi toàn bộ hệ thống routing từ `/teacher/*` sang `/student/*` để đồng bộ với định hướng sản phẩm mới.
-*   **Tối ưu Layout Components:** Thay vì gọi component `Footer` và `ProfileHeader` rải rác trên từng trang, hệ thống đã gom cụm vào lớp bao bọc Layout tổng (`ClientShell`), đảm bảo tính nhất quán trên toàn ứng dụng.
-*   **Fix Core Bugs:** Xử lý triệt để lỗi "infinite refresh loop" trên Next.js và lỗi mất trạng thái (state reset) khi chuyển trang. Sửa lỗi Next Image liên quan đến SVG Placeholder.
+*   **Fix Core Bugs:** Xử lý triệt để lỗi "infinite refresh loop" trên Next.js và lỗi mất trạng thái (state reset) khi chuyển trang.
 *   **AI Observability:** Tích hợp thành công `log_hook.py` để theo dõi và báo cáo mọi hoạt động của AI lên hệ thống giám sát.
+
+### **4. Tinh chỉnh Giao diện & Trải nghiệm Người dùng (Tuần 5)**
+*   **Video Lesson UI:** Tái thiết kế trang xem bài giảng (`VideoLessonPage`), tối ưu hóa bố cục chia cột (Video + Transcript). Phóng to font chữ ở phụ đề và thanh Transcript để học sinh dễ đọc hơn ("cân vừa mắt"). Cung cấp hướng dẫn rõ ràng vị trí tích hợp Video Player thực tế.
+*   **Mô phỏng Upload Flow:** Xây dựng tính năng "Mock Upload" với giao diện kéo thả, thanh tiến trình (progress bar) mô phỏng quá trình xử lý video và tự động chuyển hướng người dùng sau khi hoàn tất.
+*   **Layout Centering & Balance:** Căn giữa toàn bộ nội dung của các trang chính (Dashboard, Enrolled Courses, Settings) bằng giới hạn `max-w-6xl`, ngăn chặn tình trạng giao diện bị kéo giãn quá mức trên các màn hình siêu rộng.
+*   **Tối giản AppSidebar:** Thu gọn kích thước thanh điều hướng (từ 280px xuống 240px), đẩy sát vào mép trái màn hình, giảm kích thước font chữ và icon để tạo cảm giác gọn gàng, tinh tế hơn. Loại bỏ Floating Action Button không cần thiết khỏi layout.
+*   **Fix Hydration Mismatch:** Khắc phục triệt để lỗi React Hydration trên Next.js bằng cách thêm thuộc tính `suppressHydrationWarning`, ngăn chặn xung đột DOM từ các trình duyệt extension của người dùng.
 
 ---
 **"Đừng build rộng, hãy BUILD TRÚNG.**
