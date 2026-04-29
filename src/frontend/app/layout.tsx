@@ -28,6 +28,7 @@ export default function RootLayout({
     <html
       lang="vi"
       className={`${beVietnamPro.variable} ${jetbrainsMono.variable} antialiased h-full`}
+      suppressHydrationWarning
     >
       <body className="h-full flex flex-col text-text bg-bg font-sans overflow-x-hidden">
         <ClientShell>
