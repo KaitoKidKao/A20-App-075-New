@@ -124,8 +124,16 @@ export default function VideoLessonPage() {
                 controls
                 autoPlay={false}
                 preload="metadata"
+                crossOrigin="anonymous"
                 src={`/api/video/${videoId}`}
               >
+                <track
+                  kind="subtitles"
+                  src={`/api/video/${videoId}/subtitle`}
+                  srcLang={language || 'en'}
+                  label={language === 'vi' ? 'Tiếng Việt' : 'English'}
+                  default
+                />
                 Your browser does not support the video tag.
               </video>
             </div>
