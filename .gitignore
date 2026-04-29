@@ -19,3 +19,5 @@ build/
 .ai-log/*.jsonl
 temp/
 data/
+.grapuco/
+
