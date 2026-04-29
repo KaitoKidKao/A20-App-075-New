@@ -19,7 +19,7 @@ export default function EnrolledCourses() {
 
   return (
     <div className="min-h-screen">
-      <div className="px-8 md:px-12 py-8">
+      <div className="px-8 md:px-12 py-8 max-w-6xl mx-auto">
 
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-extrabold tracking-tight">Enrolled</h2>
@@ -34,7 +34,7 @@ export default function EnrolledCourses() {
           {courses.map((course) => (
             <div key={course.id} className="card-premium group hover:shadow-xl transition-all duration-300">
               <div className="relative aspect-video bg-slate-100 overflow-hidden">
-                <Image src={course.thumb} alt={course.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90" />
+                <Image src={course.thumb} alt={course.title} fill unoptimized={true} className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90" />
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-slate-400 hover:text-rose-500 transition-colors">
                   <Heart size={16} />
                 </div>

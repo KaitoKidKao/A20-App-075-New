@@ -46,7 +46,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen">
-      <div className="px-8 md:px-12 py-8">
+      <div className="px-8 md:px-12 py-8 max-w-6xl mx-auto">
 
         {/* Quiz Notification */}
         <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-10 shadow-sm">
