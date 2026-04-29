@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Footer } from '@/components/layout/Footer';
 import { 
   Play, 
@@ -14,36 +14,118 @@ import {
   Settings,
   Sparkles,
   Save,
-  ChevronDown
+  ChevronDown,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useParams } from 'next/navigation';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+const API_BASE = 'http://localhost:8000';
+
+interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export default function VideoLessonPage() {
+  const params = useParams();
+  const videoId = params.id as string;
   const [activeTab, setActiveTab] = useState('transcript');
+  
+  // Transcript state
+  const [segments, setSegments] = useState<TranscriptSegment[]>([]);
+  const [language, setLanguage] = useState('');
+  const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
+  const [transcriptError, setTranscriptError] = useState('');
+  
+  // Summary state
+  const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState('');
+
+  // Fetch transcript on mount
+  useEffect(() => {
+    const fetchTranscript = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/videos/${videoId}/transcript`);
+        const data = await res.json();
+        
+        if (data.segments && data.segments.length > 0) {
+          setSegments(data.segments);
+          setLanguage(data.language || 'Unknown');
+        } else {
+          setTranscriptError(data.message || 'Transcript chưa sẵn sàng.');
+        }
+      } catch (err) {
+        console.error('Transcript fetch error:', err);
+        setTranscriptError('Không thể kết nối Backend. Đảm bảo server đang chạy.');
+      } finally {
+        setIsLoadingTranscript(false);
+      }
+    };
+
+    fetchTranscript();
+  }, [videoId]);
+
+  // Fetch summary on demand
+  const handleGetSummary = async () => {
+    if (summaryPoints.length > 0) return; // Already loaded
+    setIsLoadingSummary(true);
+    setSummaryError('');
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/videos/${videoId}/summary`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.detail || `Error ${res.status}`);
+      }
+      const data = await res.json();
+      setSummaryPoints(data.summary || []);
+    } catch (err: any) {
+      console.error('Summary fetch error:', err);
+      setSummaryError(err.message || 'Lỗi khi tạo tóm tắt.');
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+
+  // Calculate total duration from segments
+  const totalDuration = segments.length > 0 
+    ? formatTime(segments[segments.length - 1].end) 
+    : '0:00';
+
+  // Full transcript text for display
+  const fullTranscriptText = segments.map(s => s.text).join(' ');
 
   return (
     <div className="min-h-screen">
-      <div className="p-8">
+      <div className="p-8 max-w-6xl mx-auto">
         
         <div className="grid lg:grid-cols-12 gap-8">
           {/* Main Content (Video + Tabs) */}
           <div className="lg:col-span-8 space-y-6">
             {/* Video Player Area */}
             <div className="bg-black rounded-xl overflow-hidden shadow-lg border border-slate-200 relative aspect-video group">
-              {/* === HƯỚNG DẪN CHÈN ẢNH VIDEO/THUMBNAIL === 
-                  Bạn chèn thẻ <img src="..." /> hoặc <Image src="..." /> vào đây để làm hình nền video (thumbnail) 
-                  Ví dụ: <img src="/images/video-thumbnail.jpg" alt="Video Thumbnail" className="w-full h-full object-cover" />
-              */}
               <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
-                {/* Giả lập Subtitle */}
-                <div className="absolute bottom-16 left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center w-full px-4">
-                  Xin chào, tôi là Margaret Moloney
-                </div>
+                {/* Subtitle from actual transcript */}
+                {segments.length > 0 && (
+                  <div className="absolute bottom-16 left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center w-full px-4">
+                    {segments[0].text.slice(0, 80)}{segments[0].text.length > 80 ? '...' : ''}
+                  </div>
+                )}
                 <Play size={80} className="text-white/40 group-hover:text-white/80 transition-all cursor-pointer" />
               </div>
               
@@ -52,7 +134,7 @@ export default function VideoLessonPage() {
                 <div className="flex items-center gap-6">
                   <Play size={20} className="text-white fill-white cursor-pointer hover:scale-110 transition-transform" />
                   <Volume2 size={20} className="text-white cursor-pointer hover:scale-110 transition-transform" />
-                  <span className="text-white text-sm font-bold">0:01 / 3:10</span>
+                  <span className="text-white text-sm font-bold">0:01 / {totalDuration}</span>
                 </div>
                 <div className="flex items-center gap-6">
                   <span className="text-white text-sm font-bold cursor-pointer hover:text-primary transition-colors">1x</span>
@@ -62,9 +144,16 @@ export default function VideoLessonPage() {
               </div>
             </div>
 
-            {/* Title & Save Note */}
+            {/* Title & Info */}
             <div className="flex items-center justify-between pt-2">
-              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Welcome to the Capstone!</h1>
+              <div>
+                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Video Lesson</h1>
+                {language && (
+                  <p className="text-sm text-slate-400 font-medium mt-1">
+                    Language: <span className="text-slate-600 font-semibold">{language}</span> · ID: <span className="font-mono text-xs">{videoId.slice(0, 8)}</span>
+                  </p>
+                )}
+              </div>
               <button className="flex items-center gap-2 text-primary font-bold hover:underline hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-colors">
                 <Save size={18} />
                 Save note
@@ -78,7 +167,7 @@ export default function VideoLessonPage() {
                 <ChevronDown size={20} className="text-slate-400" />
               </div>
               <p className="text-base text-slate-600 font-medium mb-6">
-                Let me know if you have any questions about this material. I'm here to help!
+                Let me know if you have any questions about this material. I&apos;m here to help!
               </p>
               <div className="flex flex-wrap gap-3">
                 <button className="bg-white border border-slate-300 px-4 py-2.5 rounded-xl text-sm font-bold text-[#4C40ED] hover:bg-[#4C40ED] hover:text-white hover:border-[#4C40ED] transition-all flex items-center gap-2 shadow-sm">
@@ -87,13 +176,39 @@ export default function VideoLessonPage() {
                 <button className="bg-white border border-slate-300 px-4 py-2.5 rounded-xl text-sm font-bold text-[#4C40ED] hover:bg-[#4C40ED] hover:text-white hover:border-[#4C40ED] transition-all flex items-center gap-2 shadow-sm">
                   <Sparkles size={16} /> Explain this topic in simple terms
                 </button>
-                <button className="bg-white border border-slate-300 px-4 py-2.5 rounded-xl text-sm font-bold text-[#4C40ED] hover:bg-[#4C40ED] hover:text-white hover:border-[#4C40ED] transition-all flex items-center gap-2 shadow-sm">
-                  <Sparkles size={16} /> Give me a summary
+                <button 
+                  onClick={handleGetSummary}
+                  disabled={isLoadingSummary}
+                  className="bg-white border border-slate-300 px-4 py-2.5 rounded-xl text-sm font-bold text-[#4C40ED] hover:bg-[#4C40ED] hover:text-white hover:border-[#4C40ED] transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+                >
+                  {isLoadingSummary ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  {isLoadingSummary ? 'Generating...' : 'Give me a summary'}
                 </button>
                 <button className="bg-white border border-slate-300 px-4 py-2.5 rounded-xl text-sm font-bold text-[#4C40ED] hover:bg-[#4C40ED] hover:text-white hover:border-[#4C40ED] transition-all flex items-center gap-2 shadow-sm">
                   <Sparkles size={16} /> Give me real-life examples
                 </button>
               </div>
+
+              {/* Summary Output */}
+              {summaryPoints.length > 0 && (
+                <div className="mt-6 p-5 bg-white border border-slate-200 rounded-xl">
+                  <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <Sparkles size={16} className="text-[#4C40ED]" /> AI Summary
+                  </h4>
+                  <ul className="space-y-2">
+                    {summaryPoints.map((point, i) => (
+                      <li key={i} className="text-sm text-slate-700 font-medium leading-relaxed">
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {summaryError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
+                  <AlertTriangle size={14} /> {summaryError}
+                </div>
+              )}
             </div>
 
             {/* Lower Tabs Area */}
@@ -112,6 +227,26 @@ export default function VideoLessonPage() {
                   </button>
                 ))}
               </div>
+
+              {/* Tab Content */}
+              {activeTab === 'transcript' && (
+                <div className="prose prose-slate max-w-none">
+                  {isLoadingTranscript ? (
+                    <div className="flex items-center gap-3 text-slate-400 py-8">
+                      <Loader2 className="animate-spin" size={20} />
+                      <span className="font-medium">Đang tải transcript...</span>
+                    </div>
+                  ) : transcriptError ? (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                      {transcriptError}
+                    </div>
+                  ) : (
+                    <p className="text-[15px] text-slate-700 leading-relaxed font-medium">
+                      {fullTranscriptText}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end pt-4 pb-12">
                 <button className="flex items-center gap-2 px-5 py-2.5 border-2 border-[#4C40ED] text-[#4C40ED] font-bold rounded-xl hover:bg-[#4C40ED]/5 transition-colors">
@@ -133,23 +268,32 @@ export default function VideoLessonPage() {
 
               <div className="px-6 py-4 border-b border-slate-100 flex items-center">
                 <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                  Language: <span className="text-slate-900 ml-1">English</span> <ChevronDown size={14} className="ml-1 text-slate-400" />
+                  Language: <span className="text-slate-900 ml-1">{language || 'Loading...'}</span> <ChevronDown size={14} className="ml-1 text-slate-400" />
                 </span>
               </div>
 
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 scrollbar-thin">
-                {[
-                  { time: '0:00', text: 'Hi, Margaret Maloney here, and welcome to the Introduction to Project Management Capstone course. This is the course that brings it all together. You\'ve been learning about what project managers do, and best practices for managing projects. Now it is your turn to put the best practices in your own practice.' },
-                  { time: '0:35', text: 'The deliverables you are creating are all part of the planning what you would do with your team at the start of a project. With regard to project, you may select whatever you wish. In a perfect world, you would select something that is both useful and interesting for you. Your selection might be a real project, it might be made up...' },
-                  { time: '1:20', text: 'It might be something that is really happening in your personal life, it could be something you\'re working on in your professional life. It\'s a real-world case.' },
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-5 group cursor-pointer hover:bg-slate-50 p-3 -mx-3 rounded-xl transition-all">
-                    <span className="text-xs font-bold text-slate-400 mt-1 shrink-0">{item.time}</span>
-                    <p className="text-[15px] font-medium text-slate-700 leading-relaxed group-hover:text-slate-900">
-                      {item.text}
-                    </p>
+                {isLoadingTranscript ? (
+                  <div className="flex items-center gap-3 text-slate-400 py-8">
+                    <Loader2 className="animate-spin" size={20} />
+                    <span className="text-sm font-medium">Đang tải transcript...</span>
                   </div>
-                ))}
+                ) : transcriptError ? (
+                  <div className="text-sm text-amber-600 font-medium py-4">
+                    {transcriptError}
+                  </div>
+                ) : segments.length > 0 ? (
+                  segments.map((item, i) => (
+                    <div key={i} className="flex gap-5 group cursor-pointer hover:bg-slate-50 p-3 -mx-3 rounded-xl transition-all">
+                      <span className="text-xs font-bold text-slate-400 mt-1 shrink-0">{formatTime(item.start)}</span>
+                      <p className="text-[15px] font-medium text-slate-700 leading-relaxed group-hover:text-slate-900">
+                        {item.text}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-400 py-4">Không có dữ liệu transcript.</p>
+                )}
               </div>
             </div>
           </div>
