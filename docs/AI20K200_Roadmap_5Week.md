@@ -377,6 +377,13 @@ Phần này ghi lại các thay đổi thực tế và quyết định quan tr�
 *   **Fix Core Bugs:** Xử lý triệt để lỗi "infinite refresh loop" trên Next.js và lỗi mất trạng thái (state reset) khi chuyển trang.
 *   **AI Observability:** Tích hợp thành công `log_hook.py` để theo dõi và báo cáo mọi hoạt động của AI lên hệ thống giám sát.
 
+### **4. Tinh chỉnh Giao diện & Trải nghiệm Người dùng (Tuần 5)**
+*   **Video Lesson UI:** Tái thiết kế trang xem bài giảng (`VideoLessonPage`), tối ưu hóa bố cục chia cột (Video + Transcript). Phóng to font chữ ở phụ đề và thanh Transcript để học sinh dễ đọc hơn ("cân vừa mắt"). Cung cấp hướng dẫn rõ ràng vị trí tích hợp Video Player thực tế.
+*   **Mô phỏng Upload Flow:** Xây dựng tính năng "Mock Upload" với giao diện kéo thả, thanh tiến trình (progress bar) mô phỏng quá trình xử lý video và tự động chuyển hướng người dùng sau khi hoàn tất.
+*   **Layout Centering & Balance:** Căn giữa toàn bộ nội dung của các trang chính (Dashboard, Enrolled Courses, Settings) bằng giới hạn `max-w-6xl`, ngăn chặn tình trạng giao diện bị kéo giãn quá mức trên các màn hình siêu rộng.
+*   **Tối giản AppSidebar:** Thu gọn kích thước thanh điều hướng (từ 280px xuống 240px), đẩy sát vào mép trái màn hình, giảm kích thước font chữ và icon để tạo cảm giác gọn gàng, tinh tế hơn. Loại bỏ Floating Action Button không cần thiết khỏi layout.
+*   **Fix Hydration Mismatch:** Khắc phục triệt để lỗi React Hydration trên Next.js bằng cách thêm thuộc tính `suppressHydrationWarning`, ngăn chặn xung đột DOM từ các trình duyệt extension của người dùng.
+
 ---
 **"Đừng build rộng, hãy BUILD TRÚNG.**
 
