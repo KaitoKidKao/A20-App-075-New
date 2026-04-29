@@ -1,29 +1,16 @@
-# Core dependencies
-anthropic>=0.40.0
-openai>=1.50.0
-python-dotenv>=1.0.0
-httpx>=0.27.0
-pydantic>=2.0.0
-
-# PDF Parsing & Extraction
-pymupdf>=1.24.0
-python-docx>=1.1.0
-
-# Backend
+# Core
 fastapi>=0.110.0
 uvicorn>=0.29.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.0
+aiofiles>=23.2.1
 
-# TTS
-edge-tts>=6.1.10
+# AI & Media
+faster-whisper>=1.0.3
+openai>=1.50.0
+ffmpeg-python>=0.2.0
+yt-dlp>=2024.3.10
 
-# OCR Research & Vision Models
-# Cài đặt transformers từ source để hỗ trợ các kiến trúc mới (hunyuan_vl)
-transformers @ git+https://github.com/huggingface/transformers.git
-torch>=2.2.0
-huggingface_hub>=0.23.0
-accelerate>=0.21.0
-einops>=0.6.0
-timm>=0.9.0
-sentencepiece>=0.1.99
-qwen_vl_utils>=0.0.8
-pillow>=10.0.0
+# General
+pydantic>=2.0.0
+httpx>=0.27.0
