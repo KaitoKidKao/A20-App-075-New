@@ -53,8 +53,8 @@ Phân công theo thế mạnh — không cứng nhắc. Mỗi sprint có thể r
 | Vai trò | Tên (điền vào) | Trách nhiệm chính | Công việc thực tế |
 | :---- | :---- | :---- | :---- |
 | Tech Lead / AI | ________Nam_________ | AI pipeline, Backend, Deploy | PDF parser, TTS integration, HITL layer, API server, Deploy lên Railway/Render |
-| Frontend / UX | ________Tuấn________ | Web UI, Wireframe, UX flow | Figma wireframe, React/Next.js UI, Upload flow, Audio player, Responsive |
-| Data / QA / PM | ________Cao________ | Data, Eval, Research, Docs | Dataset collection, Ground truth, WER/MOS test, User test, README, Báo cáo |
+| Frontend / UX | Lê Minh Tuấn | Web UI, Wireframe, UX flow | Hoàn thiện Figma (Core Functions), thiết kế "Quiet Premium", Study Desk layout, tối ưu Readability cho học sinh khiếm thính |
+| Data / QA / PM | ________Cao________ | Data, Eval, Research, Docs | Định hướng Product Pivot, Refactor Role, Quản lý Roadmap & Feedback |
 
 💡 Lưu ý: Bước Demo & Báo cáo cuối (Bước 7\) là việc chung của cả team — không ai được "phủi tay".
 
@@ -345,18 +345,46 @@ Tick từng mục trước khi submit. Thiếu bất kỳ mục nào \= chưa đ
 | ☐ | GitHub repo public, có README đầy đủ (setup, run, deploy) | Cả team | Tuần 5 |
 | ☐ | URL production hoạt động, có SSL, không crash | Tech Lead | Tuần 4 |
 | ☐ | Demo live chạy được toàn bộ flow (upload → audio) | Cả team | Tuần 5 |
-| ☐ | 1-page brief (user persona, problem, competitor) | Data/PM | Tuần 1 |
-| ☐ | PRD với user stories và feature priority matrix | Data/PM | Tuần 2 |
-| ☐ | System architecture diagram trong README | Tech Lead | Tuần 3 |
-| ☐ | Dataset đã xử lý \+ data pipeline doc | Data/PM | Tuần 2 |
+| [x] | 1-page brief (user persona, problem, competitor) | Data/PM | Tuần 1 |
+| [x] | PRD với user stories và feature priority matrix | Data/PM | Tuần 2 |
+| [x] | System architecture diagram trong README | Tech Lead | Tuần 3 |
+| [x] | Dataset đã xử lý \+ data pipeline doc | Data/PM | Tuần 2 |
 | ☐ | WER ≤ 5% (đo trên ít nhất 10 file) | Data/PM | Tuần 3–4 |
 | ☐ | MOS ≥ 4.5 (ít nhất 5 người rate) | Data/PM | Tuần 4 |
 | ☐ | User feedback log (≥ 5 người test thật) | Data/PM | Tuần 4 |
 | ☐ | Slide trình bày ≤ 10 trang | Cả team | Tuần 5 |
 | ☐ | Monitoring/error log setup (Sentry hoặc tương đương) | Tech Lead | Tuần 4 |
 | ☐ | HITL layer hoạt động (flag \+ reviewer flow) | Tech Lead | Tuần 3 |
-| ☐ | Traceability: mỗi audio biết nguồn từ đoạn văn nào | Tech Lead | Tuần 2 |
+| [x] | Traceability: mỗi audio biết nguồn từ đoạn văn nào | Tech Lead | Tuần 2 |
 
+# **X. Nhật ký Tiến độ & Thành tựu (Actual Progress)**
+
+Phần này ghi lại các thay đổi thực tế và quyết định quan trọng đã thực hiện trong quá trình phát triển (Cập nhật ngày 28/04).
+
+### **1. Chiến lược & Sản phẩm (Product Pivot)**
+*   **Tái định hướng (Deaf-First):** Chuyển trọng tâm từ hỗ trợ khiếm thị sang hỗ trợ học sinh khiếm thính (Deaf/Hard of Hearing). Loại bỏ tính năng "Document-to-Audio" để tập trung vào Captioning & Transcription.
+*   **Tái cấu trúc vai trò (Role Overhaul):** Hợp nhất và chuyển giao các công cụ mạnh mẽ của Giáo viên (Upload, AI Transcription, Summary) sang cho Học sinh sử dụng trực tiếp để tối ưu hóa việc tự học.
+*   **Loại bỏ tính năng thừa:** Xóa bỏ "Live Sessions" và các module không thiết yếu để giữ ứng dụng tinh gọn, tập trung vào giá trị lõi.
+
+### **2. Giao diện & Trải nghiệm (UI/UX Redesign)**
+*   **Hoàn thiện Figma Core Functions:** Đã thiết kế xong luồng trải nghiệm lõi cho học sinh khiếm thính trên Figma (bao gồm màn hình Dashboard, Video Player với Caption/Transcript, và Review Summary).
+*   **Triết lý "Quiet Premium":** Thay thế giao diện SaaS hào nhoáng bằng phong cách "Học thuật tĩnh lặng". Sử dụng bảng màu Soft Navy/Slate và font chữ chuyên dụng cho việc đọc dài hạn.
+*   **Study Desk Layout:** Chuyển đổi từ Dashboard quản trị sang bố cục "Bàn học" với cấu trúc thẻ Notebook, ưu tiên nội dung bài giảng thay vì các chỉ số hệ thống.
+*   **Thiết kế hỗ trợ học tập:** Bổ sung khối "Continue Learning" và "Missed Moments" (Khoảnh khắc bỏ lỡ) giúp học sinh dễ dàng bắt kịp bài giảng.
+
+### **3. Kỹ thuật & Hạ tầng (Frontend Architecture)**
+*   **Refactor Routes:** Chuyển đổi toàn bộ hệ thống routing từ `/teacher/*` sang `/student/*` để đồng bộ với định hướng sản phẩm mới.
+*   **Fix Core Bugs:** Xử lý triệt để lỗi "infinite refresh loop" trên Next.js và lỗi mất trạng thái (state reset) khi chuyển trang.
+*   **AI Observability:** Tích hợp thành công `log_hook.py` để theo dõi và báo cáo mọi hoạt động của AI lên hệ thống giám sát.
+
+### **4. Tinh chỉnh Giao diện & Trải nghiệm Người dùng (Tuần 5)**
+*   **Video Lesson UI:** Tái thiết kế trang xem bài giảng (`VideoLessonPage`), tối ưu hóa bố cục chia cột (Video + Transcript). Phóng to font chữ ở phụ đề và thanh Transcript để học sinh dễ đọc hơn ("cân vừa mắt"). Cung cấp hướng dẫn rõ ràng vị trí tích hợp Video Player thực tế.
+*   **Mô phỏng Upload Flow:** Xây dựng tính năng "Mock Upload" với giao diện kéo thả, thanh tiến trình (progress bar) mô phỏng quá trình xử lý video và tự động chuyển hướng người dùng sau khi hoàn tất.
+*   **Layout Centering & Balance:** Căn giữa toàn bộ nội dung của các trang chính (Dashboard, Enrolled Courses, Settings) bằng giới hạn `max-w-6xl`, ngăn chặn tình trạng giao diện bị kéo giãn quá mức trên các màn hình siêu rộng.
+*   **Tối giản AppSidebar:** Thu gọn kích thước thanh điều hướng (từ 280px xuống 240px), đẩy sát vào mép trái màn hình, giảm kích thước font chữ và icon để tạo cảm giác gọn gàng, tinh tế hơn. Loại bỏ Floating Action Button không cần thiết khỏi layout.
+*   **Fix Hydration Mismatch:** Khắc phục triệt để lỗi React Hydration trên Next.js bằng cách thêm thuộc tính `suppressHydrationWarning`, ngăn chặn xung đột DOM từ các trình duyệt extension của người dùng.
+
+---
 **"Đừng build rộng, hãy BUILD TRÚNG.**
 
 **Yêu problem, đừng yêu solution. AI là công cụ, không phải value."**

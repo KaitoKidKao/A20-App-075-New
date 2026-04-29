@@ -57,8 +57,7 @@ cp .env.example .env
 ```
 
 Các biến quan trọng:
-- `OPENAI_API_KEY`: Dùng cho Agent (gpt-4o-mini).
-- `CHANDRA_API_KEY`: Dùng cho luồng trích xuất chính (OCR API).
+- `OPENAI_API_KEY`: Dùng cho Agent (gpt-5-nano).
 
 ## 🛠 Cách chạy dự án
 
