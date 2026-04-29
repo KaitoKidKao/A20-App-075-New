@@ -118,30 +118,16 @@ export default function VideoLessonPage() {
           {/* Main Content (Video + Tabs) */}
           <div className="lg:col-span-8 space-y-6">
             {/* Video Player Area */}
-            <div className="bg-black rounded-xl overflow-hidden shadow-lg border border-slate-200 relative aspect-video group">
-              <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
-                {/* Subtitle from actual transcript */}
-                {segments.length > 0 && (
-                  <div className="absolute bottom-16 left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center w-full px-4">
-                    {segments[0].text.slice(0, 80)}{segments[0].text.length > 80 ? '...' : ''}
-                  </div>
-                )}
-                <Play size={80} className="text-white/40 group-hover:text-white/80 transition-all cursor-pointer" />
-              </div>
-              
-              {/* Controls Bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-14 bg-black/60 backdrop-blur-sm flex items-center justify-between px-6">
-                <div className="flex items-center gap-6">
-                  <Play size={20} className="text-white fill-white cursor-pointer hover:scale-110 transition-transform" />
-                  <Volume2 size={20} className="text-white cursor-pointer hover:scale-110 transition-transform" />
-                  <span className="text-white text-sm font-bold">0:01 / {totalDuration}</span>
-                </div>
-                <div className="flex items-center gap-6">
-                  <span className="text-white text-sm font-bold cursor-pointer hover:text-primary transition-colors">1x</span>
-                  <Settings size={20} className="text-white cursor-pointer hover:rotate-90 transition-transform" />
-                  <Maximize size={20} className="text-white cursor-pointer hover:scale-110 transition-transform" />
-                </div>
-              </div>
+            <div className="bg-black rounded-xl overflow-hidden shadow-lg border border-slate-200 relative aspect-video">
+              <video
+                className="w-full h-full object-contain bg-black"
+                controls
+                autoPlay={false}
+                preload="metadata"
+                src={`/api/video/${videoId}`}
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
 
             {/* Title & Info */}
