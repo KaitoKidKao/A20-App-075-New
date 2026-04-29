@@ -1,4 +1,8 @@
 import os
+import sys
+# Thêm thư mục gốc của dự án vào sys.path để Python nhận diện được module 'src'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import uuid
 import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks

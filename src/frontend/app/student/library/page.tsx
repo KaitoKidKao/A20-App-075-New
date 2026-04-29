@@ -1,176 +1,173 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Search, Filter, Play, Clock, BookOpen, GraduationCap } from 'lucide-react';
-import { mockLectures } from '@/lib/mockData';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import Link from 'next/link';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import React from 'react';
+import { 
+  BookOpen, 
+  Library, 
+  CheckCircle, 
+  Clock, 
+  Play, 
+  User, 
+  MoreHorizontal,
+  Star
+} from 'lucide-react';
+import Image from 'next/image';
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export default function StudentDashboard() {
+  const stats = [
+    { label: 'Enrolled Courses', value: '12', icon: Library, bg: 'bg-indigo-50', text: 'text-indigo-600' },
+    { label: 'Active Courses', value: '03', icon: BookOpen, bg: 'bg-rose-50', text: 'text-rose-600' },
+    { label: 'Completed Courses', value: '10', icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+  ];
 
-export default function StudentLibraryPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('Tất cả');
-
-  const filteredLectures = mockLectures.filter(lecture => {
-    const matchesSearch = lecture.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = selectedSubject === 'Tất cả' || lecture.subject === selectedSubject;
-    return matchesSearch && matchesSubject;
-  });
-
-  const subjects = ['Tất cả', 'Toán', 'Lý', 'Hóa', 'Văn', 'Anh'];
+  const recentEnrolled = [
+    { 
+      id: 1, 
+      title: 'Information About UI/UX Design Degree', 
+      instructor: 'David Benitez', 
+      category: 'Design', 
+      thumbnail: 'https://placehold.co/400x250/F1F5F9/64748B?text=Course+Thumbnail' 
+    },
+    { 
+      id: 2, 
+      title: 'Wordpress for Beginners - Master Wordpress Quickly', 
+      instructor: 'Ana Reyes', 
+      category: 'Wordpress', 
+      thumbnail: 'https://placehold.co/400x250/F1F5F9/64748B?text=Wordpress' 
+    },
+    { 
+      id: 3, 
+      title: 'Sketch from A to Z (2024): Become an app designer', 
+      instructor: 'Andrew Pirtle', 
+      category: 'Design', 
+      thumbnail: 'https://placehold.co/400x250/F1F5F9/64748B?text=Sketch' 
+    },
+  ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header & Stats */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Thư viện học liệu</h1>
-          <p className="text-neutral mt-1">Chào mừng bạn quay lại! Hãy tiếp tục hành trình học tập của mình.</p>
-        </div>
-        <div className="flex items-center gap-4 bg-card p-4 rounded-2xl border shadow-sm">
-          <div className="bg-primary/10 text-primary p-3 rounded-xl">
-            <BookOpen size={24} />
-          </div>
+    <div className="min-h-screen">
+      <div className="px-8 md:px-12 py-8">
+
+        {/* Quiz Notification */}
+        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-10 shadow-sm">
           <div>
-            <p className="text-2xl font-bold">12</p>
-            <p className="text-xs text-neutral font-medium uppercase tracking-wider">Bài giảng đã xem</p>
+            <h3 className="font-bold text-slate-900">Quiz : Build Responsive Real World</h3>
+            <p className="text-sm text-slate-400 font-semibold mt-1 uppercase tracking-wider">Answered : 15/22</p>
           </div>
-        </div>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral" />
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm bài giảng, giảng viên..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-card border border-border focus:ring-4 focus:ring-primary/5 focus:border-primary rounded-2xl outline-none transition-all shadow-sm"
-          />
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-          {subjects.map(subject => (
-            <button
-              key={subject}
-              onClick={() => setSelectedSubject(subject)}
-              className={cn(
-                "px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all border",
-                selectedSubject === subject 
-                  ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105" 
-                  : "bg-card text-neutral border-border hover:border-primary/50 hover:text-primary"
-              )}
-            >
-              {subject}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content Grid */}
-      {filteredLectures.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredLectures.map((lecture) => (
-            <Link 
-              key={lecture.id} 
-              href={lecture.status === 'ready' ? `/videos/${lecture.id}` : '#'}
-              className={cn(
-                "group flex flex-col bg-card rounded-2xl border border-border shadow-sm hover:shadow-elevated transition-all overflow-hidden",
-                lecture.status !== 'ready' && "opacity-80 cursor-not-allowed"
-              )}
-            >
-              {/* Thumbnail Area */}
-              <div className="aspect-video relative overflow-hidden bg-slate-100">
-                {lecture.thumbnail ? (
-                  <img 
-                    src={lecture.thumbnail} 
-                    alt={lecture.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <GraduationCap size={48} className="text-neutral/20" />
-                  </div>
-                )}
-                
-                {/* Overlay on ready */}
-                {lecture.status === 'ready' && (
-                  <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="bg-white text-primary p-4 rounded-full shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                      <Play size={24} fill="currentColor" />
-                    </div>
-                  </div>
-                )}
-
-                <div className="absolute top-3 left-3">
-                  <StatusBadge status={lecture.status} />
-                </div>
-                
-                <div className="absolute bottom-3 right-3 bg-black/70 text-white text-[10px] font-mono px-2 py-0.5 rounded backdrop-blur-sm">
-                  {lecture.duration}
-                </div>
-
-                {lecture.status === 'processing' && (
-                  <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex flex-col items-center justify-center p-6">
-                    <div className="w-full max-w-[120px] h-1.5 bg-white/20 rounded-full overflow-hidden mb-2">
-                      <div className="h-full bg-primary animate-progress" style={{ width: `${lecture.progress}%` }} />
-                    </div>
-                    <span className="text-[10px] font-bold text-white uppercase tracking-widest">Đang xử lý {lecture.progress}%</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Info Area */}
-              <div className="p-5 flex-1 flex flex-col">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-black tracking-widest uppercase px-2 py-0.5 bg-slate-100 text-slate-500 rounded">
-                    {lecture.subject}
-                  </span>
-                  <span className="text-[10px] font-bold text-neutral">
-                    {lecture.classGroup}
-                  </span>
-                </div>
-                <h3 className="font-bold text-text mb-3 leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                  {lecture.title}
-                </h3>
-                
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
-                      <GraduationCap size={12} className="text-slate-500" />
-                    </div>
-                    <span className="text-xs text-neutral">{lecture.lecturer}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-neutral">
-                    <Clock size={12} />
-                    <span className="text-[10px] font-medium">Hôm qua</span>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-24 bg-card rounded-3xl border border-dashed border-border">
-          <div className="bg-slate-50 p-6 rounded-full mb-6">
-            <Search size={48} className="text-neutral/20" />
-          </div>
-          <h3 className="text-xl font-bold">Không tìm thấy bài giảng nào</h3>
-          <p className="text-neutral mt-2">Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc.</p>
-          <button 
-            onClick={() => {setSearchQuery(''); setSelectedSubject('Tất cả');}}
-            className="mt-6 text-primary font-bold hover:underline"
-          >
-            Xóa tất cả bộ lọc
+          <button className="bg-[#4C40ED] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+            Continue Quiz
           </button>
         </div>
-      )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {stats.map((stat, i) => (
+            <div key={i} className="card-premium p-8 flex items-center gap-6">
+              <div className={`${stat.bg} ${stat.text} w-16 h-16 rounded-xl flex items-center justify-center shrink-0`}>
+                <stat.icon size={32} strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                <h3 className="text-3xl font-extrabold text-slate-900">{stat.value}</h3>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Recently Enrolled Courses */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-extrabold tracking-tight">Recently Enrolled Courses</h2>
+            <button className="text-primary font-bold hover:underline">View All</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {recentEnrolled.map((course) => (
+              <div key={course.id} className="card-premium group cursor-pointer hover:shadow-xl transition-all duration-300">
+                <div className="relative aspect-video bg-slate-100 overflow-hidden">
+                  {/* Note for User: Chèn ảnh thumbnail khóa học vào đây */}
+                  <Image 
+                    src={course.thumbnail} 
+                    alt={course.title} 
+                    fill 
+                    unoptimized={true}
+                    className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-80" 
+                  />
+                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-slate-400 hover:text-rose-500 transition-colors">
+                    <Star size={16} />
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-slate-200" />
+                      <span className="text-[13px] font-bold text-slate-400">{course.instructor}</span>
+                    </div>
+                    <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border rounded">
+                      {course.category}
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                    {course.title}
+                  </h4>
+                  <button className="bg-slate-900 text-white text-[12px] font-bold px-4 py-2 rounded-lg group-hover:bg-primary transition-colors">
+                    View Course
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Bottom Lists */}
+        <div className="grid lg:grid-cols-2 gap-10">
+          {/* Recent Courses */}
+          <section className="card-premium p-8">
+            <h3 className="text-xl font-bold mb-8">Recent Courses</h3>
+            <div className="space-y-6">
+              {[
+                { name: 'Build Responsive Real World Websites..', sub: 'Information About UI/UX Design Degree', prog: 95 },
+                { name: 'Wordpress for Beginners', sub: 'Wordpress for Beginners - Master Wordpress Quickly', prog: 85 },
+                { name: 'Information About UI/UX Design Degree', sub: 'Information About UI/UX Design Degree', prog: 85 },
+                { name: 'Sketch from A to Z (2024)', sub: 'Wordpress for Beginners - Master Wordpress Quickly', prog: 95 },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between gap-4 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+                  <div className="min-w-0">
+                    <p className="font-bold text-[15px] truncate">{item.name}</p>
+                    <p className="text-xs text-slate-400 font-medium truncate mt-0.5">{item.sub}</p>
+                  </div>
+                  <div className="w-10 h-10 shrink-0 border-4 border-emerald-500 border-t-transparent rounded-full flex items-center justify-center text-[10px] font-bold text-emerald-600">
+                    {item.prog}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Latest Quizzes */}
+          <section className="card-premium p-8">
+            <h3 className="text-xl font-bold mb-8">Latest Quizzes</h3>
+            <div className="space-y-6">
+              {[
+                { name: 'Sketch from A to Z (2024)', sub: 'Correct Answer : 15/22 • Date : 15 Jan 2025', prog: 95, color: 'text-emerald-500' },
+                { name: 'Build Responsive Real World', sub: 'Correct Answer : 18/22 • Date : 04 Jan 2025', prog: 98, color: 'text-emerald-500' },
+                { name: 'UI/UX Design Degree', sub: 'Correct Answer : 25/30 • Date : 26 Dec 2024', prog: 98, color: 'text-emerald-500' },
+                { name: 'Build Responsive Real World', sub: 'Correct Answer : 15/20 • Date : 10 Dec 2024', prog: 95, color: 'text-emerald-500' },
+                { name: 'Become an app designer', sub: 'Correct Answer : 12/20 • Date : 27 Nov 2024', prog: 26, color: 'text-rose-500' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between gap-4 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+                  <div className="min-w-0">
+                    <p className="font-bold text-[15px] truncate">{item.name}</p>
+                    <p className="text-xs text-slate-400 font-medium truncate mt-0.5">{item.sub}</p>
+                  </div>
+                  <div className={`w-10 h-10 shrink-0 border-4 border-current rounded-full flex items-center justify-center text-[10px] font-bold ${item.color}`}>
+                    {item.prog}%
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

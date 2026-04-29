@@ -22,7 +22,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  currentRole: 'student',
+  currentRole: 'teacher',
   setRole: (role) => set({ currentRole: role }),
   
   fontSize: 'L', // Default to L to accommodate the deaf students easily

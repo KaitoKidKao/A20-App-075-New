@@ -132,7 +132,7 @@ export default function VideoProcessingPage() {
                     <ArrowRight size={18} />
                   </button>
                   <button 
-                    onClick={() => router.push('/teacher/library')}
+                    onClick={() => router.push('/student/library')}
                     className="px-8 py-4 bg-card border font-bold rounded-2xl hover:bg-slate-50 transition-all"
                   >
                     Về thư viện
