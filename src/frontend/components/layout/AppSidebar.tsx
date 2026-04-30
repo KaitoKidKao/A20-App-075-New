@@ -9,7 +9,6 @@ import {
   BookOpen, 
   Upload,
   Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   Accessibility
@@ -34,7 +33,6 @@ export function AppSidebar() {
 
   const accountItems = [
     { icon: Settings, label: 'Settings', href: '/student/settings' },
-    { icon: LogOut, label: 'Logout', href: '/' },
   ];
 
   return (
