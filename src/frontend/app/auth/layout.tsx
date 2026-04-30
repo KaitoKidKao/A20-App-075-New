@@ -10,7 +10,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-white flex overflow-hidden">
+    <div className="min-h-screen bg-[#FFF9FA] flex overflow-hidden">
       {/* Left Side: Illustration & Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#FFF5F6] flex-col items-center justify-center p-12 relative overflow-hidden">
         {/* Abstract Background Shapes */}
@@ -20,9 +20,6 @@ export default function AuthLayout({
         <div className="relative z-10 w-full max-w-md">
           {/* Logo/Brand */}
           <div className="flex items-center gap-3 mb-16">
-            <div className="w-10 h-10 bg-[#4C40ED] rounded-xl flex items-center justify-center text-white shadow-lg shadow-[#4C40ED]/20">
-              <Sparkles size={24} fill="currentColor" />
-            </div>
             <span className="text-2xl font-black text-slate-900 tracking-tight">DreamsLMS</span>
           </div>
 
@@ -72,7 +69,7 @@ export default function AuthLayout({
       </div>
 
       {/* Right Side: Auth Forms */}
-      <div className="flex-1 flex flex-col justify-center items-center p-8 lg:p-20 relative bg-white">
+      <div className="flex-1 flex flex-col justify-center items-center p-8 lg:p-20 relative bg-[#FFF9FA]">
         {/* Back to Home Link (Top Right) */}
         <div className="absolute top-10 right-10">
            <a href="/" className="text-sm font-bold text-[#FF4F6E] hover:underline">Back to Home</a>

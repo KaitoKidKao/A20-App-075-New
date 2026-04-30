@@ -21,13 +21,10 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#FDFDFC] text-[#1E293B] selection:bg-accent/10 selection:text-accent">
+    <div className="flex flex-col min-h-screen bg-[#FFF9FA] text-[#1E293B] selection:bg-accent/10 selection:text-accent">
       {/* Quiet Header */}
       <header className="px-8 py-8 md:px-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="text-primary">
-            <Accessibility size={24} strokeWidth={2.5} />
-          </div>
           <span className="text-lg font-bold tracking-tight text-primary">UDL Hearing</span>
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-neutral">

@@ -11,9 +11,6 @@ export function Footer() {
           {/* Brand & Description */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="bg-[#00D084] text-white p-2 rounded-lg">
-                <Accessibility size={24} />
-              </div>
               <span className="font-extrabold text-2xl tracking-tight text-slate-900">DreamsLMS</span>
             </div>
             <p className="text-slate-500 leading-relaxed text-[15px]">
