@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Footer } from '@/components/layout/Footer';
 import { 
   Play, 
   MessageSquare, 
@@ -500,9 +499,6 @@ export default function VideoLessonPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      <Footer />
     </div>
   );
 }
