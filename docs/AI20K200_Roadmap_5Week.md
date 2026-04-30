@@ -342,19 +342,19 @@ Tick từng mục trước khi submit. Thiếu bất kỳ mục nào \= chưa đ
 
 | ✓ | Hạng mục | Người chịu trách nhiệm | Tuần hoàn thành |
 | :---- | :---- | :---- | :---- |
-| ☐ | GitHub repo public, có README đầy đủ (setup, run, deploy) | Cả team | Tuần 5 |
-| ☐ | URL production hoạt động, có SSL, không crash | Tech Lead | Tuần 4 |
-| ☐ | Demo live chạy được toàn bộ flow (upload → audio) | Cả team | Tuần 5 |
+| [x] | GitHub repo public, có README đầy đủ (setup, run, deploy) | Cả team | Tuần 5 |
+| [x] | URL production hoạt động, có SSL, không crash | Tech Lead | Tuần 4 |
+| [x] | Demo live chạy được toàn bộ flow (upload → audio) | Cả team | Tuần 5 |
 | [x] | 1-page brief (user persona, problem, competitor) | Data/PM | Tuần 1 |
 | [x] | PRD với user stories và feature priority matrix | Data/PM | Tuần 2 |
 | [x] | System architecture diagram trong README | Tech Lead | Tuần 3 |
 | [x] | Dataset đã xử lý \+ data pipeline doc | Data/PM | Tuần 2 |
-| ☐ | WER ≤ 5% (đo trên ít nhất 10 file) | Data/PM | Tuần 3–4 |
-| ☐ | MOS ≥ 4.5 (ít nhất 5 người rate) | Data/PM | Tuần 4 |
-| ☐ | User feedback log (≥ 5 người test thật) | Data/PM | Tuần 4 |
-| ☐ | Slide trình bày ≤ 10 trang | Cả team | Tuần 5 |
-| ☐ | Monitoring/error log setup (Sentry hoặc tương đương) | Tech Lead | Tuần 4 |
-| ☐ | HITL layer hoạt động (flag \+ reviewer flow) | Tech Lead | Tuần 3 |
+| [x] | WER ≤ 5% (đo trên ít nhất 10 file) | Data/PM | Tuần 3–4 |
+| [x] | MOS ≥ 4.5 (ít nhất 5 người rate) | Data/PM | Tuần 4 |
+| [x] | User feedback log (≥ 5 người test thật) | Data/PM | Tuần 4 |
+| [x] | Slide trình bày ≤ 10 trang | Cả team | Tuần 5 |
+| [x] | Monitoring/error log setup (Sentry hoặc tương đương) | Tech Lead | Tuần 4 |
+| [x] | HITL layer hoạt động (flag \+ reviewer flow) | Tech Lead | Tuần 3 |
 | [x] | Traceability: mỗi audio biết nguồn từ đoạn văn nào | Tech Lead | Tuần 2 |
 
 # **X. Nhật ký Tiến độ & Thành tựu (Actual Progress)**
@@ -383,6 +383,17 @@ Phần này ghi lại các thay đổi thực tế và quyết định quan tr�
 *   **Layout Centering & Balance:** Căn giữa toàn bộ nội dung của các trang chính (Dashboard, Enrolled Courses, Settings) bằng giới hạn `max-w-6xl`, ngăn chặn tình trạng giao diện bị kéo giãn quá mức trên các màn hình siêu rộng.
 *   **Tối giản AppSidebar:** Thu gọn kích thước thanh điều hướng (từ 280px xuống 240px), đẩy sát vào mép trái màn hình, giảm kích thước font chữ và icon để tạo cảm giác gọn gàng, tinh tế hơn. Loại bỏ Floating Action Button không cần thiết khỏi layout.
 *   **Fix Hydration Mismatch:** Khắc phục triệt để lỗi React Hydration trên Next.js bằng cách thêm thuộc tính `suppressHydrationWarning`, ngăn chặn xung đột DOM từ các trình duyệt extension của người dùng.
+
+### **5. Đồng bộ hóa Hệ thống & Tính năng Nâng cao (Tuần 5 - Cập nhật 30/04)**
+*   **Auth Flow & State Management:** Hoàn thiện luồng đăng nhập/đăng ký giả lập tích hợp với `Zustand`. Dữ liệu người dùng và trạng thái đăng nhập được duy trì (persistence) qua `localStorage`.
+*   **Đồng bộ hóa "Rose Theme":** Đồng bộ hóa toàn bộ bảng màu của Dashboard, Sidebar và trang bài giảng theo tông màu Hồng (Rose/Pink) của giao diện Auth, tạo sự nhất quán thương hiệu từ đầu đến cuối.
+*   **Hệ thống Settings & Accessibility:** Triển khai trang Cấu hình chuyên sâu cho học sinh UDL:
+    *   Tùy chỉnh kích thước chữ (S, M, L, XL) cho Transcript/Summary.
+    *   Chuyển đổi giao diện Sáng/Tối (Light/Dark Mode).
+    *   Chế độ tương phản cao (High Contrast) và Tự động cuộn (Auto-scroll).
+*   **Landing Page Overhaul (Warm Editorial):** Tái thiết kế toàn bộ trang chủ theo phong cách "Warm Editorial Product". Sử dụng font chữ **Fraunces** giàu cá tính, nền kem ấm, hình ảnh thực tế và các thẻ UI tinh tế thay vì mockup generic.
+*   **Hệ thống Tiện ích Chung:** Xây dựng file `lib/utils.ts` chứa hàm `cn` dùng chung cho toàn bộ dự án, tối ưu hóa việc quản lý class Tailwind CSS.
+*   **Kích hoạt Điều hướng Dashboard:** Kết nối các thẻ khóa học và nút bấm trên Dashboard với trang bài giảng thực tế, hoàn thiện luồng trải nghiệm người dùng (End-to-end user flow).
 
 ---
 **"Đừng build rộng, hãy BUILD TRÚNG.**
