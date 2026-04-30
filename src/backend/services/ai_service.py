@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 class AIService:
     TRANSCRIPT_DIR = Path("data/uploads/transcripts")
+    AI_RESULTS_DIR = Path("data/uploads/ai_results")
+
     # Sử dụng bản 'base' hoặc 'small' để tối ưu cho CPU
     MODEL_SIZE = "small"
     
@@ -105,3 +107,109 @@ class AIService:
         except Exception as e:
             logger.error(f"❌ Lỗi khi gọi LLM: {e}")
             return [f"Lỗi tóm tắt: {str(e)}"]
+
+    @classmethod
+    async def process_all_lecture_metadata(cls, transcript_data: dict) -> dict:
+        """
+        Batching: Trích xuất Timeline, Highlights và Questions trong 1 lần gọi LLM.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return {"error": "API Key not configured"}
+
+        client = OpenAI(api_key=api_key)
+        
+        # Chuẩn bị transcript có kèm timestamp để AI dễ phân tích
+        formatted_transcript = ""
+        for s in transcript_data["segments"]:
+            minutes = int(s["start"] // 60)
+            seconds = int(s["start"] % 60)
+            formatted_transcript += f"[{minutes:02d}:{seconds:02d}] {s['text']}\n"
+
+        # Giới hạn độ dài để tránh vượt quá context window
+        truncated_text = formatted_transcript[:8000]
+
+        prompt = f"""
+        Bạn là một chuyên gia phân tích bài giảng. Dựa trên nội dung bài giảng dưới đây (có kèm mốc thời gian), hãy trích xuất các thông tin sau theo định dạng JSON:
+        1. "timeline": Danh sách các chủ đề chính. Mỗi chủ đề có "time" (MM:SS) và "title" (tên chủ đề). Hãy chia nhỏ một cách thông minh (Smart Hybrid), dựa trên sự chuyển ý của giảng viên và cố gắng giữ mỗi đoạn khoảng 5-10 phút.
+        2. "highlights": Danh sách các khoảnh khắc quan trọng (liên quan đến thi cử, khái niệm cốt lõi, lời dặn của giảng viên). Mỗi mục có "time" (MM:SS), "reason" (tại sao quan trọng) và "context" (đoạn trích ngắn).
+        3. "questions": Danh sách các câu hỏi xuất hiện trong bài giảng (từ giảng viên hoặc sinh viên). Hãy viết lại câu hỏi (rephrase) cho rõ ràng hơn. Mỗi mục có "time" (MM:SS), "original" (câu gốc) và "rephrased" (câu đã sửa).
+
+        Định dạng trả về DUY NHẤT là một đối tượng JSON với 3 khóa: "timeline", "highlights", "questions". Không giải thích gì thêm.
+        
+        Nội dung:
+        {truncated_text}
+        """
+
+        try:
+            logger.info(f"🧠 [Batching] Đang trích xuất Timeline, Highlights & Questions cho {transcript_data['video_id']}...")
+            response = client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            
+            # Caching kết quả
+            video_id = transcript_data["video_id"]
+            result_dir = cls.AI_RESULTS_DIR / video_id
+            result_dir.mkdir(parents=True, exist_ok=True)
+            
+            with open(result_dir / "metadata.json", "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
+                
+            return result
+        except Exception as e:
+            logger.error(f"❌ Lỗi khi trích xuất metadata: {e}")
+            return {"error": str(e)}
+
+    @classmethod
+    async def generate_pre_lecture_briefing(cls, transcript_data: dict) -> dict:
+        """
+        Tạo bản tóm tắt định hướng trước bài giảng.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return {"error": "API Key not configured"}
+
+        client = OpenAI(api_key=api_key)
+        full_text = " ".join([s["text"] for s in transcript_data["segments"]])
+        truncated_text = full_text[:4000]
+
+        prompt = f"""
+        Bạn là một trợ lý giáo dục. Dựa trên nội dung bài giảng dưới đây, hãy tạo một bản tóm tắt định hướng (Pre-lecture Briefing) cho sinh viên trước khi xem video.
+        Bản tóm tắt bao gồm:
+        1. "objective": Mục tiêu chính của bài học này là gì?
+        2. "key_terms": Danh sách 3-5 thuật ngữ then chốt sẽ xuất hiện.
+        3. "summary": Một đoạn tóm tắt ngắn (3-4 câu) về những gì sinh viên sẽ học được.
+
+        Định dạng trả về DUY NHẤT là JSON với các khóa: "objective", "key_terms", "summary". Không giải thích gì thêm.
+
+        Nội dung:
+        {truncated_text}
+        """
+
+        try:
+            logger.info(f"🧠 Đang tạo Pre-lecture Briefing cho {transcript_data['video_id']}...")
+            response = client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            
+            # Caching
+            video_id = transcript_data["video_id"]
+            result_dir = cls.AI_RESULTS_DIR / video_id
+            result_dir.mkdir(parents=True, exist_ok=True)
+            
+            with open(result_dir / "briefing.json", "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
+                
+            return result
+        except Exception as e:
+            logger.error(f"❌ Lỗi khi tạo briefing: {e}")
+            return {"error": str(e)}
+
