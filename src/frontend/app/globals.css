@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=Instrument+Sans:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Warm Editorial Design Tokens */
+  --font-heading: "Fraunces", serif;
+  --font-sans: "Instrument Sans", sans-serif;
+  
+  --color-primary: #D97070; /* Muted Rose/Coral */
+  --color-primary-hover: #C25B5B;
+  --color-accent: #3D5A5A; /* Deep Soft Teal */
+  --color-success: #6D8B74;
+  
+  --color-bg-main: #FDFCF7; /* Warm Cream/Off-white */
+  --color-text-main: #2D2D2D; /* Soft Charcoal */
+  --color-text-muted: #6B6B6B;
+  
+  --shadow-subtle: 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-premium: 0 15px 30px -10px rgb(0 0 0 / 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-bg-main text-text-main font-sans antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-2.5 rounded-xl font-semibold transition-all hover:bg-primary-hover active:scale-95 shadow-premium;
+  }
+  
+  .card-premium {
+    @apply bg-white rounded-2xl border border-slate-200 shadow-premium overflow-hidden;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-text-muted hover:bg-slate-50 hover:text-primary;
+  }
+
+  .sidebar-item.active {
+    @apply bg-slate-100 text-accent font-bold;
+  }
+
+  .section-title {
+    @apply text-xl font-bold tracking-tight mb-6;
+  }
+}
+
+/* Custom Profile Header Pattern */
+.profile-header-pattern {
+  background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-header-pattern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  /* Note for User: Chèn ảnh pattern geometric của DreamsLMS vào đây nếu có file thực tế */
+  background-image: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 30%);
+  opacity: 0.8;
+}

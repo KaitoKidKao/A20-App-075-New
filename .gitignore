@@ -17,3 +17,8 @@ build/
 
 # AI logs — tracked structure, ignored content
 .ai-log/*.jsonl
+temp/
+data/
+
+# AI Log (local only)
+.ai-log/session.jsonl
