@@ -23,13 +23,8 @@ import {
   Target,
   List
 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 const API_BASE = 'http://localhost:8000';
 
