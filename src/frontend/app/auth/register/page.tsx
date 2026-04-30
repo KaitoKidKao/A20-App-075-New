@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { User, Mail, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -75,14 +75,10 @@ export default function RegisterPage() {
           </svg>
         </button>
 
-        <div className="grid grid-cols-2 gap-4 pt-4">
-          <button type="button" className="flex items-center justify-center gap-3 py-3.5 bg-white border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
+        <div className="pt-4">
+          <button type="button" className="w-full flex items-center justify-center gap-3 py-3.5 bg-white border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 opacity-80" />
-             Google
-          </button>
-          <button type="button" className="flex items-center justify-center gap-3 py-3.5 bg-[#1B125C] rounded-2xl font-bold text-white hover:bg-[#150d4d] transition-all shadow-sm">
-             <ShieldCheck size={18} />
-             Facebook
+             Sign up with Google
           </button>
         </div>
       </form>
