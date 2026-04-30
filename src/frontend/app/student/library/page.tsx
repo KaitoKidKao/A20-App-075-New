@@ -12,6 +12,7 @@ import {
   Star
 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function StudentDashboard() {
   const stats = [
@@ -54,9 +55,9 @@ export default function StudentDashboard() {
             <h3 className="font-bold text-slate-900">Quiz : Build Responsive Real World</h3>
             <p className="text-sm text-slate-400 font-semibold mt-1 uppercase tracking-wider">Answered : 15/22</p>
           </div>
-          <button className="bg-primary text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+          <Link href="/student/videos/1" className="bg-primary text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
             Continue Quiz
-          </button>
+          </Link>
         </div>
 
         {/* Stats Grid */}
@@ -82,7 +83,7 @@ export default function StudentDashboard() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {recentEnrolled.map((course) => (
-              <div key={course.id} className="card-premium group cursor-pointer hover:shadow-xl transition-all duration-300">
+              <Link key={course.id} href={`/student/videos/${course.id}`} className="card-premium group cursor-pointer hover:shadow-xl transition-all duration-300 block">
                 <div className="relative aspect-video bg-slate-100 overflow-hidden">
                   {/* Note for User: Chèn ảnh thumbnail khóa học vào đây */}
                   <Image 
@@ -113,7 +114,7 @@ export default function StudentDashboard() {
                     View Course
                   </button>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </section>
