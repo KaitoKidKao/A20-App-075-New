@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  /* DreamsLMS Design Tokens */
-  --color-primary: #4C40ED;
-  --color-primary-hover: #3B31D1;
-  --color-accent: #FF5A1F;
-  --color-success: #22C55E;
+  /* DreamsLMS Design Tokens - Rose Theme */
+  --color-primary: #FF4F6E;
+  --color-primary-hover: #E64663;
+  --color-accent: #FF4F6E;
+  --color-success: #00D084;
   
-  --color-bg-main: #F5F7FA;
+  --color-bg-main: #FFF9FA;
   --color-text-main: #1E293B;
   --color-text-muted: #64748B;
   

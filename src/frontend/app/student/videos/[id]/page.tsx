@@ -185,15 +185,15 @@ export default function VideoLessonPage() {
             
             {/* Pre-lecture Briefing Alert */}
             {briefing && (
-              <div className="bg-[#4C40ED]/5 border border-[#4C40ED]/20 rounded-2xl p-6 animate-in slide-in-from-top duration-500">
+              <div className="bg-[#FF4F6E]/5 border border-[#FF4F6E]/20 rounded-2xl p-6 animate-in slide-in-from-top duration-500">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2 text-[#4C40ED]">
+                  <div className="flex items-center gap-2 text-[#FF4F6E]">
                     <Zap size={20} fill="currentColor" />
                     <span className="font-black uppercase tracking-wider text-sm">Smart Briefing</span>
                   </div>
                   <button 
                     onClick={() => setShowBriefing(!showBriefing)}
-                    className="text-xs font-bold text-[#4C40ED] hover:underline"
+                    className="text-xs font-bold text-[#FF4F6E] hover:underline"
                   >
                     {showBriefing ? 'Thu gọn' : 'Xem chi tiết định hướng'}
                   </button>
@@ -204,12 +204,12 @@ export default function VideoLessonPage() {
                 </h3>
                 
                 {showBriefing && (
-                  <div className="space-y-4 pt-2 border-t border-[#4C40ED]/10 mt-4 animate-in fade-in duration-300">
+                  <div className="space-y-4 pt-2 border-t border-[#FF4F6E]/10 mt-4 animate-in fade-in duration-300">
                     <div>
                       <span className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">Từ khóa quan trọng</span>
                       <div className="flex flex-wrap gap-2">
                         {briefing.key_terms.map((term, i) => (
-                          <span key={i} className="px-3 py-1 bg-white border border-[#4C40ED]/20 rounded-lg text-xs font-bold text-[#4C40ED]">
+                          <span key={i} className="px-3 py-1 bg-white border border-[#FF4F6E]/20 rounded-lg text-xs font-bold text-[#FF4F6E]">
                             {term}
                           </span>
                         ))}
@@ -267,7 +267,7 @@ export default function VideoLessonPage() {
             <div className="bg-[#F8FAFC] border border-slate-200 rounded-3xl p-8">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                   <div className="w-8 h-8 bg-[#4C40ED] rounded-lg flex items-center justify-center text-white">
+                   <div className="w-8 h-8 bg-[#FF4F6E] rounded-lg flex items-center justify-center text-white">
                       <Sparkles size={18} fill="currentColor" />
                    </div>
                    <span className="font-extrabold text-xl text-slate-800 tracking-tight">AI Study Coach</span>
@@ -323,7 +323,7 @@ export default function VideoLessonPage() {
                 <button 
                   onClick={handleGetSummary}
                   disabled={isLoadingSummary}
-                  className="bg-[#4C40ED] px-6 py-3 rounded-2xl text-sm font-bold text-white hover:bg-[#3b30c9] transition-all flex items-center gap-2 shadow-lg shadow-[#4C40ED]/20 disabled:opacity-50"
+                  className="bg-[#FF4F6E] px-6 py-3 rounded-2xl text-sm font-bold text-white hover:bg-[#3b30c9] transition-all flex items-center gap-2 shadow-lg shadow-[#FF4F6E]/20 disabled:opacity-50"
                 >
                   {isLoadingSummary ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                   {isLoadingSummary ? 'Đang tóm tắt...' : 'Tóm tắt bài giảng ngay'}
@@ -337,12 +337,12 @@ export default function VideoLessonPage() {
               {summaryPoints.length > 0 && (
                 <div className="mt-8 p-6 bg-white border border-slate-200 rounded-2xl animate-in zoom-in-95 duration-500">
                   <h4 className="font-extrabold text-slate-900 mb-4 flex items-center gap-2">
-                    <Sparkles size={18} className="text-[#4C40ED]" /> AI Summary
+                    <Sparkles size={18} className="text-[#FF4F6E]" /> AI Summary
                   </h4>
                   <ul className="space-y-3">
                     {summaryPoints.map((point, i) => (
                       <li key={i} className="text-[15px] text-slate-700 font-medium leading-relaxed flex gap-3">
-                        <div className="mt-1.5 w-1.5 h-1.5 bg-[#4C40ED] rounded-full shrink-0" />
+                        <div className="mt-1.5 w-1.5 h-1.5 bg-[#FF4F6E] rounded-full shrink-0" />
                         {point}
                       </li>
                     ))}
@@ -365,7 +365,7 @@ export default function VideoLessonPage() {
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
                       "pb-4 text-[15px] font-extrabold transition-all relative flex items-center gap-2 whitespace-nowrap",
-                      activeTab === tab.id ? "text-[#4C40ED] border-b-2 border-[#4C40ED]" : "text-slate-400 hover:text-slate-600"
+                      activeTab === tab.id ? "text-[#FF4F6E] border-b-2 border-[#FF4F6E]" : "text-slate-400 hover:text-slate-600"
                     )}
                   >
                     <tab.icon size={18} />
@@ -395,12 +395,12 @@ export default function VideoLessonPage() {
                   <div className="space-y-6">
                     {timeline.length > 0 ? timeline.map((item, i) => (
                       <div key={i} className="flex gap-6 p-4 rounded-2xl hover:bg-slate-50 transition-all cursor-pointer group border border-transparent hover:border-slate-100">
-                        <div className="text-sm font-black text-[#4C40ED] bg-[#4C40ED]/5 w-16 h-10 flex items-center justify-center rounded-xl shrink-0 group-hover:bg-[#4C40ED] group-hover:text-white transition-colors">
+                        <div className="text-sm font-black text-[#FF4F6E] bg-[#FF4F6E]/5 w-16 h-10 flex items-center justify-center rounded-xl shrink-0 group-hover:bg-[#FF4F6E] group-hover:text-white transition-colors">
                           {item.time}
                         </div>
                         <div className="pt-1.5">
-                          <h4 className="font-extrabold text-slate-900 group-hover:text-[#4C40ED] transition-colors mb-1">{item.title}</h4>
-                          <div className="w-full h-1 bg-slate-100 rounded-full mt-3 group-hover:bg-[#4C40ED]/10 transition-colors" />
+                          <h4 className="font-extrabold text-slate-900 group-hover:text-[#FF4F6E] transition-colors mb-1">{item.title}</h4>
+                          <div className="w-full h-1 bg-slate-100 rounded-full mt-3 group-hover:bg-[#FF4F6E]/10 transition-colors" />
                         </div>
                       </div>
                     )) : (
@@ -475,7 +475,7 @@ export default function VideoLessonPage() {
 
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <span className="text-xs font-black text-slate-400 flex items-center gap-2">
-                  NGÔN NGỮ: <span className="text-[#4C40ED]">{language?.toUpperCase() || 'LOADING...'}</span>
+                  NGÔN NGỮ: <span className="text-[#FF4F6E]">{language?.toUpperCase() || 'LOADING...'}</span>
                 </span>
                 <ChevronDown size={14} className="text-slate-400" />
               </div>
@@ -484,7 +484,7 @@ export default function VideoLessonPage() {
                 {segments.length > 0 ? (
                   segments.map((item, i) => (
                     <div key={i} className="flex gap-4 group cursor-pointer hover:bg-slate-50 p-4 -mx-4 rounded-2xl transition-all">
-                      <span className="text-[10px] font-black text-[#4C40ED] bg-[#4C40ED]/5 w-12 h-6 flex items-center justify-center rounded-lg mt-1 shrink-0">{formatTime(item.start)}</span>
+                      <span className="text-[10px] font-black text-[#FF4F6E] bg-[#FF4F6E]/5 w-12 h-6 flex items-center justify-center rounded-lg mt-1 shrink-0">{formatTime(item.start)}</span>
                       <p className="text-[14px] font-bold text-slate-600 leading-relaxed group-hover:text-slate-900">
                         {item.text}
                       </p>

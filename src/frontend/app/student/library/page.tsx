@@ -15,8 +15,8 @@ import Image from 'next/image';
 
 export default function StudentDashboard() {
   const stats = [
-    { label: 'Enrolled Courses', value: '12', icon: Library, bg: 'bg-indigo-50', text: 'text-indigo-600' },
-    { label: 'Active Courses', value: '03', icon: BookOpen, bg: 'bg-rose-50', text: 'text-rose-600' },
+    { label: 'Enrolled Courses', value: '12', icon: Library, bg: 'bg-primary/10', text: 'text-primary' },
+    { label: 'Active Courses', value: '03', icon: BookOpen, bg: 'bg-primary/10', text: 'text-primary' },
     { label: 'Completed Courses', value: '10', icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-600' },
   ];
 
@@ -45,16 +45,16 @@ export default function StudentDashboard() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-bg-main">
       <div className="px-8 md:px-12 py-8 max-w-6xl mx-auto">
 
         {/* Quiz Notification */}
-        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-10 shadow-sm">
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-10 shadow-sm">
           <div>
             <h3 className="font-bold text-slate-900">Quiz : Build Responsive Real World</h3>
             <p className="text-sm text-slate-400 font-semibold mt-1 uppercase tracking-wider">Answered : 15/22</p>
           </div>
-          <button className="bg-[#4C40ED] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
+          <button className="bg-primary text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95">
             Continue Quiz
           </button>
         </div>

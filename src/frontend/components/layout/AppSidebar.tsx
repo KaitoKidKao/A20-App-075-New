@@ -59,11 +59,11 @@ export function AppSidebar() {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group",
                     isActive 
-                      ? "bg-[#FF5A1F]/5 text-[#FF5A1F] font-semibold" 
+                      ? "bg-primary/5 text-primary font-semibold" 
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-medium"
                   )}
                 >
-                  <item.icon size={16} className={cn("shrink-0", isActive ? "text-[#FF5A1F]" : "text-slate-700 group-hover:text-slate-900")} />
+                  <item.icon size={16} className={cn("shrink-0", isActive ? "text-primary" : "text-slate-700 group-hover:text-slate-900")} />
                   {!collapsed && <span className="text-[13px]">{item.label}</span>}
                 </Link>
               );
