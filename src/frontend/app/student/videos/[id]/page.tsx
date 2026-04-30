@@ -499,6 +499,8 @@ export default function VideoLessonPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
     </div>
   );
 }
