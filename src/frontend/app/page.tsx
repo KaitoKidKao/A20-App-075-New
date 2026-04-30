@@ -14,11 +14,10 @@ import {
 
 export default function LandingPage() {
   const router = useRouter();
-  const { setRole } = useAppStore();
+  const { } = useAppStore();
 
   const handleStart = () => {
-    setRole('teacher'); 
-    router.push('/student/library');
+    router.push('/auth/login');
   };
 
   return (

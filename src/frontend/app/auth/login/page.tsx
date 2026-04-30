@@ -2,11 +2,40 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Mail, Lock, Eye, EyeOff, Github } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Mail, Lock, Eye, EyeOff, Github, Loader2 } from 'lucide-react';
+import { useAppStore } from '@/store/useAppStore';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const login = useAppStore((state) => state.login);
+  
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<'student' | 'admin'>('student');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [email, setEmail] = useState('');
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simulate API Delay
+    setTimeout(() => {
+      login({
+        name: role === 'admin' ? 'System Administrator' : 'Ronald Richard',
+        email: email || 'user@example.com',
+        role: role
+      });
+      
+      setIsSubmitting(false);
+      
+      if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/student/library');
+      }
+    }, 1500);
+  };
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -18,12 +47,14 @@ export default function LoginPage() {
       {/* Role Switcher */}
       <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
         <button 
+          type="button"
           onClick={() => setRole('student')}
           className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${role === 'student' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
         >
           Student
         </button>
         <button 
+          type="button"
           onClick={() => setRole('admin')}
           className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${role === 'admin' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
         >
@@ -31,13 +62,16 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <form className="space-y-6">
+      <form onSubmit={handleLogin} className="space-y-6">
         <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-widest text-slate-400">Email Address *</label>
           <div className="relative group">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF4F6E] transition-colors" size={20} />
             <input 
+              required
               type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all font-medium text-slate-700"
             />
@@ -52,6 +86,7 @@ export default function LoginPage() {
           <div className="relative group">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF4F6E] transition-colors" size={20} />
             <input 
+              required
               type={showPassword ? 'text' : 'password'} 
               placeholder="Enter your password"
               className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all font-medium text-slate-700"
@@ -71,12 +106,17 @@ export default function LoginPage() {
           <label htmlFor="remember" className="text-sm font-bold text-slate-500 cursor-pointer">Remember me</label>
         </div>
 
-        <button className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-          Login 
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14" />
-            <path d="m12 5 7 7-7 7" />
-          </svg>
+        <button 
+          disabled={isSubmitting}
+          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Login'}
+          {!isSubmitting && (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          )}
         </button>
 
         <div className="relative py-4">
