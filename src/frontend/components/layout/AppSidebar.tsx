@@ -26,13 +26,13 @@ export function AppSidebar() {
 
   const menuItems = [
     { icon: Grid, label: 'Dashboard', href: '/student/library' },
-    { icon: User, label: 'My Profile', href: '/student/settings' },
+    { icon: User, label: 'My Profile', href: '/student/settings?tab=profile' },
     { icon: BookOpen, label: 'Enrolled Courses', href: '/student/documents' },
     { icon: Upload, label: 'Upload Video', href: '/student/upload' },
   ];
 
   const accountItems = [
-    { icon: Settings, label: 'Settings', href: '/student/settings' },
+    { icon: Settings, label: 'Settings', href: '/student/settings?tab=accessibility' },
   ];
 
   return (
