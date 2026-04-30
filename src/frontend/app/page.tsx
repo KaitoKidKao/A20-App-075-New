@@ -7,7 +7,8 @@ import {
   Clock, 
   Zap, 
   ArrowRight,
-  Play
+  Play,
+  Heart
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -19,132 +20,146 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-bg-main text-text-main font-sans selection:bg-primary/10">
+    <div className="flex flex-col min-h-screen bg-bg-main text-text-main font-sans selection:bg-primary/20">
       {/* Editorial Header */}
-      <header className="px-8 py-10 md:px-20 flex items-center justify-between max-w-[1440px] mx-auto w-full">
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-black tracking-tighter text-text-main font-heading uppercase">UDL Hearing</span>
+      <header className="px-8 py-12 md:px-20 flex items-center justify-between max-w-[1440px] mx-auto w-full">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+             <Heart size={18} fill="currentColor" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-text-main font-heading">UDL Hearing</span>
         </div>
-        <nav className="hidden md:flex items-center gap-10 text-[13px] font-bold uppercase tracking-widest text-text-muted">
-          <a href="#" className="hover:text-primary transition-colors">Phương pháp</a>
-          <a href="#" className="hover:text-primary transition-colors">Tính năng</a>
-          <a href="#" className="hover:text-primary transition-colors">Về chúng tôi</a>
+        <nav className="hidden md:flex items-center gap-12 text-[14px] font-medium text-text-muted">
+          <a href="#" className="hover:text-text-main transition-colors">Phương pháp</a>
+          <a href="#" className="hover:text-text-main transition-colors">Tính năng</a>
+          <a href="#" className="hover:text-text-main transition-colors">Về chúng tôi</a>
         </nav>
       </header>
 
-      <main className="flex-1 flex flex-col items-center">
-        {/* Hero Section - 55/45 Split */}
-        <section className="w-full max-w-[1440px] mx-auto px-8 md:px-20 py-12 md:py-20 flex flex-col lg:flex-row items-center gap-16">
+      <main className="flex-1">
+        {/* Hero Section - Warm Editorial Split */}
+        <section className="w-full max-w-[1440px] mx-auto px-8 md:px-20 py-16 md:py-24 flex flex-col lg:flex-row items-center gap-20">
           
-          {/* Left Content (55%) */}
-          <div className="lg:w-[55%] space-y-10 text-center lg:text-left">
-            <div className="space-y-6">
-              <h1 className="text-5xl md:text-7xl font-black text-text-main leading-[1.1] tracking-tight font-heading">
-                Môi trường học tập <br />
-                <span className="text-primary italic">tĩnh lặng</span> cho học sinh.
+          {/* Left Content (60%) */}
+          <div className="lg:w-[60%] space-y-12">
+            <div className="space-y-8">
+              <h1 className="text-5xl md:text-[80px] font-black text-text-main leading-[1.05] tracking-tight font-heading">
+                Không gian học tập <br />
+                <span className="text-primary italic">nhân văn</span> cho bạn.
               </h1>
-              <p className="text-lg md:text-xl text-text-muted font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
-                Hệ thống AI hỗ trợ ghi chép, tóm tắt và hiển thị phụ đề trực quan, giúp bạn tập trung hoàn toàn vào nội dung bài học mà không lo bỏ lỡ lời giảng.
+              <p className="text-lg md:text-2xl text-text-muted font-medium leading-relaxed max-w-2xl">
+                Chúng tôi thấu hiểu khó khăn của bạn. Bằng sự kết hợp giữa công nghệ AI và thiết kế bao trùm, UDL Hearing mang đến trải nghiệm học tập yên tĩnh, tập trung và trọn vẹn nhất.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-6 pt-2 justify-center lg:justify-start">
+            <div className="flex flex-col sm:flex-row items-center gap-8 pt-4">
               <button 
                 onClick={handleStart}
-                className="px-10 py-5 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/10 hover:bg-primary-hover transition-all active:scale-[0.98] flex items-center gap-3 text-lg"
+                className="px-12 py-6 bg-primary text-white font-semibold rounded-2xl shadow-xl shadow-primary/10 hover:bg-primary-hover transition-all active:scale-[0.98] text-lg"
               >
-                Bắt đầu học tập
+                Bắt đầu hành trình
               </button>
-              <button className="px-6 py-5 text-text-main font-bold flex items-center gap-2 hover:translate-x-1 transition-all group">
-                Xem cách hoạt động 
-                <div className="w-8 h-px bg-text-main group-hover:w-12 transition-all" />
+              <button className="px-2 py-4 text-text-main font-bold flex items-center gap-3 hover:gap-5 transition-all group border-b-2 border-transparent hover:border-primary/20">
+                Tìm hiểu thêm 
+                <ArrowRight size={20} className="text-primary" />
               </button>
             </div>
 
-            <div className="flex items-center gap-4 text-xs font-black uppercase tracking-widest text-text-muted/60 justify-center lg:justify-start pt-4">
-              <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-success" /> 200+ Sinh viên đang học</span>
-              <div className="w-px h-4 bg-slate-200" />
-              <span>Hỗ trợ AI thời gian thực</span>
+            <div className="flex items-center gap-6 text-[13px] font-bold uppercase tracking-widest text-text-muted/50 pt-8">
+               <div className="flex -space-x-3">
+                  {[1,2,3].map(i => (
+                    <div key={i} className="w-10 h-10 rounded-full border-4 border-bg-main bg-slate-200 overflow-hidden">
+                       <Image src={`https://i.pravatar.cc/100?img=${i+10}`} alt="User" width={40} height={40} />
+                    </div>
+                  ))}
+               </div>
+               <span>Đã có +500 sinh viên tin dùng</span>
             </div>
           </div>
 
-          {/* Right Content (45%) - Realistic Image + Overlay Card */}
-          <div className="lg:w-[45%] relative group">
+          {/* Right Content (40%) - Warm Photo + Subtle UI */}
+          <div className="lg:w-[40%] relative">
              {/* Realistic Hero Image */}
-             <div className="relative rounded-[32px] overflow-hidden shadow-2xl shadow-slate-200/50 aspect-[4/5] lg:aspect-auto lg:h-[600px] w-full border-8 border-white">
+             <div className="relative rounded-[40px] overflow-hidden shadow-premium aspect-[4/5] w-full border-[12px] border-white bg-white">
                 <Image 
                   src="/student_learning_quiet_classroom_1777566655650.png" 
-                  alt="Student learning focused" 
+                  alt="Inclusive learning environment" 
                   fill
-                  className="object-cover transition-transform duration-1000 group-hover:scale-105"
+                  className="object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-primary/5 mix-blend-multiply" />
              </div>
 
-             {/* Functional UI Overlay Card */}
-             <div className="absolute -bottom-6 -left-12 md:-left-20 bg-white/95 backdrop-blur-md p-6 rounded-[24px] shadow-2xl border border-white/50 max-w-[280px] animate-in slide-in-from-bottom-8 duration-1000">
+             {/* Minimalist UI Card 1 */}
+             <div className="absolute -bottom-8 -left-16 bg-white p-6 rounded-[32px] shadow-premium border border-slate-50 max-w-[260px] animate-in slide-in-from-bottom-12 duration-1000">
+                <div className="flex items-center gap-4 mb-5">
+                   <div className="w-12 h-12 bg-bg-main text-primary rounded-2xl flex items-center justify-center">
+                      <Zap size={24} fill="currentColor" />
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Real-time</p>
+                      <p className="text-sm font-bold text-text-main">Phụ đề nhịp nhàng</p>
+                   </div>
+                </div>
+                <div className="space-y-2">
+                   <div className="h-1.5 w-full bg-slate-100 rounded-full" />
+                   <div className="h-1.5 w-2/3 bg-primary/30 rounded-full" />
+                </div>
+             </div>
+
+             {/* Minimalist UI Card 2 */}
+             <div className="absolute top-16 -right-12 bg-white p-5 rounded-[28px] shadow-premium border border-slate-50 max-w-[180px] animate-in fade-in zoom-in duration-1000 delay-500">
                 <div className="flex items-center gap-3 mb-4">
-                   <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-                      <Zap size={20} fill="currentColor" />
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">AI Transcript</p>
-                      <p className="text-sm font-bold text-text-main">Phụ đề theo nhịp giảng</p>
-                   </div>
+                   <Sparkles size={18} className="text-primary" />
+                   <span className="text-[11px] font-bold uppercase tracking-widest">Tóm lược AI</span>
                 </div>
-                <div className="space-y-2">
-                   <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full w-2/3 bg-primary" />
-                   </div>
-                   <p className="text-xs text-text-muted font-medium leading-relaxed italic">
-                      "...thuật toán đang phân tích dữ liệu từ bài giảng để tạo tóm tắt..."
-                   </p>
-                </div>
-             </div>
-
-             {/* Floating Summary Card */}
-             <div className="absolute top-12 -right-8 bg-accent text-white p-5 rounded-[24px] shadow-2xl max-w-[200px] animate-in fade-in zoom-in duration-1000 delay-300">
-                <div className="flex items-center gap-2 mb-3">
-                   <Sparkles size={16} fill="currentColor" />
-                   <span className="text-[10px] font-black uppercase tracking-widest">Tóm tắt bài học</span>
-                </div>
-                <div className="space-y-2">
-                   <div className="h-1.5 w-full bg-white/20 rounded-full" />
-                   <div className="h-1.5 w-4/5 bg-white/20 rounded-full" />
-                   <div className="h-1.5 w-3/4 bg-white/20 rounded-full" />
+                <div className="space-y-3">
+                   <div className="h-2 w-full bg-slate-50 rounded-full" />
+                   <div className="h-2 w-full bg-slate-50 rounded-full" />
                 </div>
              </div>
           </div>
         </section>
 
-        {/* Secondary Section - Documentary Style Images */}
-        <section className="w-full max-w-[1440px] mx-auto px-8 md:px-20 py-20 border-t border-slate-100">
-          <div className="grid md:grid-cols-3 gap-12 items-end">
-            <div className="space-y-6">
-              <h3 className="text-3xl font-black font-heading leading-tight">Mọi chi tiết được <br /> thấu hiểu.</h3>
-              <p className="text-text-muted font-medium text-sm leading-relaxed">
-                Chúng tôi không chỉ cung cấp phụ đề, chúng tôi tạo ra sự kết nối giữa học sinh và kiến thức thông qua các thuật toán thông minh nhất.
-              </p>
-            </div>
-            
-            <div className="col-span-2 grid grid-cols-2 gap-6">
-               <div className="h-64 relative rounded-[24px] overflow-hidden grayscale hover:grayscale-0 transition-all duration-700">
-                  <Image src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop" alt="Collaborative learning" fill className="object-cover" />
-               </div>
-               <div className="h-80 relative rounded-[24px] overflow-hidden grayscale hover:grayscale-0 transition-all duration-700 -mt-12">
-                  <Image src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=2070&auto=format&fit=crop" alt="Quiet study" fill className="object-cover" />
-               </div>
-            </div>
+        {/* Philosophy Section */}
+        <section className="w-full max-w-[1440px] mx-auto px-8 md:px-20 py-32">
+          <div className="flex flex-col md:flex-row gap-24 items-center">
+             <div className="md:w-1/2 relative h-[500px] w-full rounded-[48px] overflow-hidden shadow-premium">
+                <Image src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop" alt="Technology for good" fill className="object-cover" />
+                <div className="absolute inset-0 bg-accent/10 mix-blend-overlay" />
+             </div>
+             <div className="md:w-1/2 space-y-10">
+                <span className="text-primary font-black uppercase tracking-[0.2em] text-xs">Triết lý của chúng tôi</span>
+                <h2 className="text-4xl md:text-6xl font-bold font-heading leading-tight">Thiết kế cho tất cả mọi người.</h2>
+                <p className="text-lg text-text-muted leading-relaxed font-medium">
+                   Chúng tôi tin rằng rào cản ngôn ngữ và âm thanh không nên là vật cản trên con đường học tập. UDL Hearing được xây dựng để mang lại sự công bằng và cảm hứng cho mọi học sinh, bất kể điểm xuất phát.
+                </p>
+                <div className="grid grid-cols-2 gap-8">
+                   <div>
+                      <h4 className="text-2xl font-bold font-heading mb-2">98%</h4>
+                      <p className="text-sm text-text-muted font-medium">Độ chính xác của phụ đề AI</p>
+                   </div>
+                   <div>
+                      <h4 className="text-2xl font-bold font-heading mb-2">120+</h4>
+                      <p className="text-sm text-text-muted font-medium">Trường học đang tích hợp</p>
+                   </div>
+                </div>
+             </div>
           </div>
         </section>
       </main>
 
-      <footer className="px-8 py-12 md:px-20 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6 text-[11px] font-black uppercase tracking-widest text-text-muted">
-        <p>© 2025 UDL Hearing. All rights reserved.</p>
-        <div className="flex gap-8">
-           <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
-           <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+      <footer className="px-8 py-16 md:px-20 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
+        <div className="flex items-center gap-3 opacity-50">
+           <Heart size={16} fill="currentColor" />
+           <span className="text-sm font-bold font-heading uppercase tracking-widest">UDL Hearing</span>
         </div>
+        <div className="flex gap-12 text-[12px] font-bold uppercase tracking-widest text-text-muted">
+           <a href="#" className="hover:text-primary transition-colors">Hướng dẫn</a>
+           <a href="#" className="hover:text-primary transition-colors">Bảo mật</a>
+           <a href="#" className="hover:text-primary transition-colors">Liên hệ</a>
+        </div>
+        <p className="text-[11px] font-medium text-text-muted/60 tracking-wider">© 2025 UDL Hearing. Chân thành từ tâm.</p>
       </footer>
     </div>
   );
