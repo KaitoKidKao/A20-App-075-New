@@ -1,6 +1,6 @@
 # AI20K-200 · Audio-First Accessibility Agent
 
-Dự án hỗ trợ sinh viên khiếm thị và giảng viên tiếp cận tài liệu học thuật thông qua âm thanh có cấu trúc, sử dụng các mô hình AI OCR hiện đại.
+Dự án hỗ trợ sinh viên khiếm thính và giảng viên tiếp cận tài liệu học thuật thông qua âm thanh có cấu trúc, sử dụng các mô hình AI OCR hiện đại.
 
 ## 🏗 Cấu trúc dự án
 
