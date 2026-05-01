@@ -282,57 +282,115 @@ async def process_url(
         "message": "URL đã được nhận và đang chuẩn bị tải xuống."
     }
 
+@app.get("/api/videos/me")
+async def list_my_videos(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy danh sách video của người dùng hiện tại"""
+    statement = select(Video).where(Video.user_id == current_user.id)
+    videos = session.exec(statement).all()
+    return videos
+
 @app.get("/api/videos/{video_id}/status")
-async def get_video_status(video_id: str, session: Session = Depends(get_session)):
-    """Kiểm tra trạng thái xử lý của video từ Database"""
+async def get_video_status(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Kiểm tra trạng thái xử lý của video (có kiểm tra quyền)"""
     video = session.get(Video, video_id)
     if not video:
-        return {"video_id": video_id, "status": "not_found"}
+        raise HTTPException(status_code=404, detail="Không tìm thấy video.")
+    
+    # Kiểm tra quyền: Chỉ chủ sở hữu hoặc Admin mới được xem
+    if video.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xem trạng thái video này.")
+        
     return {"video_id": video_id, "status": video.status}
 
+# Helper kiểm tra quyền truy cập dữ liệu bài giảng
+def check_video_access(video_id: str, user: User, session: Session):
+    video = session.get(Video, video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Không tìm thấy video.")
+    if video.user_id != user.id and user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập dữ liệu này.")
+    return video
+
 @app.get("/api/videos/{video_id}/transcript")
-async def get_transcript(video_id: str, session: Session = Depends(get_session)):
-    """Lấy kết quả phụ đề (Transcript) từ DB"""
+async def get_transcript(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy kết quả phụ đề (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
     if not lecture or not lecture.transcript:
         return {"video_id": video_id, "message": "Phụ đề chưa sẵn sàng."}
     return lecture.transcript
 
 @app.get("/api/videos/{video_id}/summary")
-async def get_summary(video_id: str, session: Session = Depends(get_session)):
-    """Lấy tóm tắt nội dung từ DB"""
+async def get_summary(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy tóm tắt (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
     if not lecture or not lecture.summary:
         return {"video_id": video_id, "message": "Tóm tắt chưa sẵn sàng."}
     return {"video_id": video_id, "summary": lecture.summary}
 
 @app.get("/api/videos/{video_id}/timeline")
-async def get_timeline(video_id: str, session: Session = Depends(get_session)):
-    """Lấy dòng thời gian bài giảng (Timeline) từ DB"""
+async def get_timeline(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy timeline (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
     if not lecture or not lecture.timeline:
         return {"video_id": video_id, "timeline": []}
     return {"video_id": video_id, "timeline": lecture.timeline}
 
 @app.get("/api/videos/{video_id}/highlights")
-async def get_highlights(video_id: str, session: Session = Depends(get_session)):
-    """Lấy các điểm nhấn quan trọng (Highlights) từ DB"""
+async def get_highlights(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy highlights (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
     if not lecture or not lecture.highlights:
         return {"video_id": video_id, "highlights": []}
     return {"video_id": video_id, "highlights": lecture.highlights}
 
 @app.get("/api/videos/{video_id}/questions")
-async def get_questions(video_id: str, session: Session = Depends(get_session)):
-    """Lấy danh sách câu hỏi đã được làm rõ từ DB"""
+async def get_questions(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy questions (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
     if not lecture or not lecture.questions:
         return {"video_id": video_id, "questions": []}
     return {"video_id": video_id, "questions": lecture.questions}
 
 @app.get("/api/videos/{video_id}/briefing")
-async def get_briefing(video_id: str, session: Session = Depends(get_session)):
-    """Lấy bản tóm tắt định hướng trước bài giảng (Briefing) từ DB"""
+async def get_briefing(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy briefing (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
     if not lecture or not lecture.briefing:
         return {"video_id": video_id, "message": "Briefing chưa sẵn sàng."}
