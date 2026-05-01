@@ -175,11 +175,72 @@ async def get_summary(video_id: str):
     summary = await AIService.summarize(transcript_data)
     return {"video_id": video_id, "summary": summary}
 
+async def get_cached_metadata(video_id: str):
+    """Helper để lấy transcript và metadata từ cache"""
+    transcript_path = AIService.TRANSCRIPT_DIR / f"{video_id}.json"
+    if not transcript_path.exists():
+        raise HTTPException(status_code=404, detail="Vui lòng đợi quá trình tạo phụ đề hoàn tất.")
+    
+    with open(transcript_path, "r", encoding="utf-8") as f:
+        transcript_data = json.load(f)
+        
+    metadata_path = AIService.AI_RESULTS_DIR / video_id / "metadata.json"
+    if not metadata_path.exists():
+        # Nếu chưa có cache thì gọi AI để tạo (Batching)
+        metadata = await AIService.process_all_lecture_metadata(transcript_data)
+    else:
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+            
+    return transcript_data, metadata
+
+@app.get("/api/videos/{video_id}/timeline")
+async def get_timeline(video_id: str):
+    """Lấy dòng thời gian bài giảng (Timeline)"""
+    _, metadata = await get_cached_metadata(video_id)
+    return {"video_id": video_id, "timeline": metadata.get("timeline", [])}
+
+@app.get("/api/videos/{video_id}/highlights")
+async def get_highlights(video_id: str):
+    """Lấy các điểm nhấn quan trọng (Highlights)"""
+    _, metadata = await get_cached_metadata(video_id)
+    return {"video_id": video_id, "highlights": metadata.get("highlights", [])}
+
+@app.get("/api/videos/{video_id}/questions")
+async def get_questions(video_id: str):
+    """Lấy danh sách câu hỏi đã được làm rõ (Rephrased Questions)"""
+    _, metadata = await get_cached_metadata(video_id)
+    return {"video_id": video_id, "questions": metadata.get("questions", [])}
+
+@app.get("/api/videos/{video_id}/briefing")
+async def get_briefing(video_id: str):
+    """Lấy bản tóm tắt định hướng trước bài giảng (Pre-lecture Briefing)"""
+    briefing_path = AIService.AI_RESULTS_DIR / video_id / "briefing.json"
+    
+    if not briefing_path.exists():
+        # Cần transcript để tạo briefing
+        transcript_path = AIService.TRANSCRIPT_DIR / f"{video_id}.json"
+        if not transcript_path.exists():
+            raise HTTPException(status_code=404, detail="Vui lòng đợi quá trình tạo phụ đề hoàn tất.")
+        
+        with open(transcript_path, "r", encoding="utf-8") as f:
+            transcript_data = json.load(f)
+        
+        briefing = await AIService.generate_pre_lecture_briefing(transcript_data)
+    else:
+        with open(briefing_path, "r", encoding="utf-8") as f:
+            briefing = json.load(f)
+            
+    return {"video_id": video_id, "briefing": briefing}
+
+
 if __name__ == "__main__":
     import uvicorn
     # Đảm bảo các thư mục tồn tại
     VideoService.ensure_dirs()
     AIService.TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)
+    AIService.AI_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
     
     logger.info("🚀 Starting A20 Backend Server on port 8000 with reload...")
     uvicorn.run("src.backend.main:app", host="0.0.0.0", port=8000, reload=True)

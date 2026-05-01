@@ -9,17 +9,11 @@ import {
   BookOpen, 
   Upload,
   Settings,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   Accessibility
 } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -27,14 +21,13 @@ export function AppSidebar() {
 
   const menuItems = [
     { icon: Grid, label: 'Dashboard', href: '/student/library' },
-    { icon: User, label: 'My Profile', href: '/student/settings' },
+    { icon: User, label: 'My Profile', href: '/student/settings?tab=profile' },
     { icon: BookOpen, label: 'Enrolled Courses', href: '/student/documents' },
     { icon: Upload, label: 'Upload Video', href: '/student/upload' },
   ];
 
   const accountItems = [
-    { icon: Settings, label: 'Settings', href: '/student/settings' },
-    { icon: LogOut, label: 'Logout', href: '/' },
+    { icon: Settings, label: 'Settings', href: '/student/settings?tab=accessibility' },
   ];
 
   return (
@@ -59,11 +52,11 @@ export function AppSidebar() {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group",
                     isActive 
-                      ? "bg-[#FF5A1F]/5 text-[#FF5A1F] font-semibold" 
+                      ? "bg-primary/5 text-primary font-semibold" 
                       : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-medium"
                   )}
                 >
-                  <item.icon size={16} className={cn("shrink-0", isActive ? "text-[#FF5A1F]" : "text-slate-700 group-hover:text-slate-900")} />
+                  <item.icon size={16} className={cn("shrink-0", isActive ? "text-primary" : "text-slate-700 group-hover:text-slate-900")} />
                   {!collapsed && <span className="text-[13px]">{item.label}</span>}
                 </Link>
               );

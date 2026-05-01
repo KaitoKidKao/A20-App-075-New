@@ -18,12 +18,13 @@ function cn(...inputs: ClassValue[]) {
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
+  const isAuthPage = pathname.startsWith('/auth/');
 
-  if (isLandingPage) {
+  if (isLandingPage || isAuthPage) {
     return (
-      <>
+      <div className="min-h-screen">
         {children}
-      </>
+      </div>
     );
   }
 

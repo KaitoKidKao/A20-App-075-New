@@ -1,18 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,800;9..144,900&family=Instrument+Sans:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* DreamsLMS Design Tokens */
-  --color-primary: #4C40ED;
-  --color-primary-hover: #3B31D1;
-  --color-accent: #FF5A1F;
-  --color-success: #22C55E;
+  /* Warm Editorial Design Tokens */
+  --font-heading: "Fraunces", serif;
+  --font-sans: "Instrument Sans", sans-serif;
   
-  --color-bg-main: #F5F7FA;
-  --color-text-main: #1E293B;
-  --color-text-muted: #64748B;
+  --color-primary: #D97070; /* Muted Rose/Coral */
+  --color-primary-hover: #C25B5B;
+  --color-accent: #3D5A5A; /* Deep Soft Teal */
+  --color-success: #6D8B74;
   
-  --shadow-premium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-elevated: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --color-bg-main: #FDFCF7; /* Warm Cream/Off-white */
+  --color-text-main: #2D2D2D; /* Soft Charcoal */
+  --color-text-muted: #6B6B6B;
+  
+  --shadow-subtle: 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-premium: 0 15px 30px -10px rgb(0 0 0 / 0.05);
 }
 
 @layer base {

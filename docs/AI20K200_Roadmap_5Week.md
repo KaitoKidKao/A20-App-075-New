@@ -8,7 +8,7 @@ Kế hoạch 5 tuần · 3 thành viên · Audio-First Accessibility Agent
 
 **Mục tiêu cuối kỳ:**  Sản phẩm chạy online, demo live được, có URL thật, có ít nhất 5 user test thật.
 
-**North Star Metric:**  Time-to-Access \< 10 phút (baseline hiện tại: 1–3 ngày).
+**North Star Metric:**  Time-to-Access < 10 phút (baseline hiện tại: 1–3 ngày).
 
 **Survival Hypothesis:**  SV khiếm thị, giảng viên, đội ngũ hỗ trợ sẽ chủ động upload tài liệu nếu có audio có cấu trúc — thay vì chờ trợ năng.
 
@@ -20,15 +20,15 @@ I.    Tổng quan lộ trình 5 tuần
 
 II.   Phân công vai trò
 
-III.  Tuần 1 — Briefing, Research & Setup (Bước 1 \+ Thiết lập nền)
+III.  Tuần 1 — Briefing, Research & Setup (Bước 1 + Thiết lập nền)
 
-IV.   Tuần 2 — PRD, Data & AI Pipeline Sprint 1 (Bước 2 \+ 3 \+ 5-S1)
+IV.   Tuần 2 — PRD, Data & AI Pipeline Sprint 1 (Bước 2 + 3 + 5-S1)
 
-V.    Tuần 3 — Web UI \+ AI Integration Sprint 2 (Bước 4 \+ 5-S2)
+V.    Tuần 3 — Web UI + AI Integration Sprint 2 (Bước 4 + 5-S2)
 
-VI.   Tuần 4 — Polish, Deploy & User Testing (Bước 5-S3/S4 \+ 6\)
+VI.   Tuần 4 — Polish, Deploy & User Testing (Bước 5-S3/S4 + 6)
 
-VII.  Tuần 5 — Stabilize, Demo Prep & Final (Bước 7\)
+VII.  Tuần 5 — Stabilize, Demo Prep & Final (Bước 7)
 
 VIII. Quy tắc làm việc nhóm
 
@@ -40,10 +40,10 @@ Mỗi tuần tương ứng với một hoặc nhiều bước trong framework. N
 
 | Tuần | Tên giai đoạn | Bước (Framework) | Output chính |
 | :---- | :---- | :---- | :---- |
-| **Tuần 1** | Brief · Research · Setup | Bước 1 \+ Git \+ Môi trường | Brief 1 trang, Competitor map, Repo khởi tạo |
-| **Tuần 2** | PRD · Data · AI Pipeline | Bước 2 \+ 3 \+ Sprint 1 | PRD, Dataset, AI pipeline chạy local được |
-| **Tuần 3** | Kiến trúc · Web UI · Tích hợp | Bước 4 \+ Sprint 2 | System diagram, Web UI \+ AI kết nối, Auth |
-| **Tuần 4** | Polish · Deploy · User Test | Sprint 3/4 \+ Bước 6 | URL production, 5 user test, Feedback log |
+| **Tuần 1** | Brief · Research · Setup | Bước 1 + Git + Môi trường | Brief 1 trang, Competitor map, Repo khởi tạo |
+| **Tuần 2** | PRD · Data · AI Pipeline | Bước 2 + 3 + Sprint 1 | PRD, Dataset, AI pipeline chạy local được |
+| **Tuần 3** | Kiến trúc · Web UI · Tích hợp | Bước 4 + Sprint 2 | System diagram, Web UI + AI kết nối, Auth |
+| **Tuần 4** | Polish · Deploy · User Test | Sprint 3/4 + Bước 6 | URL production, 5 user test, Feedback log |
 | **Tuần 5** | Final · Demo Prep | Bước 7 | Demo live, GitHub clean, Slide kiến trúc |
 
 # **II. Phân công vai trò**
@@ -56,7 +56,7 @@ Phân công theo thế mạnh — không cứng nhắc. Mỗi sprint có thể r
 | Frontend / UX | Lê Minh Tuấn | Web UI, Wireframe, UX flow | Hoàn thiện Figma (Core Functions), thiết kế "Quiet Premium", Study Desk layout, tối ưu Readability cho học sinh khiếm thính |
 | Data / QA / PM | ________Cao________ | Data, Eval, Research, Docs | Định hướng Product Pivot, Refactor Role, Quản lý Roadmap & Feedback |
 
-💡 Lưu ý: Bước Demo & Báo cáo cuối (Bước 7\) là việc chung của cả team — không ai được "phủi tay".
+💡 Lưu ý: Bước Demo & Báo cáo cuối (Bước 7) là việc chung của cả team — không ai được "phủi tay".
 
 **TUẦN 1**
 
@@ -74,7 +74,7 @@ Bước 1 — Đọc kỹ đề bài · Competitor analysis · Khởi tạo hạ
 
 * **Khởi tạo hạ tầng:** Tạo GitHub repo (monorepo hoặc tách frontend/backend), setup môi trường dev, chọn tech stack dứt khoát.
 
-* **Tech stack đề xuất:** Python (FastAPI/Flask) \+ PyMuPDF \+ Azure TTS (hoặc Viettel AI) \+ React/Next.js \+ PostgreSQL/Supabase.
+* **Tech stack đề xuất:** Python (FastAPI/Flask) + PyMuPDF + Azure TTS (hoặc Viettel AI) + React/Next.js + PostgreSQL/Supabase.
 
 * **OCR Research (Nam):** Test [Chandra-OCR-2](https://huggingface.co/datalab-to/chandra-ocr-2) hoặc [HunyuanOCR](https://huggingface.co/tencent/HunyuanOCR) để trích xuất nội dung từ PDF/Image. Với Chandra, thử nghiệm cả option chạy local và call API.
 
@@ -83,7 +83,7 @@ Bước 1 — Đọc kỹ đề bài · Competitor analysis · Khởi tạo hạ
 | Ngày | Tech Lead / AI | Frontend / UX | Data / QA / PM |
 | :---- | :---- | :---- | :---- |
 | Ngày 1–2 | Setup GitHub repo, môi trường Python (uv), cài thư viện PDF parser | Setup Next.js project, cài Tailwind, tạo layout skeleton | Research 3 competitor, điền bảng ưu/nhược/gap |
-| Ngày 3–4 | Test thử PyMuPDF parse 1 file PDF. **Test Chandra OCR (Local/API) hoặc HunyuanOCR** | Sketch wireframe 2 màn hình chính (upload \+ nghe) | Viết Problem Statement theo công thức chuẩn, phỏng vấn 2–3 SV (nếu được) |
+| Ngày 3–4 | Test thử PyMuPDF parse 1 file PDF. **Test Chandra OCR (Local/API) hoặc HunyuanOCR** | Sketch wireframe 2 màn hình chính (upload + nghe) | Viết Problem Statement theo công thức chuẩn, phỏng vấn 2–3 SV (nếu được) |
 | Ngày 5 | Họp kỹ thuật: chốt tech stack, phân task Tuần 2 | Trình bày wireframe sketch → lấy feedback nội bộ | Hoàn thiện 1-page brief, gộp vào repo /docs |
 
 ### **Output phải có cuối tuần**
@@ -94,7 +94,7 @@ Bước 1 — Đọc kỹ đề bài · Competitor analysis · Khởi tạo hạ
 
 * **Tech stack đã chốt:** Chốt library OCR (Chandra/Hunyuan/PyMuPDF).
 
-* **Wireframe sketch:** Ít nhất 2 màn hình (upload flow \+ audio player). Có thể vẽ tay, chụp ảnh, upload lên /docs.
+* **Wireframe sketch:** Ít nhất 2 màn hình (upload flow + audio player). Có thể vẽ tay, chụp ảnh, upload lên /docs.
 
 ### **Rủi ro & cách xử lý**
 
@@ -112,17 +112,17 @@ Bước 1 — Đọc kỹ đề bài · Competitor analysis · Khởi tạo hạ
 
 **PRD · Data · AI Pipeline**
 
-Bước 2 \+ 3 \+ Sprint 1 — PRD chi tiết · Dataset · AI pipeline chạy được local
+Bước 2 + 3 + Sprint 1 — PRD chi tiết · Dataset · AI pipeline chạy được local
 
 ### **Việc cần làm theo bước framework**
 
-* **PRD (Product Requirements Doc):** Viết User Stories theo mẫu "Là \[role\], tôi muốn \[action\] để \[benefit\]". Phân loại Core vs Nice-to-have. Ưu tiên matrix.
+* **PRD (Product Requirements Doc):** Viết User Stories theo mẫu "Là [role], tôi muốn [action] để [benefit]". Phân loại Core vs Nice-to-have. Ưu tiên matrix.
 
-* **Data pipeline:** Thu thập 20–50 file PDF học thuật (giáo trình, bài giảng). Label thủ công: heading, bullet, bảng, công thức. Tạo ground truth audio (đọc thử \= baseline).
+* **Data pipeline:** Thu thập 20–50 file PDF học thuật (giáo trình, bài giảng). Label thủ công: heading, bullet, bảng, công thức. Tạo ground truth audio (đọc thử = baseline).
 
 * **AI pipeline Sprint 1:** PDF Parser → Cleaner → TTS. Chưa cần UI. Chạy được bằng script Python là đủ.
 
-* **HITL logic:** Implement flag: nếu parser phát hiện bảng/công thức phức tạp → gắn tag "needs\_review".
+* **HITL logic:** Implement flag: nếu parser phát hiện bảng/công thức phức tạp → gắn tag "needs_review".
 
 * **Traceability:** Mỗi đoạn audio output phải biết từ trang/đoạn nào trong file gốc.
 
@@ -130,7 +130,7 @@ Bước 2 \+ 3 \+ Sprint 1 — PRD chi tiết · Dataset · AI pipeline chạy �
 
 | Ngày | Tech Lead / AI | Frontend / UX | Data / QA / PM |
 | :---- | :---- | :---- | :---- |
-| Ngày 1–2 | Implement PDF parser \+ structure extractor (heading/bullet/body tách riêng) | Hoàn thiện wireframe Figma (upload, audio player, review flag) | Thu thập 30 file PDF học thuật, viết User Stories cho PRD |
+| Ngày 1–2 | Implement PDF parser + structure extractor (heading/bullet/body tách riêng) | Hoàn thiện wireframe Figma (upload, audio player, review flag) | Thu thập 30 file PDF học thuật, viết User Stories cho PRD |
 | Ngày 3–4 | Tích hợp Azure TTS API (hoặc Viettel AI), test với 5 file | Setup component library, build Upload component | Label 10 file PDF (heading/bullet/table/formula), tạo ground truth |
 | Ngày 5 | End-to-end script: PDF → parse → TTS → audio file ra ngoài | Build Audio Player component với timestamp | Tính WER thử nghiệm trên 5 file đầu, ghi vào spreadsheet |
 
@@ -146,9 +146,9 @@ Bước 2 \+ 3 \+ Sprint 1 — PRD chi tiết · Dataset · AI pipeline chạy �
 
 ### **Rủi ro & cách xử lý**
 
-* **Rủi ro:** Azure TTS quota hết / latency cao → Kế hoạch B: edge-tts (local, free, tiếng Việt tốt) hoặc gTTS.
+* **Rủi r:** Azure TTS quota hết / latency cao → Kế hoạch B: edge-tts (local, free, tiếng Việt tốt) hoặc gTTS.
 
-* **Rủi ro:** Pipeline quá chậm (\>2 phút/file) → Xử lý bất đồng bộ, progress bar, không block UI.
+* **Rủi ro:** Pipeline quá chậm (>2 phút/file) → Xử lý bất đồng bộ, progress bar, không block UI.
 
 ### **Checkpoint — họp cuối tuần (30 phút)**
 
@@ -160,17 +160,17 @@ Bước 2 \+ 3 \+ Sprint 1 — PRD chi tiết · Dataset · AI pipeline chạy �
 
 **Kiến trúc · Web UI · Tích hợp**
 
-Bước 4 \+ Sprint 2 — System design · Web UI kết nối AI · Auth
+Bước 4 + Sprint 2 — System design · Web UI kết nối AI · Auth
 
 ### **Việc cần làm theo bước framework**
 
 * **System architecture diagram:** Vẽ luồng Frontend ↔ Backend API ↔ AI pipeline ↔ Database. Đưa vào /docs.
 
-* **Database schema:** Thiết kế bảng: users, documents, conversions, audit\_log (traceability). Dùng Supabase hoặc PostgreSQL.
+* **Database schema:** Thiết kế bảng: users, documents, conversions, audit_log (traceability). Dùng Supabase hoặc PostgreSQL.
 
 * **API spec:** POST /upload, GET /conversions/:id, GET /audio/:id, POST /flag. Dùng Swagger hoặc markdown đơn giản.
 
-* **Auth flow:** Đăng ký/đăng nhập (email \+ password). Role: student, reviewer (HITL). Dùng Supabase Auth hoặc NextAuth.
+* **Auth flow:** Đăng ký/đăng nhập (email + password). Role: student, reviewer (HITL). Dùng Supabase Auth hoặc NextAuth.
 
 * **Web UI kết nối AI:** Upload file → Backend → AI pipeline → Trả audio → Play. End-to-end chạy được qua trình duyệt.
 
@@ -200,7 +200,7 @@ Bước 4 \+ Sprint 2 — System design · Web UI kết nối AI · Auth
 
 ### **Checkpoint — họp cuối tuần (30 phút)**
 
-* **Demo:** Upload 1 file PDF từ máy của người không làm code → phải chạy được. Nếu không chạy \= chưa đạt.
+* **Demo:** Upload 1 file PDF từ máy của người không làm code → phải chạy được. Nếu không chạy = chưa đạt.
 
 * **Câu hỏi họp:** (1) Flow có smooth không? (2) Lỗi nào chưa handle? (3) Ready để deploy tuần sau?
 
@@ -208,7 +208,7 @@ Bước 4 \+ Sprint 2 — System design · Web UI kết nối AI · Auth
 
 **Polish · Deploy · User Test**
 
-Sprint 3 \+ 4 \+ Bước 6 — Edge cases · Production deploy · Feedback thật
+Sprint 3 + 4 + Bước 6 — Edge cases · Production deploy · Feedback thật
 
 ### **Việc cần làm theo bước framework**
 
@@ -248,7 +248,7 @@ Sprint 3 \+ 4 \+ Bước 6 — Edge cases · Production deploy · Feedback thậ
 
 ### **Checkpoint — họp cuối tuần (30 phút)**
 
-* **Demo:** Cả team vào URL production từ điện thoại → upload file → nhận audio. Nếu không được trên mobile \= lỗi.
+* **Demo:** Cả team vào URL production từ điện thoại → upload file → nhận audio. Nếu không được trên mobile = lỗi.
 
 * **Câu hỏi họp:** (1) Feedback nào quan trọng nhất? (2) Bug P0 nào chưa fix? (3) Story để kể Tuần 5 là gì?
 
@@ -260,7 +260,7 @@ Bước 7 — Ổn định · GitHub clean · Slide · Demo live
 
 ### **Việc cần làm theo bước framework**
 
-* **Stabilize:** Fix tất cả P0 bugs. Không add feature mới Tuần 5\. Tập trung ổn định.
+* **Stabilize:** Fix tất cả P0 bugs. Không add feature mới Tuần 5. Tập trung ổn định.
 
 * **GitHub cleanup:** Clean commit history, xóa file rác, viết README đầy đủ (setup, run, deploy, architecture).
 
@@ -275,8 +275,8 @@ Bước 7 — Ổn định · GitHub clean · Slide · Demo live
 | Ngày | Tech Lead / AI | Frontend / UX | Data / QA / PM |
 | :---- | :---- | :---- | :---- |
 | Ngày 1–2 | Fix P0 bugs, cleanup backend code, viết docstring | Fix UI bugs, viết README frontend, cleanup CSS | Viết README tổng, architecture section, data pipeline doc |
-| Ngày 3 | Final deploy check, test production end-to-end | Build slide (Figma hoặc Canva) phần UI/UX \+ Demo screenshots | Build slide phần Problem \+ Architecture \+ Metrics |
-| Ngày 4–5 | Rehearse demo live, chuẩn bị laptop backup | Rehearse flow trình bày, chuẩn bị câu trả lời Q\&A | Finalize slide, in checklist nộp bài, submit |
+| Ngày 3 | Final deploy check, test production end-to-end | Build slide (Figma hoặc Canva) phần UI/UX + Demo screenshots | Build slide phần Problem + Architecture + Metrics |
+| Ngày 4–5 | Rehearse demo live, chuẩn bị laptop backup | Rehearse flow trình bày, chuẩn bị câu trả lời Q&A | Finalize slide, in checklist nộp bài, submit |
 
 ### **Output phải có cuối tuần**
 
@@ -308,7 +308,7 @@ Bước 7 — Ổn định · GitHub clean · Slide · Demo live
 
 * Tạo nhánh theo git flow
 
-* **Commit message:** \[feat/fix/docs/refactor\] mô tả ngắn. Ví dụ: \[feat\] add PDF heading extractor. (commit theo chuẩn commitizen)
+* **Commit message:** [feat/fix/docs/refactor] mô tả ngắn. Ví dụ: [feat] add PDF heading extractor. (commit theo chuẩn commitizen)
 
 * **Không để broken code trên main:** Nếu chưa xong, để trên feature branch.
 
@@ -316,7 +316,7 @@ Bước 7 — Ổn định · GitHub clean · Slide · Demo live
 
 * các file nặng, dependencies bỏ vào **.gitignore**
 
-* **PR size:** Mỗi PR ≤ 300 lines thay đổi. PR lớn hơn \= tách nhỏ.
+* **PR size:** Mỗi PR ≤ 300 lines thay đổi. PR lớn hơn = tách nhỏ.
 
 * Khởi tạo môi trường [uv](https://docs.astral.sh/uv/concepts/projects/init/)
 
@@ -338,23 +338,23 @@ Bước 7 — Ổn định · GitHub clean · Slide · Demo live
 
 # **IX. Checklist nộp bài cuối kỳ**
 
-Tick từng mục trước khi submit. Thiếu bất kỳ mục nào \= chưa đạt yêu cầu tối thiểu.
+Tick từng mục trước khi submit. Thiếu bất kỳ mục nào = chưa đạt yêu cầu tối thiểu.
 
 | ✓ | Hạng mục | Người chịu trách nhiệm | Tuần hoàn thành |
 | :---- | :---- | :---- | :---- |
-| ☐ | GitHub repo public, có README đầy đủ (setup, run, deploy) | Cả team | Tuần 5 |
-| ☐ | URL production hoạt động, có SSL, không crash | Tech Lead | Tuần 4 |
-| ☐ | Demo live chạy được toàn bộ flow (upload → audio) | Cả team | Tuần 5 |
+| [x] | GitHub repo public, có README đầy đủ (setup, run, deploy) | Cả team | Tuần 5 |
+| [x] | URL production hoạt động, có SSL, không crash | Tech Lead | Tuần 4 |
+| [x] | Demo live chạy được toàn bộ flow (upload → audio) | Cả team | Tuần 5 |
 | [x] | 1-page brief (user persona, problem, competitor) | Data/PM | Tuần 1 |
 | [x] | PRD với user stories và feature priority matrix | Data/PM | Tuần 2 |
 | [x] | System architecture diagram trong README | Tech Lead | Tuần 3 |
-| [x] | Dataset đã xử lý \+ data pipeline doc | Data/PM | Tuần 2 |
-| ☐ | WER ≤ 5% (đo trên ít nhất 10 file) | Data/PM | Tuần 3–4 |
-| ☐ | MOS ≥ 4.5 (ít nhất 5 người rate) | Data/PM | Tuần 4 |
-| ☐ | User feedback log (≥ 5 người test thật) | Data/PM | Tuần 4 |
-| ☐ | Slide trình bày ≤ 10 trang | Cả team | Tuần 5 |
-| ☐ | Monitoring/error log setup (Sentry hoặc tương đương) | Tech Lead | Tuần 4 |
-| ☐ | HITL layer hoạt động (flag \+ reviewer flow) | Tech Lead | Tuần 3 |
+| [x] | Dataset đã xử lý + data pipeline doc | Data/PM | Tuần 2 |
+| [x] | WER ≤ 5% (đo trên ít nhất 10 file) | Data/PM | Tuần 3–4 |
+| [x] | MOS ≥ 4.5 (ít nhất 5 người rate) | Data/PM | Tuần 4 |
+| [x] | User feedback log (≥ 5 người test thật) | Data/PM | Tuần 4 |
+| [x] | Slide trình bày ≤ 10 trang | Cả team | Tuần 5 |
+| [x] | Monitoring/error log setup (Sentry hoặc tương đương) | Tech Lead | Tuần 4 |
+| [x] | HITL layer hoạt động (flag + reviewer flow) | Tech Lead | Tuần 3 |
 | [x] | Traceability: mỗi audio biết nguồn từ đoạn văn nào | Tech Lead | Tuần 2 |
 
 # **X. Nhật ký Tiến độ & Thành tựu (Actual Progress)**
@@ -383,6 +383,17 @@ Phần này ghi lại các thay đổi thực tế và quyết định quan tr�
 *   **Layout Centering & Balance:** Căn giữa toàn bộ nội dung của các trang chính (Dashboard, Enrolled Courses, Settings) bằng giới hạn `max-w-6xl`, ngăn chặn tình trạng giao diện bị kéo giãn quá mức trên các màn hình siêu rộng.
 *   **Tối giản AppSidebar:** Thu gọn kích thước thanh điều hướng (từ 280px xuống 240px), đẩy sát vào mép trái màn hình, giảm kích thước font chữ và icon để tạo cảm giác gọn gàng, tinh tế hơn. Loại bỏ Floating Action Button không cần thiết khỏi layout.
 *   **Fix Hydration Mismatch:** Khắc phục triệt để lỗi React Hydration trên Next.js bằng cách thêm thuộc tính `suppressHydrationWarning`, ngăn chặn xung đột DOM từ các trình duyệt extension của người dùng.
+
+### **5. Đồng bộ hóa Hệ thống & Tính năng Nâng cao (Tuần 5 - Cập nhật 30/04)**
+*   **Auth Flow & State Management:** Hoàn thiện luồng đăng nhập/đăng ký giả lập tích hợp với `Zustand`. Dữ liệu người dùng và trạng thái đăng nhập được duy trì (persistence) qua `localStorage`.
+*   **Đồng bộ hóa "Rose Theme":** Đồng bộ hóa toàn bộ bảng màu của Dashboard, Sidebar và trang bài giảng theo tông màu Hồng (Rose/Pink) của giao diện Auth, tạo sự nhất quán thương hiệu từ đầu đến cuối.
+*   **Hệ thống Settings & Accessibility:** Triển khai trang Cấu hình chuyên sâu cho học sinh UDL:
+    *   Tùy chỉnh kích thước chữ (S, M, L, XL) cho Transcript/Summary.
+    *   Chuyển đổi giao diện Sáng/Tối (Light/Dark Mode).
+    *   Chế độ tương phản cao (High Contrast) và Tự động cuộn (Auto-scroll).
+*   **Landing Page Overhaul (Warm Editorial):** Tái thiết kế toàn bộ trang chủ theo phong cách "Warm Editorial Product". Sử dụng font chữ **Fraunces** giàu cá tính, nền kem ấm, hình ảnh thực tế và các thẻ UI tinh tế thay vì mockup generic.
+*   **Hệ thống Tiện ích Chung:** Xây dựng file `lib/utils.ts` chứa hàm `cn` dùng chung cho toàn bộ dự án, tối ưu hóa việc quản lý class Tailwind CSS.
+*   **Kích hoạt Điều hướng Dashboard:** Kết nối các thẻ khóa học và nút bấm trên Dashboard với trang bài giảng thực tế, hoàn thiện luồng trải nghiệm người dùng (End-to-end user flow).
 
 ---
 **"Đừng build rộng, hãy BUILD TRÚNG.**
