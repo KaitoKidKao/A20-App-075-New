@@ -11,9 +11,6 @@ export function Footer() {
           {/* Brand & Description */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <div className="bg-[#00D084] text-white p-2 rounded-lg">
-                <Accessibility size={24} />
-              </div>
               <span className="font-extrabold text-2xl tracking-tight text-slate-900">DreamsLMS</span>
             </div>
             <p className="text-slate-500 leading-relaxed text-[15px]">
@@ -61,7 +58,7 @@ export function Footer() {
                 placeholder="Enter your email address" 
                 className="w-full pl-4 pr-32 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm"
               />
-              <button className="absolute right-1.5 top-1.5 bg-[#4C40ED] text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5">
+              <button className="absolute right-1.5 top-1.5 bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5">
                 Subscribe
                 <ArrowRight size={14} />
               </button>
@@ -85,7 +82,7 @@ export function Footer() {
       </div>
       
       {/* Bottom Bar */}
-      <div className="border-t border-slate-100 bg-[#1B125C] text-white/70 py-4">
+      <div className="border-t border-slate-100 bg-[#1A1A1A] text-white/70 py-4">
         <div className="max-w-[1400px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-semibold">
           <p>© 2025 DreamsLMS. All rights reserved.</p>
           <div className="flex gap-6">

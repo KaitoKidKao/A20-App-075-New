@@ -6,12 +6,20 @@ import {
   User, 
   Moon, 
   Sun,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
+import { useRouter } from 'next/navigation';
 
 export function TopBar() {
-  const { theme, setTheme } = useAppStore();
+  const { theme, setTheme, user, logout } = useAppStore();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/auth/login');
+  };
 
   return (
     <header className="flex flex-col sticky top-0 z-50 shadow-sm relative bg-white">
@@ -50,16 +58,32 @@ export function TopBar() {
           <div className="h-8 w-px bg-slate-100" />
 
           {/* User Profile Info */}
-          <div className="flex items-center gap-3 pl-2 cursor-pointer group">
+          <div className="flex items-center gap-3 pl-2 cursor-pointer group relative">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">Ronald Richard</p>
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Student</p>
+              <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">
+                {user?.name || 'Guest User'}
+              </p>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                {user?.role || 'Guest'}
+              </p>
             </div>
-            <div className="relative">
-              <div className="w-11 h-11 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
+            
+            <div className="relative group/avatar">
+              <div className="w-11 h-11 rounded-full bg-slate-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center group-hover:border-primary transition-all">
                 <User className="text-slate-400" size={24} />
               </div>
               <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
+              
+              {/* Simple Dropdown on hover/click */}
+              <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-slate-100 rounded-2xl shadow-xl py-2 opacity-0 invisible group-hover/avatar:opacity-100 group-hover/avatar:visible transition-all">
+                 <button 
+                   onClick={handleLogout}
+                   className="w-full px-4 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 flex items-center gap-2"
+                 >
+                    <LogOut size={16} />
+                    Log Out
+                 </button>
+              </div>
             </div>
           </div>
         </div>
