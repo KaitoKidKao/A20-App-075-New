@@ -7,7 +7,7 @@ import uuid
 import logging
 import asyncio
 import json
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +15,11 @@ from concurrent.futures import ThreadPoolExecutor
 from src.backend.services.video_service import VideoService
 from src.backend.services.ai_service import AIService
 from src.backend import config
+from src.backend.database import create_db_and_tables, get_session
+from src.backend.models import User
+from src.backend.auth import get_password_hash, verify_password, create_access_token
+from src.backend.schemas.auth import UserCreate, UserLogin, Token
+from sqlmodel import Session, select
 
 # Cấu hình Logging
 logging.basicConfig(
@@ -39,6 +44,11 @@ app.add_middleware(
 
 # Thư mục lưu trữ trạng thái đơn giản (In-memory)
 processing_status = {}
+
+@app.on_event("startup")
+def on_startup():
+    logger.info("🚀 Đang khởi tạo cơ sở dữ liệu...")
+    create_db_and_tables()
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -76,6 +86,45 @@ async def run_video_pipeline(video_id: str, video_path: Path):
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy", "service": "Video Captioning API"}
+
+# --- Auth Endpoints ---
+
+@app.post("/api/auth/register", response_model=dict)
+async def register(user_data: UserCreate, session: Session = Depends(get_session)):
+    # Kiểm tra email tồn tại
+    statement = select(User).where(User.email == user_data.email)
+    existing_user = session.exec(statement).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email đã được sử dụng.")
+    
+    # Tạo user mới
+    new_user = User(
+        email=user_data.email,
+        password_hash=get_password_hash(user_data.password),
+        full_name=user_data.full_name,
+        role=user_data.role
+    )
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+    return {"message": "Đăng ký thành công", "user_id": new_user.id}
+
+@app.post("/api/auth/login", response_model=Token)
+async def login(user_data: UserLogin, session: Session = Depends(get_session)):
+    statement = select(User).where(User.email == user_data.email)
+    user = session.exec(statement).first()
+    
+    if not user or not verify_password(user_data.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không chính xác.")
+    
+    access_token = create_access_token(data={"sub": user.email})
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "role": user.role
+    }
+
+# --- Video Endpoints ---
 
 @app.post("/api/videos/upload")
 async def upload_video(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
