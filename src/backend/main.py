@@ -8,6 +8,7 @@ import logging
 import asyncio
 import json
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -151,11 +152,11 @@ async def register(user_data: UserCreate, session: Session = Depends(get_session
     return {"message": "Đăng ký thành công", "user_id": new_user.id}
 
 @app.post("/api/auth/login", response_model=Token)
-async def login(user_data: UserLogin, session: Session = Depends(get_session)):
-    statement = select(User).where(User.email == user_data.email)
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    statement = select(User).where(User.email == form_data.username)
     user = session.exec(statement).first()
     
-    if not user or not verify_password(user_data.password, user.password_hash):
+    if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không chính xác.")
     
     access_token = create_access_token(data={"sub": user.email})
