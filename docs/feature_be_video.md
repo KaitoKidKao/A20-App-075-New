@@ -7,13 +7,13 @@ Hệ thống Backend cung cấp giải pháp toàn diện để xử lý video b
 - **FastAPI**: Framework hiện đại cho hiệu năng cao.
 - **Faster-Whisper**: Công nghệ Speech-to-Text chạy trên CPU với độ chính xác cao.
 - **FFmpeg**: Công cụ xử lý âm thanh và video đa năng.
-- **OpenAI (GPT-5-nano)**: "Bộ não" AI thực hiện tóm tắt, trích xuất timeline và các điểm nhấn.
+- **OpenAI (gpt-5-nano)**: "Bộ não" AI thực hiện tóm tắt, trích xuất timeline và các điểm nhấn.
 
 ## 3. Danh sách API Endpoints
 
 ### A. Xác thực (Authentication)
 - **Đăng ký**: `POST /api/auth/register` (JSON `{"email": "...", "password": "...", "full_name": "...", "role": "..."}`)
-- **Đăng nhập**: `POST /api/auth/login` (JSON `{"email": "...", "password": "..."}`) -> Trả về `access_token`.
+- **Đăng nhập**: `POST /api/auth/login` (Form Data `username`, `password`) -> Trả về `access_token`.
 
 ### B. Quản lý Video (Yêu cầu JWT Token)
 - **Upload Video**: `POST /api/videos/upload` (Multipart form-data)
@@ -24,7 +24,7 @@ Hệ thống Backend cung cấp giải pháp toàn diện để xử lý video b
 
 ### C. Dữ liệu Phụ đề & Phân tích AI (Yêu cầu JWT Token)
 - **Lấy Transcript**: `GET /api/videos/{video_id}/transcript`
-- **Lấy Tóm tắt chính**: `GET /api/videos/{video_id}/summary`
+- **Lấy Tóm tắt chính**: `GET /api/videos/{video_id}/summary` (Trả về danh sách bullet points)
 - **Dòng thời gian (Timeline)**: `GET /api/videos/{video_id}/timeline`
 - **Điểm nhấn (Highlights)**: `GET /api/videos/{video_id}/highlights`
 - **Làm rõ câu hỏi (Questions)**: `GET /api/videos/{video_id}/questions`
