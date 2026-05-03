@@ -24,11 +24,11 @@ def test_auth():
     # 2. Đăng nhập
     print("\n--- Testing Login ---")
     login_data = {
-        "email": "student@a20.edu.vn",
+        "username": "student@a20.edu.vn",
         "password": "password123"
     }
     try:
-        response = requests.post(f"{BASE_URL}/login", json=login_data)
+        response = requests.post(f"{BASE_URL}/login", data=login_data)
         print(f"Status: {response.status_code}")
         if response.status_code == 200:
             token_data = response.json()
