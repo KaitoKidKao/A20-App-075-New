@@ -7,5 +7,5 @@ echo "🚀 Đang khởi chạy A20 Backend FastAPI..."
 echo "📍 API sẽ chạy tại: http://localhost:8000"
 echo "📚 Tài liệu Swagger: http://localhost:8000/docs"
 
-# Chạy uvicorn với chế độ reload để tiện phát triển
-uvicorn src.backend.main:app --host 0.0.0.0 --port 8000 --reload
+# Chạy uvicorn qua uv để đảm bảo đúng môi trường ảo
+uv run uvicorn src.backend.main:app --host 0.0.0.0 --port 8000 --reload

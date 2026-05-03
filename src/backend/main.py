@@ -7,7 +7,7 @@ import uuid
 import logging
 import asyncio
 import json
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +15,11 @@ from concurrent.futures import ThreadPoolExecutor
 from src.backend.services.video_service import VideoService
 from src.backend.services.ai_service import AIService
 from src.backend import config
+from src.backend.database import create_db_and_tables, get_session
+from src.backend.models import User, Video, LectureData
+from src.backend.auth import get_password_hash, verify_password, create_access_token, get_current_user
+from src.backend.schemas.auth import UserCreate, UserLogin, Token
+from sqlmodel import Session, select
 
 # Cấu hình Logging
 logging.basicConfig(
@@ -40,6 +45,11 @@ app.add_middleware(
 # Thư mục lưu trữ trạng thái đơn giản (In-memory)
 processing_status = {}
 
+@app.on_event("startup")
+def on_startup():
+    logger.info("🚀 Đang khởi tạo cơ sở dữ liệu...")
+    create_db_and_tables()
+
 @app.on_event("shutdown")
 def shutdown_event():
     logger.info("🛑 Đang dọn dẹp tài nguyên và tắt server...")
@@ -49,27 +59,68 @@ def run_transcription_sync(audio_path: Path, video_id: str):
     """Hàm chạy Whisper (đồng bộ) trong thread riêng"""
     return AIService.transcribe(audio_path, video_id)
 
+from src.backend.database import engine
+
 async def run_video_pipeline(video_id: str, video_path: Path):
     """
-    Pipeline xử lý video: Tách audio (Subprocess) -> Transcribe (Whisper/Thread)
+    Pipeline xử lý video: Tách audio -> Transcribe -> AI Summary & Metadata -> Lưu DB
     """
     try:
-        # Bước 1: Tách âm thanh
-        processing_status[video_id] = "extracting_audio"
-        logger.info(f"🎬 [{video_id}] Đang tách âm thanh...")
-        audio_path = VideoService.extract_audio(video_path)
-        
-        # Bước 2: Nhận diện tiếng nói (Whisper - chạy trong ThreadPool để không block async)
-        processing_status[video_id] = "transcribing"
-        logger.info(f"🎙️ [{video_id}] Đang nhận diện tiếng nói (Whisper CPU)...")
-        
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(executor, run_transcription_sync, audio_path, video_id)
-        
-        processing_status[video_id] = "completed"
-        logger.info(f"✅ [{video_id}] Hoàn thành toàn bộ pipeline.")
-        
+        with Session(engine) as session:
+            # Helper để cập nhật trạng thái video
+            def update_status(new_status: str):
+                video = session.get(Video, video_id)
+                if video:
+                    video.status = new_status
+                    session.add(video)
+                    session.commit()
+                # Đồng thời cập nhật processing_status (cho tương thích ngược tạm thời)
+                processing_status[video_id] = new_status
+
+            # Bước 1: Tách âm thanh
+            update_status("extracting_audio")
+            logger.info(f"🎬 [{video_id}] Đang tách âm thanh...")
+            audio_path = VideoService.extract_audio(video_path)
+            
+            # Bước 2: Nhận diện tiếng nói (Whisper)
+            update_status("transcribing")
+            logger.info(f"🎙️ [{video_id}] Đang nhận diện tiếng nói (Whisper CPU)...")
+            
+            loop = asyncio.get_event_loop()
+            transcript_data = await loop.run_in_executor(executor, run_transcription_sync, audio_path, video_id)
+            
+            # Bước 3: Phân tích AI (Summary, Timeline, Highlights, etc.)
+            update_status("ai_processing")
+            logger.info(f"🧠 [{video_id}] Đang phân tích AI (Batching)...")
+            
+            # Gọi gộp các tính năng AI
+            summary = await AIService.summarize(transcript_data)
+            metadata = await AIService.process_all_lecture_metadata(transcript_data)
+            briefing = await AIService.generate_pre_lecture_briefing(transcript_data)
+            
+            # Bước 4: Lưu kết quả vào DB
+            logger.info(f"💾 [{video_id}] Đang lưu kết quả vào bảng lecture_data...")
+            lecture_entry = LectureData(
+                video_id=video_id,
+                transcript=transcript_data,
+                summary=summary,
+                timeline=metadata.get("timeline"),
+                highlights=metadata.get("highlights"),
+                questions=metadata.get("questions"),
+                briefing=briefing
+            )
+            session.add(lecture_entry)
+            
+            update_status("completed")
+            logger.info(f"✅ [{video_id}] Hoàn thành toàn bộ pipeline.")
+            
     except Exception as e:
+        with Session(engine) as session:
+            video = session.get(Video, video_id)
+            if video:
+                video.status = f"failed: {str(e)}"
+                session.add(video)
+                session.commit()
         processing_status[video_id] = f"failed: {str(e)}"
         logger.error(f"❌ [{video_id}] Lỗi pipeline: {e}")
 
@@ -77,10 +128,54 @@ async def run_video_pipeline(video_id: str, video_path: Path):
 def health_check():
     return {"status": "healthy", "service": "Video Captioning API"}
 
+# --- Auth Endpoints ---
+
+@app.post("/api/auth/register", response_model=dict)
+async def register(user_data: UserCreate, session: Session = Depends(get_session)):
+    # Kiểm tra email tồn tại
+    statement = select(User).where(User.email == user_data.email)
+    existing_user = session.exec(statement).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email đã được sử dụng.")
+    
+    # Tạo user mới
+    new_user = User(
+        email=user_data.email,
+        password_hash=get_password_hash(user_data.password),
+        full_name=user_data.full_name,
+        role=user_data.role
+    )
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+    return {"message": "Đăng ký thành công", "user_id": new_user.id}
+
+@app.post("/api/auth/login", response_model=Token)
+async def login(user_data: UserLogin, session: Session = Depends(get_session)):
+    statement = select(User).where(User.email == user_data.email)
+    user = session.exec(statement).first()
+    
+    if not user or not verify_password(user_data.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không chính xác.")
+    
+    access_token = create_access_token(data={"sub": user.email})
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "role": user.role
+    }
+
+# --- Video Endpoints ---
+
 @app.post("/api/videos/upload")
-async def upload_video(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def upload_video(
+    background_tasks: BackgroundTasks, 
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
     """
-    Endpoint upload video: Lưu file và kích hoạt pipeline xử lý.
+    Endpoint upload video: Lưu file, tạo record DB và kích hoạt pipeline.
     """
     video_id = str(uuid.uuid4())
     ext = os.path.splitext(file.filename)[1].lower()
@@ -90,28 +185,44 @@ async def upload_video(background_tasks: BackgroundTasks, file: UploadFile = Fil
     filename = f"{video_id}{ext}"
     
     try:
-        # Lưu file video
+        # 1. Lưu file video vật lý
         content = await file.read()
-        logger.info(f"📥 Đang nhận file: {file.filename} (ID: {video_id})")
+        logger.info(f"📥 [{video_id}] Nhận file từ {current_user.email}: {file.filename}")
         video_path = await VideoService.save_video(content, filename)
         
-        # Đưa vào hàng chờ xử lý trong nền
+        # 2. Tạo record trong database
+        new_video = Video(
+            id=video_id,
+            user_id=current_user.id,
+            title=file.filename,
+            storage_path=str(video_path),
+            status="queued"
+        )
+        session.add(new_video)
+        session.commit()
+        
+        # 3. Đưa vào hàng chờ xử lý trong nền
         processing_status[video_id] = "queued"
         background_tasks.add_task(run_video_pipeline, video_id, video_path)
         
         return {
             "video_id": video_id,
             "status": "processing",
-            "message": "Video đang được xử lý trong nền."
+            "message": "Video đã được tải lên và đang chờ xử lý."
         }
     except Exception as e:
-        logger.error(f"❌ Lỗi khi upload video {video_id}: {e}")
+        logger.error(f"❌ Lỗi upload video {video_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/videos/process-url")
-async def process_url(background_tasks: BackgroundTasks, data: dict):
+async def process_url(
+    background_tasks: BackgroundTasks, 
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
     """
-    Tiếp nhận URL video và xử lý trong nền.
+    Tiếp nhận URL video, tạo record DB và tải xuống để xử lý.
     """
     url = data.get("url")
     if not url:
@@ -119,14 +230,47 @@ async def process_url(background_tasks: BackgroundTasks, data: dict):
     
     video_id = str(uuid.uuid4())
     
+    # Tạo record ban đầu
+    new_video = Video(
+        id=video_id,
+        user_id=current_user.id,
+        title=f"Video từ URL: {url[:30]}...",
+        storage_path="", # Sẽ cập nhật sau khi tải xong
+        status="queued"
+    )
+    session.add(new_video)
+    session.commit()
+
     async def download_and_run_pipeline(vid: str, vurl: str):
         try:
+            with Session(engine) as sub_session:
+                video = sub_session.get(Video, vid)
+                if video:
+                    video.status = "downloading"
+                    sub_session.add(video)
+                    sub_session.commit()
+            
             processing_status[vid] = "downloading"
             vpath = await VideoService.download_video(vurl, vid)
+            
+            # Cập nhật path sau khi tải xong
+            with Session(engine) as sub_session:
+                video = sub_session.get(Video, vid)
+                if video:
+                    video.storage_path = str(vpath)
+                    sub_session.add(video)
+                    sub_session.commit()
+
             await run_video_pipeline(vid, vpath)
         except Exception as e:
+            with Session(engine) as sub_session:
+                video = sub_session.get(Video, vid)
+                if video:
+                    video.status = f"failed_download: {str(e)}"
+                    sub_session.add(video)
+                    sub_session.commit()
             processing_status[vid] = f"failed_download: {str(e)}"
-            logger.error(f"❌ Lỗi khi tải video {vid}: {e}")
+            logger.error(f"❌ Lỗi tải video {vid}: {e}")
 
     # Đưa vào hàng chờ
     processing_status[video_id] = "queued"
@@ -135,103 +279,122 @@ async def process_url(background_tasks: BackgroundTasks, data: dict):
     return {
         "video_id": video_id,
         "status": "processing",
-        "message": "URL đã được nhận và đang được tải xuống để xử lý."
+        "message": "URL đã được nhận và đang chuẩn bị tải xuống."
     }
 
+@app.get("/api/videos/me")
+async def list_my_videos(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy danh sách video của người dùng hiện tại"""
+    statement = select(Video).where(Video.user_id == current_user.id)
+    videos = session.exec(statement).all()
+    return videos
+
 @app.get("/api/videos/{video_id}/status")
-async def get_video_status(video_id: str):
-    """Kiểm tra trạng thái xử lý của video"""
-    status = processing_status.get(video_id, "not_found")
-    return {"video_id": video_id, "status": status}
+async def get_video_status(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Kiểm tra trạng thái xử lý của video (có kiểm tra quyền)"""
+    video = session.get(Video, video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Không tìm thấy video.")
+    
+    # Kiểm tra quyền: Chỉ chủ sở hữu hoặc Admin mới được xem
+    if video.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xem trạng thái video này.")
+        
+    return {"video_id": video_id, "status": video.status}
+
+# Helper kiểm tra quyền truy cập dữ liệu bài giảng
+def check_video_access(video_id: str, user: User, session: Session):
+    video = session.get(Video, video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Không tìm thấy video.")
+    if video.user_id != user.id and user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập dữ liệu này.")
+    return video
 
 @app.get("/api/videos/{video_id}/transcript")
-async def get_transcript(video_id: str):
-    """Lấy kết quả phụ đề (Transcript)"""
-    transcript_path = AIService.TRANSCRIPT_DIR / f"{video_id}.json"
-    
-    if not transcript_path.exists():
-        status = processing_status.get(video_id, "not_found")
-        return {
-            "video_id": video_id, 
-            "status": status, 
-            "message": "Phụ đề chưa sẵn sàng hoặc không tồn tại."
-        }
-    
-    with open(transcript_path, "r", encoding="utf-8") as f:
-        return json.load(f)
+async def get_transcript(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy kết quả phụ đề (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.transcript:
+        return {"video_id": video_id, "message": "Phụ đề chưa sẵn sàng."}
+    return lecture.transcript
 
 @app.get("/api/videos/{video_id}/summary")
-async def get_summary(video_id: str):
-    """Lấy tóm tắt nội dung dựa trên transcript đã có"""
-    transcript_path = AIService.TRANSCRIPT_DIR / f"{video_id}.json"
-    
-    if not transcript_path.exists():
-        raise HTTPException(status_code=404, detail="Vui lòng đợi quá trình tạo phụ đề hoàn tất.")
-    
-    with open(transcript_path, "r", encoding="utf-8") as f:
-        transcript_data = json.load(f)
-    
-    # Gọi service tóm tắt
-    summary = await AIService.summarize(transcript_data)
-    return {"video_id": video_id, "summary": summary}
-
-async def get_cached_metadata(video_id: str):
-    """Helper để lấy transcript và metadata từ cache"""
-    transcript_path = AIService.TRANSCRIPT_DIR / f"{video_id}.json"
-    if not transcript_path.exists():
-        raise HTTPException(status_code=404, detail="Vui lòng đợi quá trình tạo phụ đề hoàn tất.")
-    
-    with open(transcript_path, "r", encoding="utf-8") as f:
-        transcript_data = json.load(f)
-        
-    metadata_path = AIService.AI_RESULTS_DIR / video_id / "metadata.json"
-    if not metadata_path.exists():
-        # Nếu chưa có cache thì gọi AI để tạo (Batching)
-        metadata = await AIService.process_all_lecture_metadata(transcript_data)
-    else:
-        with open(metadata_path, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
-            
-    return transcript_data, metadata
+async def get_summary(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy tóm tắt (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.summary:
+        return {"video_id": video_id, "message": "Tóm tắt chưa sẵn sàng."}
+    return {"video_id": video_id, "summary": lecture.summary}
 
 @app.get("/api/videos/{video_id}/timeline")
-async def get_timeline(video_id: str):
-    """Lấy dòng thời gian bài giảng (Timeline)"""
-    _, metadata = await get_cached_metadata(video_id)
-    return {"video_id": video_id, "timeline": metadata.get("timeline", [])}
+async def get_timeline(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy timeline (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.timeline:
+        return {"video_id": video_id, "timeline": []}
+    return {"video_id": video_id, "timeline": lecture.timeline}
 
 @app.get("/api/videos/{video_id}/highlights")
-async def get_highlights(video_id: str):
-    """Lấy các điểm nhấn quan trọng (Highlights)"""
-    _, metadata = await get_cached_metadata(video_id)
-    return {"video_id": video_id, "highlights": metadata.get("highlights", [])}
+async def get_highlights(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy highlights (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.highlights:
+        return {"video_id": video_id, "highlights": []}
+    return {"video_id": video_id, "highlights": lecture.highlights}
 
 @app.get("/api/videos/{video_id}/questions")
-async def get_questions(video_id: str):
-    """Lấy danh sách câu hỏi đã được làm rõ (Rephrased Questions)"""
-    _, metadata = await get_cached_metadata(video_id)
-    return {"video_id": video_id, "questions": metadata.get("questions", [])}
+async def get_questions(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy questions (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.questions:
+        return {"video_id": video_id, "questions": []}
+    return {"video_id": video_id, "questions": lecture.questions}
 
 @app.get("/api/videos/{video_id}/briefing")
-async def get_briefing(video_id: str):
-    """Lấy bản tóm tắt định hướng trước bài giảng (Pre-lecture Briefing)"""
-    briefing_path = AIService.AI_RESULTS_DIR / video_id / "briefing.json"
-    
-    if not briefing_path.exists():
-        # Cần transcript để tạo briefing
-        transcript_path = AIService.TRANSCRIPT_DIR / f"{video_id}.json"
-        if not transcript_path.exists():
-            raise HTTPException(status_code=404, detail="Vui lòng đợi quá trình tạo phụ đề hoàn tất.")
-        
-        with open(transcript_path, "r", encoding="utf-8") as f:
-            transcript_data = json.load(f)
-        
-        briefing = await AIService.generate_pre_lecture_briefing(transcript_data)
-    else:
-        with open(briefing_path, "r", encoding="utf-8") as f:
-            briefing = json.load(f)
-            
-    return {"video_id": video_id, "briefing": briefing}
+async def get_briefing(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy briefing (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.briefing:
+        return {"video_id": video_id, "message": "Briefing chưa sẵn sàng."}
+    return {"video_id": video_id, "briefing": lecture.briefing}
 
 
 if __name__ == "__main__":
