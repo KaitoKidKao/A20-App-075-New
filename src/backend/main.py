@@ -8,6 +8,7 @@ import logging
 import asyncio
 import json
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -97,6 +98,7 @@ async def run_video_pipeline(video_id: str, video_path: Path):
             summary = await AIService.summarize(transcript_data)
             metadata = await AIService.process_all_lecture_metadata(transcript_data)
             briefing = await AIService.generate_pre_lecture_briefing(transcript_data)
+            notebook_data = await AIService.generate_notebook_data(transcript_data)
             
             # Bước 4: Lưu kết quả vào DB
             logger.info(f"💾 [{video_id}] Đang lưu kết quả vào bảng lecture_data...")
@@ -107,9 +109,22 @@ async def run_video_pipeline(video_id: str, video_path: Path):
                 timeline=metadata.get("timeline"),
                 highlights=metadata.get("highlights"),
                 questions=metadata.get("questions"),
-                briefing=briefing
+                briefing=briefing,
+                visual_data=notebook_data.get("visual_data"),
+                cover_image_url=notebook_data.get("cover_image_url")
             )
             session.add(lecture_entry)
+
+            # Lưu Flashcards
+            flashcards_data = notebook_data.get("flashcards", [])
+            for fc in flashcards_data:
+                from src.backend.models.flashcard import Flashcard
+                new_fc = Flashcard(
+                    video_id=video_id,
+                    front=fc.get("front"),
+                    back=fc.get("back")
+                )
+                session.add(new_fc)
             
             update_status("completed")
             logger.info(f"✅ [{video_id}] Hoàn thành toàn bộ pipeline.")
@@ -151,11 +166,15 @@ async def register(user_data: UserCreate, session: Session = Depends(get_session
     return {"message": "Đăng ký thành công", "user_id": new_user.id}
 
 @app.post("/api/auth/login", response_model=Token)
-async def login(user_data: UserLogin, session: Session = Depends(get_session)):
-    statement = select(User).where(User.email == user_data.email)
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    session: Session = Depends(get_session)
+):
+    # Trong OAuth2PasswordRequestForm, 'username' sẽ chứa Email
+    statement = select(User).where(User.email == form_data.username)
     user = session.exec(statement).first()
     
-    if not user or not verify_password(user_data.password, user.password_hash):
+    if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không chính xác.")
     
     access_token = create_access_token(data={"sub": user.email})
@@ -395,6 +414,36 @@ async def get_briefing(
     if not lecture or not lecture.briefing:
         return {"video_id": video_id, "message": "Briefing chưa sẵn sàng."}
     return {"video_id": video_id, "briefing": lecture.briefing}
+
+@app.get("/api/videos/{video_id}/flashcards")
+async def get_flashcards(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy danh sách flashcards của video (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    from src.backend.models.flashcard import Flashcard
+    statement = select(Flashcard).where(Flashcard.video_id == video_id)
+    flashcards = session.exec(statement).all()
+    return {"video_id": video_id, "flashcards": flashcards}
+
+@app.get("/api/videos/{video_id}/viz-data")
+async def get_viz_data(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy dữ liệu trực quan hóa (charts) cho video (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.visual_data:
+        return {"video_id": video_id, "visual_data": {}, "cover_image_url": None}
+    return {
+        "video_id": video_id, 
+        "visual_data": lecture.visual_data,
+        "cover_image_url": lecture.cover_image_url
+    }
 
 
 if __name__ == "__main__":

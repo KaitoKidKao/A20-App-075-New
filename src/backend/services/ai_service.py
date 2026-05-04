@@ -213,3 +213,68 @@ class AIService:
             logger.error(f"❌ Lỗi khi tạo briefing: {e}")
             return {"error": str(e)}
 
+    @classmethod
+    async def generate_notebook_data(cls, transcript_data: dict) -> dict:
+        """
+        Tính năng Notebook LLM: Trích xuất dữ liệu trực quan (Charts) và Flashcards.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return {"error": "API Key not configured"}
+
+        client = OpenAI(api_key=api_key)
+        full_text = " ".join([s["text"] for s in transcript_data["segments"]])
+        truncated_text = full_text[:6000]
+
+        prompt = f"""
+        Bạn là một chuyên gia thiết kế đồ họa thông tin (Infographic) và phân tích dữ liệu. Dựa trên nội dung bài giảng dưới đây, hãy trích xuất dữ liệu để tạo Flashcards và một bộ tài liệu trực quan hóa cao (Infographic & Charts).
+
+        Yêu cầu đầu ra định dạng JSON với các khóa sau:
+        1. "flashcards": Danh sách 5-10 thẻ học tập. Mỗi thẻ có "front" (câu hỏi/khái niệm) và "back" (câu trả lời/định nghĩa ngắn gọn).
+        2. "visual_data": 
+           - "charts": Dữ liệu cho các biểu đồ (topic_distribution, knowledge_density, skills_radar như yêu cầu trước).
+           - "infographic": Dữ liệu cho một Infographic chuyên nghiệp bao gồm:
+             - "title": Tiêu đề chính của Infographic.
+             - "sections": Danh sách 3-5 phần nội dung chính. Mỗi phần có:
+               - "icon": Tên icon (ví dụ: 'brain', 'clock', 'target', 'lightbulb', 'star' - dùng chuẩn Lucide/FontAwesome).
+               - "label": Tiêu đề của phần.
+               - "value": Một số liệu hoặc từ khóa quan trọng nhất.
+               - "description": Một đoạn mô tả ngắn (1 câu) giải thích chi tiết hơn.
+             - "key_takeaways": 3 điểm rút ra quan trọng nhất từ bài học.
+           - "image_prompt": Một mô tả ngắn bằng tiếng Anh (khoảng 10-15 từ) để sinh ảnh minh họa cho bài giảng này (ví dụ: 'A futuristic digital library with holographic data screens, educational style').
+
+        Định dạng trả về DUY NHẤT là JSON. Không giải thích gì thêm.
+
+        Nội dung:
+        {truncated_text}
+        """
+
+        try:
+            logger.info(f"🧠 [Notebook LLM] Đang trích xuất dữ liệu trực quan & Flashcards cho {transcript_data['video_id']}...")
+            response = client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
+            )
+            
+            result = json.loads(response.choices[0].message.content)
+            
+            # Sinh URL ảnh từ Pollinations.ai dựa trên image_prompt
+            # Ta lấy từ visual_data.image_prompt hoặc mặc định
+            image_prompt = result.get("visual_data", {}).get("image_prompt", "educational illustration")
+            safe_prompt = "".join(c if c.isalnum() or c == " " else "" for c in image_prompt).replace(" ", "+")
+            result["cover_image_url"] = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1024&height=768&nologo=true"
+            
+            # Caching
+            video_id = transcript_data["video_id"]
+            result_dir = cls.AI_RESULTS_DIR / video_id
+            result_dir.mkdir(parents=True, exist_ok=True)
+            
+            with open(result_dir / "notebook.json", "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
+                
+            return result
+        except Exception as e:
+            logger.error(f"❌ Lỗi khi tạo dữ liệu Notebook: {e}")
+            return {"error": str(e)}
+
