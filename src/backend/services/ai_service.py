@@ -10,12 +10,26 @@ logger = logging.getLogger(__name__)
 class AIService:
     TRANSCRIPT_DIR = Path("data/uploads/transcripts")
     AI_RESULTS_DIR = Path("data/uploads/ai_results")
+    VSL_DATA_PATH = Path("src/backend/data/vsl_processed.json")
+    
+    _vsl_data = None
 
     # Sử dụng bản 'base' hoặc 'small' để tối ưu cho CPU
     MODEL_SIZE = "small"
     
     # Khởi tạo Whisper Model (Lazy Loading)
     _whisper_model = None
+
+    @classmethod
+    def get_vsl_data(cls):
+        if cls._vsl_data is None:
+            if cls.VSL_DATA_PATH.exists():
+                with open(cls.VSL_DATA_PATH, "r", encoding="utf-8") as f:
+                    cls._vsl_data = json.load(f)
+            else:
+                logger.warning(f"⚠️ Không tìm thấy file dữ liệu VSL tại {cls.VSL_DATA_PATH}")
+                cls._vsl_data = {"dictionary": {}, "synonyms": {}}
+        return cls._vsl_data
 
     @classmethod
     def get_whisper_model(cls):
@@ -163,6 +177,87 @@ class AIService:
         except Exception as e:
             logger.error(f"❌ Lỗi khi trích xuất metadata: {e}")
             return {"error": str(e)}
+    @classmethod
+    async def generate_handsign_data(cls, transcript_data: dict) -> list:
+        """
+        Dịch Transcript sang chuỗi VSL Glosses (Ngôn ngữ ký hiệu Việt Nam) kèm mã HamNoSys.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return []
+
+        client = OpenAI(api_key=api_key)
+        vsl_data = cls.get_vsl_data()
+        vsl_dict = vsl_data.get("dictionary", {})
+        
+        # Lấy danh sách 500 từ vựng phổ biến nhất từ từ điển để "gợi ý" cho AI
+        available_keywords = list(vsl_dict.keys())[:1000] # Giới hạn để tránh quá tải Prompt
+        
+        segments = transcript_data["segments"]
+        formatted_text = ""
+        for s in segments:
+            formatted_text += f"[{s['start']}] {s['text']}\n"
+
+        prompt = f"""
+        Bạn là chuyên gia Ngôn ngữ ký hiệu Việt Nam (VSL). Hãy dịch đoạn hội thoại dưới đây sang danh sách các từ khóa VSL (Glosses).
+        
+        Yêu cầu:
+        1. Trả về định dạng JSON: {{"glosses": [{{"time": float, "word": str}}]}}
+        2. "word" PHẢI là từ gốc tiếng Việt, viết thường, các từ ghép nối bằng dấu gạch dưới (ví dụ: "ăn_cơm", "xin_chào").
+        3. Ưu tiên sử dụng các từ khóa sau nếu phù hợp ngữ cảnh: {", ".join(available_keywords[:200])}...
+        4. Loại bỏ các từ hư từ, chỉ giữ lại từ mang nội dung chính.
+        
+        Input:
+        {formatted_text[:4000]}
+        
+        Chỉ trả về JSON.
+        """
+
+        try:
+            logger.info(f"🤟 [VSL] Đang dịch transcript sang VSL cho {transcript_data['video_id']}...")
+            response = client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
+            )
+            
+            ai_result = json.loads(response.choices[0].message.content)
+            raw_glosses = ai_result.get("glosses", []) or ai_result.get("data", [])
+            
+            # Làm giàu dữ liệu với HamNoSys và xử lý từ đồng nghĩa
+            final_glosses = []
+            synonyms_map = vsl_data.get("synonyms", {})
+            
+            for item in raw_glosses:
+                word = item.get("word", "").lower().replace(" ", "_")
+                timestamp = item.get("time", 0)
+                
+                # 1. Tra trực tiếp
+                if word in vsl_dict:
+                    item["vsl_info"] = vsl_dict[word]
+                    final_glosses.append(item)
+                # 2. Tra qua từ đồng nghĩa
+                else:
+                    found_synonym = False
+                    # Kiểm tra xem từ này có là từ đồng nghĩa của từ nào trong từ điển không
+                    for main_word, syns in synonyms_map.items():
+                        if word in syns and main_word in vsl_dict:
+                            item["word"] = main_word
+                            item["vsl_info"] = vsl_dict[main_word]
+                            final_glosses.append(item)
+                            found_synonym = True
+                            break
+                    
+                    if not found_synonym:
+                        # Fallback: Vẫn giữ từ đó nhưng không có mã HamNoSys (Frontend có thể hiển thị text hoặc xử lý khác)
+                        item["vsl_info"] = None
+                        final_glosses.append(item)
+            
+            return final_glosses
+        except Exception as e:
+            logger.error(f"❌ Lỗi khi sinh Handsign Data: {e}")
+            return []
+
 
     @classmethod
     async def generate_pre_lecture_briefing(cls, transcript_data: dict) -> dict:

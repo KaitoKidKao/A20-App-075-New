@@ -99,6 +99,7 @@ async def run_video_pipeline(video_id: str, video_path: Path):
             metadata = await AIService.process_all_lecture_metadata(transcript_data)
             briefing = await AIService.generate_pre_lecture_briefing(transcript_data)
             notebook_data = await AIService.generate_notebook_data(transcript_data)
+            handsign_data = await AIService.generate_handsign_data(transcript_data)
             
             # Bước 4: Lưu kết quả vào DB
             logger.info(f"💾 [{video_id}] Đang lưu kết quả vào bảng lecture_data...")
@@ -111,7 +112,8 @@ async def run_video_pipeline(video_id: str, video_path: Path):
                 questions=metadata.get("questions"),
                 briefing=briefing,
                 visual_data=notebook_data.get("visual_data"),
-                cover_image_url=notebook_data.get("cover_image_url")
+                cover_image_url=notebook_data.get("cover_image_url"),
+                handsign_data=handsign_data
             )
             session.add(lecture_entry)
 
@@ -443,6 +445,25 @@ async def get_viz_data(
         "video_id": video_id, 
         "visual_data": lecture.visual_data,
         "cover_image_url": lecture.cover_image_url
+    }
+
+@app.get("/api/videos/{video_id}/handsign")
+async def get_handsign_data(
+    video_id: str, 
+    current_user: User = Depends(get_current_user), 
+    session: Session = Depends(get_session)
+):
+    """
+    Lấy dữ liệu chuỗi từ khóa thủ ngữ (ASL Glosses) cho video.
+    """
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.handsign_data:
+        return {"video_id": video_id, "handsign_data": []}
+        
+    return {
+        "video_id": video_id, 
+        "handsign_data": lecture.handsign_data
     }
 
 

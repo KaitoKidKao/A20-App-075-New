@@ -12,4 +12,5 @@ class LectureData(SQLModel, table=True):
     briefing: Optional[Any] = Field(sa_column=Column(JSON))
     visual_data: Optional[Any] = Field(sa_column=Column(JSON)) # Dữ liệu cho biểu đồ (viz-data)
     cover_image_url: Optional[str] = None # URL ảnh bìa minh họa
+    handsign_data: Optional[Any] = Field(sa_column=Column(JSON)) # Chuỗi từ khóa thủ ngữ (ASL Glosses)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
