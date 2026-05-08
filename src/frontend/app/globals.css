@@ -21,7 +21,14 @@
 
 @layer base {
   body {
-    @apply bg-bg-main text-text-main font-sans antialiased;
+    @apply text-text-main font-sans antialiased relative min-h-screen;
+    background-color: var(--color-bg-main);
+    background-image: 
+      linear-gradient(rgba(240, 249, 255, 0.9), rgba(240, 249, 255, 0.9)),
+      url('/assets/images/learning-bg.png');
+    background-attachment: fixed;
+    background-size: cover;
+    background-position: center;
   }
 }
 

@@ -49,7 +49,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-main">
+    <div className="min-h-screen bg-transparent">
       <div className="px-8 md:px-12 py-8 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row gap-8">
           
