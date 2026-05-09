@@ -8,6 +8,7 @@ from src.backend.models import User, Video, LectureData
 from src.backend.auth import get_current_user
 from src.backend.services.video_service import VideoService
 from src.backend.services.pipeline import run_video_pipeline, download_and_run_pipeline, processing_status
+from src.backend.services.ai_service import AIService
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,6 @@ router = APIRouter(prefix="/api/videos", tags=["Videos & Analysis"])
 async def upload_video(
     background_tasks: BackgroundTasks, 
     file: UploadFile = File(...),
-    num_questions: int = 5,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -50,7 +50,7 @@ async def upload_video(
         
         # 3. Đưa vào hàng chờ xử lý trong nền
         processing_status[video_id] = "queued"
-        background_tasks.add_task(run_video_pipeline, video_id, video_path, num_questions)
+        background_tasks.add_task(run_video_pipeline, video_id, video_path)
         
         return {
             "video_id": video_id,
@@ -90,8 +90,7 @@ async def process_url(
 
     # Đưa vào hàng chờ
     processing_status[video_id] = "queued"
-    num_questions = data.get("num_questions", 5)
-    background_tasks.add_task(download_and_run_pipeline, video_id, url, num_questions)
+    background_tasks.add_task(download_and_run_pipeline, video_id, url)
     
     return {
         "video_id": video_id,
@@ -219,24 +218,43 @@ async def get_mindmap(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    """Lấy mindmap (có kiểm tra quyền)"""
+    """Lấy mindmap (On-demand)"""
     check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
-    if not lecture or not lecture.mindmap:
-        return {"video_id": video_id, "message": "Mindmap chưa sẵn sàng."}
+    if not lecture:
+        return {"video_id": video_id, "message": "Dữ liệu bài giảng chưa sẵn sàng."}
+    
+    if not lecture.mindmap:
+        logger.info(f"🧠 [{video_id}] Mindmap chưa có, đang tạo On-demand...")
+        mindmap = await AIService.generate_mindmap(lecture.transcript)
+        lecture.mindmap = mindmap
+        session.add(lecture)
+        session.commit()
+        session.refresh(lecture)
+        
     return {"video_id": video_id, "mindmap": lecture.mindmap}
 
 @router.get("/{video_id}/quiz")
 async def get_quiz(
     video_id: str, 
+    num_questions: int = 5,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    """Lấy quiz (có kiểm tra quyền)"""
+    """Lấy quiz (On-demand)"""
     check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
-    if not lecture or not lecture.quiz:
+    if not lecture:
         return {"video_id": video_id, "quiz": []}
+    
+    if not lecture.quiz:
+        logger.info(f"🧠 [{video_id}] Quiz chưa có, đang tạo On-demand ({num_questions} câu)...")
+        quiz = await AIService.generate_quiz(lecture.transcript, num_questions=num_questions)
+        lecture.quiz = quiz
+        session.add(lecture)
+        session.commit()
+        session.refresh(lecture)
+        
     return {"video_id": video_id, "quiz": lecture.quiz}
 
 @router.get("/{video_id}/slides")
@@ -245,9 +263,18 @@ async def get_slides(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    """Lấy slides blueprint (có kiểm tra quyền)"""
+    """Lấy slides blueprint (On-demand)"""
     check_video_access(video_id, current_user, session)
     lecture = session.get(LectureData, video_id)
-    if not lecture or not lecture.slides:
+    if not lecture:
         return {"video_id": video_id, "slides": []}
+        
+    if not lecture.slides:
+        logger.info(f"🧠 [{video_id}] Slides chưa có, đang tạo On-demand...")
+        slides = await AIService.generate_slides(lecture.transcript)
+        lecture.slides = slides
+        session.add(lecture)
+        session.commit()
+        session.refresh(lecture)
+        
     return {"video_id": video_id, "slides": lecture.slides}
