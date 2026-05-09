@@ -143,11 +143,13 @@ async def run_video_pipeline(video_id: str, video_path: Path):
             logger.info(f"🧠 [{video_id}] Đang phân tích AI (Batching)...")
             
             # Gọi gộp các tính năng AI
-            summary = await AIService.summarize(transcript_data)
-            metadata = await AIService.process_all_lecture_metadata(transcript_data)
-            briefing = await AIService.generate_pre_lecture_briefing(transcript_data)
-            notebook_data = await AIService.generate_notebook_data(transcript_data)
-            handsign_data = await AIService.generate_handsign_data(transcript_data)
+            summary, metadata, briefing, notebook_data, handsign_data = await asyncio.gather(
+                AIService.summarize(transcript_data),
+                AIService.process_all_lecture_metadata(transcript_data),
+                AIService.generate_pre_lecture_briefing(transcript_data),
+                AIService.generate_notebook_data(transcript_data),
+                AIService.generate_handsign_data(transcript_data),
+            )
             
             # Bước 4: Lưu kết quả vào DB
             logger.info(f"💾 [{video_id}] Đang lưu kết quả vào bảng lecture_data...")

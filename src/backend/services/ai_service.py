@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 from faster_whisper import WhisperModel
-from openai import OpenAI
+from openai import AsyncOpenAI
 from src.backend import config
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class AIService:
             logger.warning("⚠️ Không tìm thấy OPENAI_API_KEY. Bỏ qua bước tóm tắt.")
             return ["Vui lòng cấu hình API Key để sử dụng tính năng tóm tắt."]
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         
         # Kết hợp các đoạn text lại để gửi sang LLM
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
@@ -106,7 +106,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 Đang gọi LLM ({config.DEFAULT_MODEL}) để tóm tắt nội dung...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL, 
                 messages=[{"role": "user", "content": prompt}],
                 max_completion_tokens=500  # Thay max_tokens bằng max_completion_tokens theo thông báo lỗi
@@ -131,7 +131,7 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         
         # Chuẩn bị transcript có kèm timestamp để AI dễ phân tích
         formatted_transcript = ""
@@ -157,7 +157,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 [Batching] Đang trích xuất Timeline, Highlights & Questions cho {transcript_data['video_id']}...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -186,7 +186,7 @@ class AIService:
         if not api_key:
             return []
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         vsl_data = cls.get_vsl_data()
         vsl_dict = vsl_data.get("dictionary", {})
         
@@ -215,7 +215,7 @@ class AIService:
 
         try:
             logger.info(f"🤟 [VSL] Đang dịch transcript sang VSL cho {transcript_data['video_id']}...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -257,7 +257,7 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
         truncated_text = full_text[:4000]
 
@@ -276,7 +276,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 Đang tạo Pre-lecture Briefing cho {transcript_data['video_id']}...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -306,7 +306,7 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
         truncated_text = full_text[:6000]
 
@@ -335,7 +335,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 [Notebook LLM] Đang trích xuất dữ liệu trực quan & Flashcards cho {transcript_data['video_id']}...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
