@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle2, 
   Clock, 
@@ -18,12 +18,11 @@ import {
 import { useParams, useRouter } from 'next/navigation';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { api } from '@/lib/api';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-const API_BASE = 'http://localhost:8000';
 
 function mapStatusToUI(status: string) {
   if (status === 'queued') return { step: 1, progress: 10, label: 'Đang xếp hàng chờ xử lý...' };
@@ -51,9 +50,7 @@ export default function VideoProcessingPage() {
 
     const pollStatus = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/videos/${videoId}/status`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await api.videos.getStatus(videoId);
 
         if (cancelled) return;
 
@@ -78,7 +75,7 @@ export default function VideoProcessingPage() {
         setCurrentStep(ui.step);
 
         timeoutId = setTimeout(pollStatus, 3000);
-      } catch (err) {
+      } catch {
         if (!cancelled) timeoutId = setTimeout(pollStatus, 5000);
       }
     };
@@ -245,7 +242,7 @@ export default function VideoProcessingPage() {
   );
 }
 
-function Activity(props: any) {
+function Activity(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>

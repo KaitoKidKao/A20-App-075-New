@@ -1,57 +1,63 @@
 /**
- * API Service for UDL Hearing
- * Tích hợp đầy đủ các chức năng Auth và Video/AI từ Backend mới.
+ * API service for frontend -> backend communication.
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// Helper để lấy Token từ localStorage (Zustand persist)
-const getAuthToken = () => {
+export interface AuthUser {
+  name: string;
+  email: string;
+  role: 'student' | 'admin' | 'teacher';
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  role: 'student' | 'admin' | 'teacher';
+  user: AuthUser;
+}
+
+const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   const storage = localStorage.getItem('udl-app-storage');
-  if (storage) {
-    try {
-      const parsed = JSON.parse(storage);
-      return parsed.state.token || null;
-    } catch (e) {
-      return null;
-    }
+  if (!storage) return null;
+
+  try {
+    const parsed = JSON.parse(storage);
+    return parsed?.state?.token || null;
+  } catch {
+    return null;
   }
-  return null;
 };
 
-// Cấu hình Fetch Header chung
-const getHeaders = (isMultipart = false) => {
+const getHeaders = (isMultipart = false): HeadersInit => {
   const headers: HeadersInit = {};
-  if (!isMultipart) {
-    headers['Content-Type'] = 'application/json';
-  }
+  if (!isMultipart) headers['Content-Type'] = 'application/json';
+
   const token = getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  if (token) headers['Authorization'] = `Bearer ${token}`;
   return headers;
 };
 
 export const api = {
-  // --- AUTH API ---
   auth: {
-    async register(data: any) {
+    async register(data: { email: string; password: string; confirm_password: string; full_name?: string; role?: string }) {
       const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(data),
       });
+
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || 'Đăng ký không thành công');
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || 'Dang ky khong thanh cong');
       }
       return res.json();
     },
 
-    async login(credentials: any) {
+    async login(credentials: { email: string; password: string }): Promise<LoginResponse> {
       const formData = new URLSearchParams();
-      formData.append('username', credentials.email); // OAuth2 dùng 'username'
+      formData.append('username', credentials.email);
       formData.append('password', credentials.password);
 
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -59,23 +65,24 @@ export const api = {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData,
       });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || 'Đăng nhập thất bại');
-      }
-      return res.json();
-    },
 
-    async getMe() {
-      const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        headers: getHeaders(),
-      });
-      if (!res.ok) throw new Error('Không thể lấy thông tin người dùng');
-      return res.json();
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || 'Dang nhap that bai');
+      }
+
+      const data = await res.json();
+      return {
+        ...data,
+        user: {
+          name: credentials.email.split('@')[0] || 'User',
+          email: credentials.email,
+          role: data.role || 'student',
+        },
+      };
     },
   },
 
-  // --- VIDEO & AI API ---
   videos: {
     async upload(file: File) {
       const formData = new FormData();
@@ -86,7 +93,11 @@ export const api = {
         headers: getHeaders(true),
         body: formData,
       });
-      if (!res.ok) throw new Error('Upload video thất bại');
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || 'Upload video that bai');
+      }
       return res.json();
     },
 
@@ -96,7 +107,7 @@ export const api = {
         headers: getHeaders(),
         body: JSON.stringify({ url }),
       });
-      if (!res.ok) throw new Error('Xử lý URL thất bại');
+      if (!res.ok) throw new Error('Xu ly URL that bai');
       return res.json();
     },
 
@@ -104,7 +115,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/status`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Không thể lấy trạng thái');
+      if (!res.ok) throw new Error('Khong the lay trang thai');
       return res.json();
     },
 
@@ -112,7 +123,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/transcript`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Không thể lấy transcript');
+      if (!res.ok) throw new Error('Khong the lay transcript');
       return res.json();
     },
 
@@ -120,7 +131,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/summary`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Không thể lấy summary');
+      if (!res.ok) throw new Error('Khong the lay summary');
       return res.json();
     },
 
@@ -128,7 +139,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/timeline`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Không thể lấy timeline');
+      if (!res.ok) throw new Error('Khong the lay timeline');
       return res.json();
     },
 
@@ -136,7 +147,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/highlights`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Không thể lấy highlights');
+      if (!res.ok) throw new Error('Khong the lay highlights');
       return res.json();
     },
 
@@ -144,7 +155,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/questions`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Không thể lấy questions');
+      if (!res.ok) throw new Error('Khong the lay questions');
       return res.json();
     },
 
@@ -152,8 +163,8 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/briefing`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Không thể lấy briefing');
+      if (!res.ok) throw new Error('Khong the lay briefing');
       return res.json();
     },
-  }
+  },
 };

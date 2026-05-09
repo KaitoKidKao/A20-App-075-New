@@ -31,8 +31,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-
-const API_BASE = 'http://localhost:8000';
+import { api } from '@/lib/api';
 
 interface TranscriptSegment {
   start: number;
@@ -95,8 +94,7 @@ export default function VideoLessonPage() {
   useEffect(() => {
     const fetchTranscript = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/videos/${videoId}/transcript`);
-        const data = await res.json();
+        const data = await api.videos.getTranscript(videoId);
         if (data.segments) {
           setSegments(data.segments);
           setLanguage(data.language || 'vi');
@@ -115,10 +113,10 @@ export default function VideoLessonPage() {
     setIsLoadingMetadata(true);
     try {
       const [timelineRes, highlightsRes, questionsRes, briefingRes] = await Promise.all([
-        fetch(`${API_BASE}/api/videos/${videoId}/timeline`).then(r => r.json()),
-        fetch(`${API_BASE}/api/videos/${videoId}/highlights`).then(r => r.json()),
-        fetch(`${API_BASE}/api/videos/${videoId}/questions`).then(r => r.json()),
-        fetch(`${API_BASE}/api/videos/${videoId}/briefing`).then(r => r.json())
+        api.videos.getTimeline(videoId),
+        api.videos.getHighlights(videoId),
+        api.videos.getQuestions(videoId),
+        api.videos.getBriefing(videoId),
       ]);
 
       setTimeline(timelineRes.timeline || []);
@@ -157,8 +155,7 @@ export default function VideoLessonPage() {
     if (summaryPoints.length > 0) return;
     setIsLoadingSummary(true);
     try {
-      const res = await fetch(`${API_BASE}/api/videos/${videoId}/summary`);
-      const data = await res.json();
+      const data = await api.videos.getSummary(videoId);
       setSummaryPoints(data.summary || []);
     } catch (err) {
       console.error('Summary fetch error:', err);

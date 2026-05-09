@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Convert seconds to VTT timestamp format: HH:MM:SS.mmm
 function toVTTTime(seconds: number): string {
@@ -16,10 +16,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: videoId } = await params;
+  const token = request.cookies.get('udl_token')?.value;
 
   try {
     // Fetch transcript from BE
-    const res = await fetch(`${API_BASE}/api/videos/${videoId}/transcript`);
+    const res = await fetch(`${API_BASE}/api/videos/${videoId}/transcript`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      cache: 'no-store',
+    });
     const data = await res.json();
 
     if (!data.segments || data.segments.length === 0) {

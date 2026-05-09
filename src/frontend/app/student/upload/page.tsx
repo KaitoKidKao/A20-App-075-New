@@ -4,8 +4,6 @@ import React, { useState, useRef } from 'react';
 import { 
   UploadCloud, 
   FileVideo, 
-  Info, 
-  Loader2, 
   CheckCircle2, 
   Sparkles,
   Zap,
@@ -13,8 +11,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-
-const API_BASE = 'http://localhost:8000';
+import { api } from '@/lib/api';
 
 export default function UploadVideo() {
   const router = useRouter();
@@ -50,22 +47,8 @@ export default function UploadVideo() {
     }, 300);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      const response = await fetch(`${API_BASE}/api/videos/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-
+      const data = await api.videos.upload(selectedFile);
       clearInterval(progressInterval);
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        throw new Error(errData?.detail || `Upload failed (${response.status})`);
-      }
-
-      const data = await response.json();
 
       if (data.video_id) {
         setUploadProgress(100);
@@ -75,9 +58,10 @@ export default function UploadVideo() {
       } else {
         throw new Error('Server did not return a video_id.');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearInterval(progressInterval);
-      setErrorMsg(error.message || 'Connection failed. Please ensure backend is running.');
+      const message = error instanceof Error ? error.message : 'Connection failed. Please ensure backend is running.';
+      setErrorMsg(message);
       setIsUploading(false);
       setUploadProgress(0);
     }

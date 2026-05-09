@@ -1,11 +1,32 @@
-from pydantic import BaseModel, EmailStr
+import re
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import Optional
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, max_length=128)
+    confirm_password: str
     full_name: Optional[str] = None
     role: Optional[str] = "student"
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, value: str) -> str:
+        if len(value) < 8:
+            raise ValueError("Password phai co it nhat 8 ky tu.")
+        if not re.search(r"[A-Z]", value):
+            raise ValueError("Password phai co it nhat 1 chu hoa.")
+        if not re.search(r"[a-z]", value):
+            raise ValueError("Password phai co it nhat 1 chu thuong.")
+        if not re.search(r"\d", value):
+            raise ValueError("Password phai co it nhat 1 chu so.")
+        return value
+
+    @model_validator(mode="after")
+    def validate_password_confirmation(self):
+        if self.password != self.confirm_password:
+            raise ValueError("Password va confirm_password khong khop.")
+        return self
 
 class UserLogin(BaseModel):
     email: EmailStr
