@@ -214,23 +214,34 @@ class AIService:
             return {"error": str(e)}
 
     @classmethod
-    async def generate_mindmap(cls, transcript_data: dict) -> str:
+    async def generate_mindmap(cls, transcript_data: dict) -> dict:
         """
-        Tạo code Mermaid.js cho Mindmap từ transcript.
+        Tạo cấu trúc Mindmap (JSON) từ transcript để frontend render.
         """
         api_key = config.OPENAI_API_KEY
-        if not api_key: return "Mermaid API Key error"
+        if not api_key: return {"error": "API Key not configured"}
 
         client = OpenAI(api_key=api_key)
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
-        truncated_text = full_text[:6000]
+        truncated_text = full_text[:8000]
 
         prompt = f"""
-        Bạn là một chuyên gia tóm tắt kiến thức. Hãy tạo một sơ đồ tư duy (Mindmap) cho nội dung bài giảng sau bằng cú pháp Mermaid.js.
-        Yêu cầu:
-        1. Sử dụng cú pháp `mindmap`.
-        2. Phân cấp rõ ràng các ý chính và ý phụ.
-        3. Chỉ trả về mã Mermaid.js, không giải thích gì thêm.
+        Bạn là một chuyên gia tóm tắt kiến thức. Hãy tạo một sơ đồ tư duy (Mindmap) cho nội dung bài giảng sau.
+        
+        Yêu cầu định dạng JSON phân cấp:
+        {{
+            "name": "Chủ đề chính",
+            "children": [
+                {{
+                    "name": "Ý chính 1",
+                    "children": [
+                        {{ "name": "Ý phụ 1.1" }},
+                        {{ "name": "Ý phụ 1.2" }}
+                    ]
+                }},
+                ...
+            ]
+        }}
         
         Nội dung:
         {truncated_text}
@@ -239,12 +250,15 @@ class AIService:
         try:
             response = client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
-                messages=[{"role": "user", "content": prompt}]
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
             )
-            return response.choices[0].message.content.replace("```mermaid", "").replace("```", "").strip()
+            data = json.loads(response.choices[0].message.content)
+            # Trả về root object (name & children)
+            return data.get("mindmap") or data
         except Exception as e:
             logger.error(f"❌ Lỗi tạo mindmap: {e}")
-            return f"Error: {str(e)}"
+            return {"error": str(e)}
 
     @classmethod
     async def generate_quiz(cls, transcript_data: dict) -> list:
