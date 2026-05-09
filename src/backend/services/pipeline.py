@@ -56,6 +56,11 @@ async def run_video_pipeline(video_id: str, video_path: Path):
             metadata = await AIService.process_all_lecture_metadata(transcript_data)
             briefing = await AIService.generate_pre_lecture_briefing(transcript_data)
             
+            # New features
+            mindmap = await AIService.generate_mindmap(transcript_data)
+            quiz = await AIService.generate_quiz(transcript_data)
+            slides = await AIService.generate_slides(transcript_data)
+            
             # Bước 4: Lưu kết quả vào DB
             logger.info(f"💾 [{video_id}] Đang lưu kết quả vào bảng lecture_data...")
             lecture_entry = LectureData(
@@ -65,7 +70,10 @@ async def run_video_pipeline(video_id: str, video_path: Path):
                 timeline=metadata.get("timeline"),
                 highlights=metadata.get("highlights"),
                 questions=metadata.get("questions"),
-                briefing=briefing
+                briefing=briefing,
+                mindmap=mindmap,
+                quiz=quiz,
+                slides=slides
             )
             session.add(lecture_entry)
             
