@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/videos", tags=["Videos & Analysis"])
 async def upload_video(
     background_tasks: BackgroundTasks, 
     file: UploadFile = File(...),
+    num_questions: int = 5,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
@@ -49,7 +50,7 @@ async def upload_video(
         
         # 3. Đưa vào hàng chờ xử lý trong nền
         processing_status[video_id] = "queued"
-        background_tasks.add_task(run_video_pipeline, video_id, video_path)
+        background_tasks.add_task(run_video_pipeline, video_id, video_path, num_questions)
         
         return {
             "video_id": video_id,
@@ -89,7 +90,8 @@ async def process_url(
 
     # Đưa vào hàng chờ
     processing_status[video_id] = "queued"
-    background_tasks.add_task(download_and_run_pipeline, video_id, url)
+    num_questions = data.get("num_questions", 5)
+    background_tasks.add_task(download_and_run_pipeline, video_id, url, num_questions)
     
     return {
         "video_id": video_id,
