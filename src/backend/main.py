@@ -11,7 +11,7 @@ from src.backend import config
 from src.backend.database import create_db_and_tables, ensure_admin_exists
 from src.backend.services.video_service import VideoService
 from src.backend.services.ai_service import AIService
-from src.backend.routers import auth, videos
+from src.backend.routers import auth, videos, users
 
 # Cấu hình Logging
 logging.basicConfig(
@@ -34,6 +34,7 @@ app.add_middleware(
 # Đăng ký Routers
 app.include_router(auth.router)
 app.include_router(videos.router)
+app.include_router(users.router)
 
 @app.on_event("startup")
 def on_startup():
