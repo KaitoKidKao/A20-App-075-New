@@ -11,3 +11,7 @@ UPLOADS_DIR = "data/uploads"
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-for-development-only")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+
+# --- System Admin (Auto-init) ---
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@a20.ai")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")

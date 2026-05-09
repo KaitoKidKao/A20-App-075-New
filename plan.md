@@ -55,8 +55,10 @@ Tài liệu này chi tiết các bước chỉnh sửa hệ thống Router và P
 
 ## 5. Quản lý phân quyền (Auth Management) - *Cập nhật 09/05/2026*
 - **Đăng ký:** Hệ thống chỉ cho phép tự đăng ký với `role="student"`. Mọi giá trị role khác gửi lên từ client đều bị bỏ qua.
-- **Quản trị viên (Admin):** Chỉ có duy nhất 01 tài khoản admin. Tài khoản này không thể đăng ký qua API mà phải khởi tạo qua script terminal:
+- **Quản trị viên (Admin):** Chỉ có duy nhất 01 tài khoản admin. Tài khoản này được tự động khởi tạo khi server bắt đầu chạy (Startup) nếu trong DB chưa có admin nào.
+- **Cấu hình:** Bạn quản lý Email/Password của admin qua biến môi trường trong file `.env`:
   ```bash
-  python src/backend/scripts/init_admin.py <email> <password>
+  ADMIN_EMAIL=admin@a20.ai
+  ADMIN_PASSWORD=admin123
   ```
-- **Bảo mật:** Điều này đảm bảo người dùng bình thường không bao giờ có thể tự nâng cấp quyền của mình.
+- **Bảo mật:** Điều này đảm bảo người dùng bình thường không bao giờ có thể tự nâng cấp quyền của mình và admin luôn được khởi tạo sẵn khi deploy.

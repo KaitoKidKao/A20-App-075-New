@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from src.backend import config
-from src.backend.database import create_db_and_tables
+from src.backend.database import create_db_and_tables, ensure_admin_exists
 from src.backend.services.video_service import VideoService
 from src.backend.services.ai_service import AIService
 from src.backend.routers import auth, videos
@@ -39,6 +39,7 @@ app.include_router(videos.router)
 def on_startup():
     logger.info("🚀 Đang khởi tạo cơ sở dữ liệu...")
     create_db_and_tables()
+    ensure_admin_exists()
 
 @app.on_event("shutdown")
 def shutdown_event():
