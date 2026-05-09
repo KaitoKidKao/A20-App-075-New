@@ -82,10 +82,10 @@ export function Footer() {
       </div>
       
       {/* Bottom Bar */}
-      <div className="border-t border-slate-100 bg-[#1A1A1A] text-white/70 py-4">
-        <div className="max-w-[1400px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-semibold">
-          <p>© 2025 DreamsLMS. All rights reserved.</p>
-          <div className="flex gap-6">
+      <div className="border-t border-slate-100 bg-[#14142B] text-white/50 py-6">
+        <div className="max-w-[1400px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-black uppercase tracking-widest">
+          <p>© 2026 Dreams. All rights reserved.</p>
+          <div className="flex gap-10">
             <span className="hover:text-white cursor-pointer transition-colors">Terms & Conditions</span>
             <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
           </div>
