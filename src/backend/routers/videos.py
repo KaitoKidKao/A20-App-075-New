@@ -210,3 +210,42 @@ async def get_briefing(
     if not lecture or not lecture.briefing:
         return {"video_id": video_id, "message": "Briefing chưa sẵn sàng."}
     return {"video_id": video_id, "briefing": lecture.briefing}
+
+@router.get("/{video_id}/mindmap")
+async def get_mindmap(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy mindmap (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.mindmap:
+        return {"video_id": video_id, "message": "Mindmap chưa sẵn sàng."}
+    return {"video_id": video_id, "mindmap": lecture.mindmap}
+
+@router.get("/{video_id}/quiz")
+async def get_quiz(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy quiz (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.quiz:
+        return {"video_id": video_id, "quiz": []}
+    return {"video_id": video_id, "quiz": lecture.quiz}
+
+@router.get("/{video_id}/slides")
+async def get_slides(
+    video_id: str, 
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Lấy slides blueprint (có kiểm tra quyền)"""
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.slides:
+        return {"video_id": video_id, "slides": []}
+    return {"video_id": video_id, "slides": lecture.slides}
