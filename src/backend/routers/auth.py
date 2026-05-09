@@ -16,12 +16,12 @@ async def register(user_data: UserCreate, session: Session = Depends(get_session
     if existing_user:
         raise HTTPException(status_code=400, detail="Email đã được sử dụng.")
     
-    # Tạo user mới
+    # Tạo user mới (Mặc định luôn là student)
     new_user = User(
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
         full_name=user_data.full_name,
-        role=user_data.role
+        role="student"
     )
     session.add(new_user)
     session.commit()

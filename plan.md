@@ -50,3 +50,13 @@ Tài liệu này chi tiết các bước chỉnh sửa hệ thống Router và P
   - *Giải pháp:* Frontend cần hiển thị Loading Spinner rõ ràng.
 - **Race Condition:** Nhiều người cùng gọi gen một lúc cho cùng 1 video.
   - *Giải pháp:* Có thể thêm cơ chế lock đơn giản hoặc chấp nhận AI gen đè (vì kết quả AI thường tương đồng).
+
+---
+
+## 5. Quản lý phân quyền (Auth Management) - *Cập nhật 09/05/2026*
+- **Đăng ký:** Hệ thống chỉ cho phép tự đăng ký với `role="student"`. Mọi giá trị role khác gửi lên từ client đều bị bỏ qua.
+- **Quản trị viên (Admin):** Chỉ có duy nhất 01 tài khoản admin. Tài khoản này không thể đăng ký qua API mà phải khởi tạo qua script terminal:
+  ```bash
+  python src/backend/scripts/init_admin.py <email> <password>
+  ```
+- **Bảo mật:** Điều này đảm bảo người dùng bình thường không bao giờ có thể tự nâng cấp quyền của mình.
