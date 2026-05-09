@@ -20,7 +20,7 @@ def run_transcription_sync(audio_path: Path, video_id: str):
     """Hàm chạy Whisper (đồng bộ) trong thread riêng"""
     return AIService.transcribe(audio_path, video_id)
 
-async def run_video_pipeline(video_id: str, video_path: Path):
+async def run_video_pipeline(video_id: str, video_path: Path, num_questions: int = 5):
     """
     Pipeline xử lý video: Tách audio -> Transcribe -> AI Summary & Metadata -> Lưu DB
     """
@@ -58,7 +58,7 @@ async def run_video_pipeline(video_id: str, video_path: Path):
             
             # New features
             mindmap = await AIService.generate_mindmap(transcript_data)
-            quiz = await AIService.generate_quiz(transcript_data)
+            quiz = await AIService.generate_quiz(transcript_data, num_questions=num_questions)
             slides = await AIService.generate_slides(transcript_data)
             
             # Bước 4: Lưu kết quả vào DB
@@ -90,11 +90,12 @@ async def run_video_pipeline(video_id: str, video_path: Path):
         processing_status[video_id] = f"failed: {str(e)}"
         logger.error(f"❌ [{video_id}] Lỗi pipeline: {e}")
 
-async def download_and_run_pipeline(vid: str, vurl: str):
+async def download_and_run_pipeline(vid: str, vurl: str, num_questions: int = 5):
     """
-    Tiếp nhận URL video, tải xuống và sau đó chạy pipeline.
+    Wrapper để tải video từ URL rồi mới chạy pipeline.
     """
     try:
+        # Cập nhật trạng thái record ban đầu
         with Session(engine) as sub_session:
             video = sub_session.get(Video, vid)
             if video:
@@ -113,7 +114,7 @@ async def download_and_run_pipeline(vid: str, vurl: str):
                 sub_session.add(video)
                 sub_session.commit()
 
-        await run_video_pipeline(vid, vpath)
+        await run_video_pipeline(vid, vpath, num_questions=num_questions)
     except Exception as e:
         with Session(engine) as sub_session:
             video = sub_session.get(Video, vid)
