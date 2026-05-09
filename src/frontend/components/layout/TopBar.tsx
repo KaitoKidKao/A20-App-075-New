@@ -48,6 +48,8 @@ export function TopBar() {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               className="p-2.5 text-slate-500 hover:bg-slate-50 hover:text-primary rounded-full transition-all"
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}

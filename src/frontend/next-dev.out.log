@@ -1,0 +1,25 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.213:3000
+✓ Ready in 2.8s
+Creating turbopack project { dir: 'C:\\Users\\ASUS\\A20-App-075\\src\\frontend', testMode: true }
+
+ GET / 200 in 2.9s (next.js: 1568ms, application-code: 1371ms)
+ GET /auth/login 200 in 341ms (next.js: 196ms, application-code: 145ms)
+ GET /student/library 200 in 233ms (next.js: 134ms, application-code: 99ms)
+ GET /student/settings 200 in 221ms (next.js: 127ms, application-code: 94ms)
+ GET /student/library 200 in 1368ms (next.js: 441ms, application-code: 927ms)
+○ Compiling /student/documents ...
+ GET /student/documents 200 in 12.5s (next.js: 12.2s, application-code: 314ms)
+ GET /student/documents 200 in 167ms (next.js: 28ms, application-code: 139ms)
+ GET /student/settings 200 in 274ms (next.js: 66ms, application-code: 208ms)
+ GET /student/settings 200 in 165ms (next.js: 34ms, application-code: 132ms)
+✓ Compiled in 1114ms
+ GET /auth/login 200 in 676ms (next.js: 135ms, application-code: 541ms)
+ GET /student/settings 200 in 774ms (next.js: 162ms, application-code: 612ms)
+ GET /auth/login 200 in 1179ms (next.js: 186ms, application-code: 994ms)
+ GET /student/library 200 in 107ms (next.js: 32ms, application-code: 75ms)

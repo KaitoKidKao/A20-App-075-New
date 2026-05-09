@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ClientShell } from "@/components/layout/ClientShell";
+import { ThemeController } from "@/components/ThemeController";
 
 const beVietnamPro = Be_Vietnam_Pro({
   variable: "--font-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="h-full flex flex-col font-sans overflow-x-hidden">
+        <ThemeController />
         <ClientShell>
           {children}
         </ClientShell>
