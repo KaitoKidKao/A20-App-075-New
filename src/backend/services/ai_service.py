@@ -261,19 +261,22 @@ class AIService:
             return {"error": str(e)}
 
     @classmethod
-    async def generate_quiz(cls, transcript_data: dict) -> list:
+    async def generate_quiz(cls, transcript_data: dict, num_questions: int = 5) -> list:
         """
         Tạo danh sách câu hỏi trắc nghiệm từ transcript.
         """
         api_key = config.OPENAI_API_KEY
         if not api_key: return []
 
+        # Giới hạn số lượng câu hỏi từ 1 đến 20
+        num_questions = max(1, min(int(num_questions), 20))
+
         client = OpenAI(api_key=api_key)
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
         truncated_text = full_text[:6000]
 
         prompt = f"""
-        Dựa trên nội dung bài giảng sau, hãy tạo 5 câu hỏi trắc nghiệm để kiểm tra kiến thức sinh viên.
+        Dựa trên nội dung bài giảng sau, hãy tạo {num_questions} câu hỏi trắc nghiệm để kiểm tra kiến thức sinh viên.
         Định dạng trả về là một JSON array gồm các object:
         {{
             "question": "Câu hỏi?",
