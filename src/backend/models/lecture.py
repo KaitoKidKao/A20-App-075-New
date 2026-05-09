@@ -10,4 +10,10 @@ class LectureData(SQLModel, table=True):
     highlights: Optional[Any] = Field(sa_column=Column(JSON))
     questions: Optional[Any] = Field(sa_column=Column(JSON))
     briefing: Optional[Any] = Field(sa_column=Column(JSON))
+    
+    # New features
+    mindmap: Optional[Any] = Field(sa_column=Column(JSON))
+    quiz: Optional[Any] = Field(sa_column=Column(JSON))
+    slides: Optional[Any] = Field(sa_column=Column(JSON))
+    
     updated_at: datetime = Field(default_factory=datetime.utcnow)
