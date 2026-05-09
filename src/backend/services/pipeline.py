@@ -20,7 +20,7 @@ def run_transcription_sync(audio_path: Path, video_id: str):
     """Hàm chạy Whisper (đồng bộ) trong thread riêng"""
     return AIService.transcribe(audio_path, video_id)
 
-async def run_video_pipeline(video_id: str, video_path: Path, num_questions: int = 5):
+async def run_video_pipeline(video_id: str, video_path: Path):
     """
     Pipeline xử lý video: Tách audio -> Transcribe -> AI Summary & Metadata -> Lưu DB
     """
@@ -51,17 +51,12 @@ async def run_video_pipeline(video_id: str, video_path: Path, num_questions: int
             update_status("ai_processing")
             logger.info(f"🧠 [{video_id}] Đang phân tích AI (Batching)...")
             
-            # Gọi gộp các tính năng AI
+            # Gọi gộp các tính năng AI (Cốt lõi)
             summary = await AIService.summarize(transcript_data)
             metadata = await AIService.process_all_lecture_metadata(transcript_data)
             briefing = await AIService.generate_pre_lecture_briefing(transcript_data)
             
-            # New features
-            mindmap = await AIService.generate_mindmap(transcript_data)
-            quiz = await AIService.generate_quiz(transcript_data, num_questions=num_questions)
-            slides = await AIService.generate_slides(transcript_data)
-            
-            # Bước 4: Lưu kết quả vào DB
+            # Bước 4: Lưu kết quả vào DB (Chưa bao gồm Mindmap/Quiz/Slides - sẽ xử lý On-demand)
             logger.info(f"💾 [{video_id}] Đang lưu kết quả vào bảng lecture_data...")
             lecture_entry = LectureData(
                 video_id=video_id,
@@ -71,9 +66,9 @@ async def run_video_pipeline(video_id: str, video_path: Path, num_questions: int
                 highlights=metadata.get("highlights"),
                 questions=metadata.get("questions"),
                 briefing=briefing,
-                mindmap=mindmap,
-                quiz=quiz,
-                slides=slides
+                mindmap=None,
+                quiz=None,
+                slides=None
             )
             session.add(lecture_entry)
             
@@ -90,7 +85,7 @@ async def run_video_pipeline(video_id: str, video_path: Path, num_questions: int
         processing_status[video_id] = f"failed: {str(e)}"
         logger.error(f"❌ [{video_id}] Lỗi pipeline: {e}")
 
-async def download_and_run_pipeline(vid: str, vurl: str, num_questions: int = 5):
+async def download_and_run_pipeline(vid: str, vurl: str):
     """
     Wrapper để tải video từ URL rồi mới chạy pipeline.
     """
@@ -114,7 +109,7 @@ async def download_and_run_pipeline(vid: str, vurl: str, num_questions: int = 5)
                 sub_session.add(video)
                 sub_session.commit()
 
-        await run_video_pipeline(vid, vpath, num_questions=num_questions)
+        await run_video_pipeline(vid, vpath)
     except Exception as e:
         with Session(engine) as sub_session:
             video = sub_session.get(Video, vid)
