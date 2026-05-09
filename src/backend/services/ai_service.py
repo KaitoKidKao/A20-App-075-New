@@ -213,3 +213,119 @@ class AIService:
             logger.error(f"❌ Lỗi khi tạo briefing: {e}")
             return {"error": str(e)}
 
+    @classmethod
+    async def generate_mindmap(cls, transcript_data: dict) -> str:
+        """
+        Tạo code Mermaid.js cho Mindmap từ transcript.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key: return "Mermaid API Key error"
+
+        client = OpenAI(api_key=api_key)
+        full_text = " ".join([s["text"] for s in transcript_data["segments"]])
+        truncated_text = full_text[:6000]
+
+        prompt = f"""
+        Bạn là một chuyên gia tóm tắt kiến thức. Hãy tạo một sơ đồ tư duy (Mindmap) cho nội dung bài giảng sau bằng cú pháp Mermaid.js.
+        Yêu cầu:
+        1. Sử dụng cú pháp `mindmap`.
+        2. Phân cấp rõ ràng các ý chính và ý phụ.
+        3. Chỉ trả về mã Mermaid.js, không giải thích gì thêm.
+        
+        Nội dung:
+        {truncated_text}
+        """
+
+        try:
+            response = client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return response.choices[0].message.content.replace("```mermaid", "").replace("```", "").strip()
+        except Exception as e:
+            logger.error(f"❌ Lỗi tạo mindmap: {e}")
+            return f"Error: {str(e)}"
+
+    @classmethod
+    async def generate_quiz(cls, transcript_data: dict) -> list:
+        """
+        Tạo danh sách câu hỏi trắc nghiệm từ transcript.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key: return []
+
+        client = OpenAI(api_key=api_key)
+        full_text = " ".join([s["text"] for s in transcript_data["segments"]])
+        truncated_text = full_text[:6000]
+
+        prompt = f"""
+        Dựa trên nội dung bài giảng sau, hãy tạo 5 câu hỏi trắc nghiệm để kiểm tra kiến thức sinh viên.
+        Định dạng trả về là một JSON array gồm các object:
+        {{
+            "question": "Câu hỏi?",
+            "options": ["A", "B", "C", "D"],
+            "answer": "Đáp án đúng (chọn từ options)",
+            "explanation": "Giải thích ngắn gọn"
+        }}
+        
+        Nội dung:
+        {truncated_text}
+        """
+
+        try:
+            response = client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
+            )
+            data = json.loads(response.choices[0].message.content)
+            return data.get("questions") or data.get("quiz") or data
+        except Exception as e:
+            logger.error(f"❌ Lỗi tạo quiz: {e}")
+            return []
+
+    @classmethod
+    async def generate_slides(cls, transcript_data: dict) -> list:
+        """
+        Tạo JSON Blueprint cho Reveal.js slides.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key: return []
+
+        client = OpenAI(api_key=api_key)
+        full_text = " ".join([s["text"] for s in transcript_data["segments"]])
+        truncated_text = full_text[:8000]
+
+        prompt = f"""
+        Bạn là một chuyên gia thiết kế bài giảng. Hãy thiết kế kịch bản slide (Slide Blueprint) từ nội dung bài giảng sau để trình chiếu bằng Reveal.js.
+        
+        Yêu cầu định dạng JSON array:
+        [
+            {{
+                "title": "Tiêu đề trang slide",
+                "content": ["Ý chính 1", "Ý chính 2", ...],
+                "notes": "Lời thoại/Ghi chú cho giảng viên"
+            }},
+            ...
+        ]
+        
+        Quy tắc thiết kế:
+        1. Slide 1 luôn là tiêu đề bài học.
+        2. Slide cuối cùng là kết luận/tổng kết.
+        3. Mỗi slide không nên quá 5 ý chính.
+        
+        Nội dung:
+        {truncated_text}
+        """
+
+        try:
+            response = client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
+            )
+            data = json.loads(response.choices[0].message.content)
+            return data.get("slides") or data
+        except Exception as e:
+            logger.error(f"❌ Lỗi tạo slides: {e}")
+            return []
