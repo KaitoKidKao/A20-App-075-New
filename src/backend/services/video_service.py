@@ -3,6 +3,8 @@ import subprocess
 import logging
 import asyncio
 from pathlib import Path
+from fastapi import UploadFile
+import aiofiles
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,41 @@ class VideoService:
         async with cls._write_lock: # Use class-level lock
             with open(file_path, "wb") as f:
                 f.write(file_content)
+        return file_path
+
+    @classmethod
+    async def save_video_stream(
+        cls,
+        upload_file: UploadFile,
+        filename: str,
+        max_size_bytes: int,
+        chunk_size: int = 1024 * 1024,
+    ) -> Path:
+        """
+        Save uploaded video incrementally to disk to avoid loading full file into memory.
+        Raises ValueError if file exceeds max_size_bytes.
+        """
+        cls.ensure_dirs()
+        file_path = cls.UPLOAD_DIR / filename
+        total_bytes = 0
+
+        async with cls._write_lock:
+            async with aiofiles.open(file_path, "wb") as out_file:
+                while True:
+                    chunk = await upload_file.read(chunk_size)
+                    if not chunk:
+                        break
+                    total_bytes += len(chunk)
+                    if total_bytes > max_size_bytes:
+                        await out_file.close()
+                        try:
+                            file_path.unlink(missing_ok=True)
+                        except Exception:
+                            pass
+                        raise ValueError("Uploaded file exceeds allowed size.")
+                    await out_file.write(chunk)
+
+        await upload_file.seek(0)
         return file_path
 
     @classmethod

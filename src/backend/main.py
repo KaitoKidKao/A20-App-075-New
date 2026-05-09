@@ -1,5 +1,8 @@
 import os
 import sys
+import socket
+import ipaddress
+from urllib.parse import urlparse
 # Thêm thư mục gốc vào sys.path để nhận diện module 'src'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
@@ -36,7 +39,7 @@ executor = ThreadPoolExecutor(max_workers=2)
 # Cấu hình CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=config.CORS_ALLOW_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,6 +63,52 @@ def run_transcription_sync(audio_path: Path, video_id: str):
     return AIService.transcribe(audio_path, video_id)
 
 from src.backend.database import engine
+
+
+def _is_public_ip(ip_str: str) -> bool:
+    try:
+        ip_obj = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return not (
+        ip_obj.is_private
+        or ip_obj.is_loopback
+        or ip_obj.is_link_local
+        or ip_obj.is_reserved
+        or ip_obj.is_multicast
+        or ip_obj.is_unspecified
+    )
+
+
+def validate_external_video_url(raw_url: str) -> str:
+    if not raw_url:
+        raise HTTPException(status_code=400, detail="Video URL is required.")
+
+    parsed = urlparse(raw_url.strip())
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(status_code=400, detail="Only http/https URLs are allowed.")
+    if not parsed.netloc:
+        raise HTTPException(status_code=400, detail="Invalid URL.")
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(status_code=400, detail="Invalid URL host.")
+
+    lowered = hostname.lower()
+    if lowered in {"localhost", "127.0.0.1", "::1"} or lowered.endswith(".local"):
+        raise HTTPException(status_code=400, detail="Local addresses are not allowed.")
+
+    try:
+        resolved = socket.getaddrinfo(hostname, parsed.port or 443, proto=socket.IPPROTO_TCP)
+    except socket.gaierror:
+        raise HTTPException(status_code=400, detail="Unable to resolve URL host.")
+
+    for record in resolved:
+        ip = record[4][0]
+        if not _is_public_ip(ip):
+            raise HTTPException(status_code=400, detail="Target host is not publicly routable.")
+
+    return raw_url.strip()
 
 async def run_video_pipeline(video_id: str, video_path: Path):
     """
@@ -188,28 +237,30 @@ async def login(
 
 @app.post("/api/videos/upload")
 async def upload_video(
-    background_tasks: BackgroundTasks, 
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
     """
-    Endpoint upload video: Lưu file, tạo record DB và kích hoạt pipeline.
+    Endpoint upload video: stream file to disk, create DB record, and enqueue pipeline.
     """
     video_id = str(uuid.uuid4())
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".mp4", ".mov", ".avi", ".mkv"]:
-        raise HTTPException(status_code=400, detail="Định dạng file không hỗ trợ.")
-    
+        raise HTTPException(status_code=400, detail="Unsupported file format.")
+
     filename = f"{video_id}{ext}"
-    
+    max_upload_size_bytes = config.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
     try:
-        # 1. Lưu file video vật lý
-        content = await file.read()
-        logger.info(f"📥 [{video_id}] Nhận file từ {current_user.email}: {file.filename}")
-        video_path = await VideoService.save_video(content, filename)
-        
-        # 2. Tạo record trong database
+        logger.info(f"[{video_id}] Receiving file from {current_user.email}: {file.filename}")
+        video_path = await VideoService.save_video_stream(
+            upload_file=file,
+            filename=filename,
+            max_size_bytes=max_upload_size_bytes,
+        )
+
         new_video = Video(
             id=video_id,
             user_id=current_user.id,
@@ -219,18 +270,23 @@ async def upload_video(
         )
         session.add(new_video)
         session.commit()
-        
-        # 3. Đưa vào hàng chờ xử lý trong nền
+
         processing_status[video_id] = "queued"
         background_tasks.add_task(run_video_pipeline, video_id, video_path)
-        
+
         return {
             "video_id": video_id,
             "status": "processing",
-            "message": "Video đã được tải lên và đang chờ xử lý."
+            "message": "Video uploaded and queued for processing."
         }
+    except ValueError as e:
+        logger.warning(f"Upload rejected for {video_id}: {e}")
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum allowed size is {config.MAX_UPLOAD_SIZE_MB} MB.",
+        )
     except Exception as e:
-        logger.error(f"❌ Lỗi upload video {video_id}: {e}")
+        logger.error(f"Upload error for {video_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/videos/process-url")
@@ -243,9 +299,7 @@ async def process_url(
     """
     Tiếp nhận URL video, tạo record DB và tải xuống để xử lý.
     """
-    url = data.get("url")
-    if not url:
-        raise HTTPException(status_code=400, detail="Vui lòng cung cấp URL video.")
+    url = validate_external_video_url(data.get("url"))
     
     video_id = str(uuid.uuid4())
     
@@ -253,7 +307,7 @@ async def process_url(
     new_video = Video(
         id=video_id,
         user_id=current_user.id,
-        title=f"Video từ URL: {url[:30]}...",
+        title=f"Video from URL: {url[:30]}...",
         storage_path="", # Sẽ cập nhật sau khi tải xong
         status="queued"
     )
@@ -298,7 +352,7 @@ async def process_url(
     return {
         "video_id": video_id,
         "status": "processing",
-        "message": "URL đã được nhận và đang chuẩn bị tải xuống."
+        "message": "URL accepted and download has started."
     }
 
 @app.get("/api/videos/me")
@@ -474,3 +528,5 @@ if __name__ == "__main__":
     
     logger.info("🚀 Starting A20 Backend Server on port 8000 with reload...")
     uvicorn.run("src.backend.main:app", host="0.0.0.0", port=8000, reload=True)
+
+
