@@ -28,15 +28,19 @@ export function TopBar() {
         {/* Left Side (Empty for now) */}
         <div></div>
 
-        {/* Center Navigation */}
-        <nav className="hidden lg:flex items-center justify-center gap-8 bg-white relative z-50">
-          {['Home', 'Courses', 'Instructors', 'Pages', 'Blog'].map((item) => (
-            <button key={item} className="flex items-center gap-1 text-[15px] font-semibold text-slate-700 hover:text-primary transition-colors bg-white">
-              {item}
-              <ChevronDown size={14} className="text-slate-400" />
-            </button>
-          ))}
-        </nav>
+        {/* Center Search Bar (Optional addition for utility) */}
+        <div className="hidden lg:flex items-center justify-center">
+           <div className="relative w-full max-w-md">
+              <input 
+                type="text" 
+                placeholder="Search your courses..." 
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
+              />
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+           </div>
+        </div>
 
         {/* Right Side */}
         <div className="flex items-center justify-end gap-6">

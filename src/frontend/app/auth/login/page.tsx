@@ -135,10 +135,22 @@ export default function LoginPage() {
           </button>
         </div>
         
-        <div className="text-center pt-4">
+        <div className="text-center pt-4 space-y-4">
            <p className="text-sm font-medium text-slate-500">
               Don't you have an account? <Link href="/auth/register" className="text-[#FF4F6E] font-bold hover:underline ml-1">Sign up</Link>
            </p>
+
+           {/* Dev Only: Bypass Login */}
+           <button
+             type="button"
+             onClick={() => {
+               login({ name: 'Dev User', email: 'dev@dreams.com', role: 'student' }, 'mock-token');
+               router.push('/student/library');
+             }}
+             className="w-full py-3 border-2 border-dashed border-[#FF4F6E]/30 text-[#FF4F6E] font-black rounded-2xl hover:bg-[#FF4F6E]/5 transition-all text-[10px] uppercase tracking-[0.2em] animate-pulse"
+           >
+             🚀 Bypass Login (Dev Only)
+           </button>
         </div>
       </form>
     </div>

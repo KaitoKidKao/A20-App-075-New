@@ -65,10 +65,7 @@ export default function LandingPage() {
 
           {/* Left Content */}
           <div className="lg:w-[55%] space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-full text-xs font-black uppercase tracking-widest">
-               <Sparkles size={14} fill="currentColor" />
-               AI-Powered Inclusion
-            </div>
+
             <div className="space-y-8">
               <h1 className="text-6xl md:text-[88px] font-black text-slate-900 leading-[0.95] tracking-tight">
                 Hear with your <span className="text-[#FF4F6E] italic">eyes</span>, <br />
