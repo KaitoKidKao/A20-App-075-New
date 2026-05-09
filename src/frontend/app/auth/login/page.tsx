@@ -33,7 +33,7 @@ export default function LoginPage() {
         router.push('/student/library');
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Dang nhap that bai. Vui long thu lai.';
+      const message = err instanceof Error ? err.message : 'Login failed. Please try again.';
       setError(message);
     } finally {
       setIsSubmitting(false);

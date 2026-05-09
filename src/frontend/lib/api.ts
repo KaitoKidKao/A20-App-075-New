@@ -50,7 +50,7 @@ export const api = {
 
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
-        throw new Error(error.detail || 'Dang ky khong thanh cong');
+        throw new Error(error.detail || 'Registration failed.');
       }
       return res.json();
     },
@@ -68,7 +68,7 @@ export const api = {
 
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
-        throw new Error(error.detail || 'Dang nhap that bai');
+        throw new Error(error.detail || 'Login failed.');
       }
 
       const data = await res.json();
@@ -96,7 +96,7 @@ export const api = {
 
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
-        throw new Error(error.detail || 'Upload video that bai');
+        throw new Error(error.detail || 'Video upload failed.');
       }
       return res.json();
     },
@@ -107,7 +107,7 @@ export const api = {
         headers: getHeaders(),
         body: JSON.stringify({ url }),
       });
-      if (!res.ok) throw new Error('Xu ly URL that bai');
+      if (!res.ok) throw new Error('Processing URL failed.');
       return res.json();
     },
 
@@ -115,7 +115,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/status`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Khong the lay trang thai');
+      if (!res.ok) throw new Error('Failed to fetch status.');
       return res.json();
     },
 
@@ -123,7 +123,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/transcript`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Khong the lay transcript');
+      if (!res.ok) throw new Error('Failed to fetch transcript.');
       return res.json();
     },
 
@@ -131,7 +131,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/summary`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Khong the lay summary');
+      if (!res.ok) throw new Error('Failed to fetch summary.');
       return res.json();
     },
 
@@ -139,7 +139,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/timeline`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Khong the lay timeline');
+      if (!res.ok) throw new Error('Failed to fetch timeline.');
       return res.json();
     },
 
@@ -147,7 +147,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/highlights`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Khong the lay highlights');
+      if (!res.ok) throw new Error('Failed to fetch highlights.');
       return res.json();
     },
 
@@ -155,7 +155,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/questions`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Khong the lay questions');
+      if (!res.ok) throw new Error('Failed to fetch questions.');
       return res.json();
     },
 
@@ -163,7 +163,7 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/briefing`, {
         headers: getHeaders(),
       });
-      if (!res.ok) throw new Error('Khong the lay briefing');
+      if (!res.ok) throw new Error('Failed to fetch briefing.');
       return res.json();
     },
   },

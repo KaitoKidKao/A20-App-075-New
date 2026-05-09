@@ -18,32 +18,48 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    fullName?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    terms?: string;
+  }>({});
+
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    setFieldErrors({});
 
-    if (password !== confirmPassword) {
-      setError('Mat khau xac nhan khong khop.');
-      setIsSubmitting(false);
-      return;
+    const nextErrors: typeof fieldErrors = {};
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName) nextErrors.fullName = 'Please enter your full name.';
+    if (!trimmedEmail) nextErrors.email = 'Please enter your email address.';
+    else if (!isValidEmail(trimmedEmail)) nextErrors.email = 'Please enter a valid email address.';
+    if (password.length < 8) nextErrors.password = 'Password must be at least 8 characters long.';
+    else if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+      nextErrors.password = 'Password must include uppercase, lowercase, and a number.';
     }
-    if (password.length < 8) {
-      setError('Mat khau phai co it nhat 8 ky tu.');
-      setIsSubmitting(false);
-      return;
-    }
-    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
-      setError('Mat khau phai co chu hoa, chu thuong va chu so.');
+    if (password !== confirmPassword) nextErrors.confirmPassword = 'Passwords do not match.';
+    if (!acceptedTerms) nextErrors.terms = 'You must accept the terms to continue.';
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setError('Please review the highlighted fields.');
       setIsSubmitting(false);
       return;
     }
 
     try {
       await api.auth.register({
-        full_name: fullName,
-        email,
+        full_name: trimmedName,
+        email: trimmedEmail,
         password,
         confirm_password: confirmPassword,
       });
@@ -53,7 +69,7 @@ export default function RegisterPage() {
         router.push('/auth/login');
       }, 2000);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Dang ky that bai. Vui long thu lai.';
+      const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -90,7 +106,7 @@ export default function RegisterPage() {
         </div>
       )}
 
-      <form onSubmit={handleRegister} className="space-y-5">
+      <form onSubmit={handleRegister} noValidate className="space-y-5">
         <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-widest text-slate-400">Full Name *</label>
           <div className="relative group">
@@ -101,9 +117,11 @@ export default function RegisterPage() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Enter your full name"
+              aria-invalid={Boolean(fieldErrors.fullName)}
               className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all font-medium text-slate-700"
             />
           </div>
+          {fieldErrors.fullName && <p className="text-xs font-bold text-red-600">{fieldErrors.fullName}</p>}
         </div>
 
         <div className="space-y-2">
@@ -116,9 +134,11 @@ export default function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
+              aria-invalid={Boolean(fieldErrors.email)}
               className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all font-medium text-slate-700"
             />
           </div>
+          {fieldErrors.email && <p className="text-xs font-bold text-red-600">{fieldErrors.email}</p>}
         </div>
 
         <div className="space-y-2">
@@ -131,6 +151,7 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a password"
+              aria-invalid={Boolean(fieldErrors.password)}
               className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all font-medium text-slate-700"
             />
             <button
@@ -141,6 +162,7 @@ export default function RegisterPage() {
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
+          {fieldErrors.password && <p className="text-xs font-bold text-red-600">{fieldErrors.password}</p>}
         </div>
 
         <div className="space-y-2">
@@ -153,18 +175,27 @@ export default function RegisterPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Re-enter your password"
+              aria-invalid={Boolean(fieldErrors.confirmPassword)}
               className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all font-medium text-slate-700"
             />
           </div>
+          {fieldErrors.confirmPassword && <p className="text-xs font-bold text-red-600">{fieldErrors.confirmPassword}</p>}
         </div>
 
         <div className="space-y-4 pt-2">
           <div className="flex items-start gap-3">
-            <input required type="checkbox" id="terms" className="mt-1 w-4 h-4 rounded border-slate-200 text-[#FF4F6E] focus:ring-[#FF4F6E]" />
+            <input
+              type="checkbox"
+              id="terms"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded border-slate-200 text-[#FF4F6E] focus:ring-[#FF4F6E]"
+            />
             <label htmlFor="terms" className="text-xs font-bold text-slate-500 leading-relaxed cursor-pointer">
               I agree with <Link href="#" className="text-slate-900 hover:underline">Terms of Service</Link> and <Link href="#" className="text-slate-900 hover:underline">Privacy Policy</Link>
             </label>
           </div>
+          {fieldErrors.terms && <p className="text-xs font-bold text-red-600">{fieldErrors.terms}</p>}
         </div>
 
         <button

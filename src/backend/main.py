@@ -151,7 +151,7 @@ async def register(user_data: UserCreate, session: Session = Depends(get_session
     statement = select(User).where(User.email == user_data.email)
     existing_user = session.exec(statement).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email đã được sử dụng.")
+        raise HTTPException(status_code=400, detail="Email is already in use.")
     
     # Tạo user mới
     new_user = User(
@@ -163,7 +163,7 @@ async def register(user_data: UserCreate, session: Session = Depends(get_session
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
-    return {"message": "Đăng ký thành công", "user_id": new_user.id}
+    return {"message": "Registration successful", "user_id": new_user.id}
 
 @app.post("/api/auth/login", response_model=Token)
 async def login(
@@ -175,7 +175,7 @@ async def login(
     user = session.exec(statement).first()
     
     if not user or not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Email hoặc mật khẩu không chính xác.")
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
     
     access_token = create_access_token(data={"sub": user.email})
     return {
