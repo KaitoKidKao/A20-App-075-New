@@ -6,7 +6,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 import uuid
 import logging
 import asyncio
-import json
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,9 +16,9 @@ from src.backend.services.video_service import VideoService
 from src.backend.services.ai_service import AIService
 from src.backend import config
 from src.backend.database import create_db_and_tables, get_session
-from src.backend.models import User, Video, LectureData
+from src.backend.models import User, Video, LectureData, Flashcard
 from src.backend.auth import get_password_hash, verify_password, create_access_token, get_current_user
-from src.backend.schemas.auth import UserCreate, UserLogin, Token
+from src.backend.schemas.auth import UserCreate, Token
 from sqlmodel import Session, select
 
 # Cấu hình Logging
@@ -120,7 +119,6 @@ async def run_video_pipeline(video_id: str, video_path: Path):
             # Lưu Flashcards
             flashcards_data = notebook_data.get("flashcards", [])
             for fc in flashcards_data:
-                from src.backend.models.flashcard import Flashcard
                 new_fc = Flashcard(
                     video_id=video_id,
                     front=fc.get("front"),
@@ -425,7 +423,6 @@ async def get_flashcards(
 ):
     """Lấy danh sách flashcards của video (có kiểm tra quyền)"""
     check_video_access(video_id, current_user, session)
-    from src.backend.models.flashcard import Flashcard
     statement = select(Flashcard).where(Flashcard.video_id == video_id)
     flashcards = session.exec(statement).all()
     return {"video_id": video_id, "flashcards": flashcards}

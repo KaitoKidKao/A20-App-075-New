@@ -224,34 +224,23 @@ class AIService:
             ai_result = json.loads(response.choices[0].message.content)
             raw_glosses = ai_result.get("glosses", []) or ai_result.get("data", [])
             
-            # Làm giàu dữ liệu với HamNoSys và xử lý từ đồng nghĩa
+            # Làm giàu dữ liệu với HamNoSys
             final_glosses = []
-            synonyms_map = vsl_data.get("synonyms", {})
             
             for item in raw_glosses:
-                word = item.get("word", "").lower().replace(" ", "_")
-                timestamp = item.get("time", 0)
+                word = item.get("word", "").lower()
+                # Thử tra cứu với cả dấu gạch dưới và dấu cách
+                word_variants = [word, word.replace(" ", "_"), word.replace("_", " ")]
                 
-                # 1. Tra trực tiếp
-                if word in vsl_dict:
-                    item["vsl_info"] = vsl_dict[word]
-                    final_glosses.append(item)
-                # 2. Tra qua từ đồng nghĩa
-                else:
-                    found_synonym = False
-                    # Kiểm tra xem từ này có là từ đồng nghĩa của từ nào trong từ điển không
-                    for main_word, syns in synonyms_map.items():
-                        if word in syns and main_word in vsl_dict:
-                            item["word"] = main_word
-                            item["vsl_info"] = vsl_dict[main_word]
-                            final_glosses.append(item)
-                            found_synonym = True
-                            break
-                    
-                    if not found_synonym:
-                        # Fallback: Vẫn giữ từ đó nhưng không có mã HamNoSys (Frontend có thể hiển thị text hoặc xử lý khác)
-                        item["vsl_info"] = None
-                        final_glosses.append(item)
+                vsl_info = None
+                for variant in word_variants:
+                    if variant in vsl_dict:
+                        vsl_info = vsl_dict[variant]
+                        item["word"] = variant # Cập nhật lại từ chuẩn trong từ điển
+                        break
+                
+                item["vsl_info"] = vsl_info
+                final_glosses.append(item)
             
             return final_glosses
         except Exception as e:

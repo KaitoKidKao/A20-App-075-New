@@ -4,11 +4,15 @@ import os
 import sys
 from pathlib import Path
 
+# Fix encoding for Windows console
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 
 from src.backend.services.ai_service import AIService
-from src.backend import config
 
 async def test_vsl_translation():
     print("Testing VSL Translation...")

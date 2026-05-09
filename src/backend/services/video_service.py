@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 class VideoService:
     UPLOAD_DIR = Path("data/uploads/videos")
     AUDIO_DIR = Path("data/uploads/audio")
+    _write_lock = asyncio.Lock()
     
     @classmethod
     def ensure_dirs(cls):
@@ -19,7 +20,7 @@ class VideoService:
     async def save_video(cls, file_content: bytes, filename: str) -> Path:
         cls.ensure_dirs()
         file_path = cls.UPLOAD_DIR / filename
-        async with asyncio.Lock(): # Simple lock for local writing
+        async with cls._write_lock: # Use class-level lock
             with open(file_path, "wb") as f:
                 f.write(file_content)
         return file_path
@@ -79,7 +80,7 @@ class VideoService:
         
         try:
             logger.info(f"🎬 Đang tách âm thanh từ: {video_path}")
-            result = subprocess.run(
+            subprocess.run(
                 command, 
                 capture_output=True, 
                 text=True, 

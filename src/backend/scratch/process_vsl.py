@@ -23,7 +23,6 @@ def parse_vsl_data(data_path, output_path):
         lines, enc = open_file(dictionary_file)
         print(f"Reading dictionary with {enc} encoding...")
         if lines:
-            header = lines[0].strip().split('\t')
             for line in lines[1:]:
                 parts = line.strip().split('\t')
                 if len(parts) >= 9:
