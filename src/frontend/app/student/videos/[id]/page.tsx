@@ -1,30 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Play, 
-  MessageSquare, 
   FileText, 
-  Download, 
-  Search, 
-  ChevronRight, 
-  Maximize, 
-  Volume2, 
-  Settings,
   Sparkles,
-  Save,
-  ChevronDown,
-  Loader2,
-  AlertTriangle,
   Clock,
+  ChevronLeft,
+  ChevronRight,
   Zap,
   HelpCircle,
   BookOpen,
   Target,
   List,
   Eye,
-  Hand,
-  Activity,
   Film,
   CheckCircle
 } from 'lucide-react';
@@ -62,6 +51,31 @@ interface BriefingData {
   summary: string;
 }
 
+interface FlashcardItem {
+  id: string;
+  front: string;
+  back: string;
+  hint?: string | null;
+}
+
+interface VisualSection {
+  icon?: string;
+  label?: string;
+  value?: string;
+  description?: string;
+}
+
+interface VisualData {
+  infographic?: {
+    title?: string;
+    sections?: VisualSection[];
+    key_takeaways?: string[];
+  };
+  charts?: Record<string, unknown>;
+}
+
+const flashcardBackgroundImages = Array.from({ length: 10 }, (_, i) => `/assets/images/flashcards/flashcard_${i + 1}.png`);
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -74,7 +88,6 @@ export default function VideoLessonPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const [activeTab, setActiveTab] = useState('transcript');
-  const [showSignLanguage, setShowSignLanguage] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   
   // Data state
@@ -84,12 +97,17 @@ export default function VideoLessonPage() {
   const [highlights, setHighlights] = useState<HighlightItem[]>([]);
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [briefing, setBriefing] = useState<BriefingData | null>(null);
+  const [flashcards, setFlashcards] = useState<FlashcardItem[]>([]);
+  const [visualData, setVisualData] = useState<VisualData | null>(null);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [coverImageFailed, setCoverImageFailed] = useState(false);
   
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
-  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
+  const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
+  const [isFlashcardFlipped, setIsFlashcardFlipped] = useState(false);
 
   useEffect(() => {
     const fetchTranscript = async () => {
@@ -109,32 +127,40 @@ export default function VideoLessonPage() {
     fetchTranscript();
   }, [videoId]);
 
-  const fetchAllMetadata = async () => {
-    setIsLoadingMetadata(true);
+  const fetchAllMetadata = useCallback(async () => {
     try {
-      const [timelineRes, highlightsRes, questionsRes, briefingRes] = await Promise.all([
+      const [timelineRes, highlightsRes, questionsRes, briefingRes, flashcardsRes, vizDataRes] = await Promise.all([
         api.videos.getTimeline(videoId),
         api.videos.getHighlights(videoId),
         api.videos.getQuestions(videoId),
         api.videos.getBriefing(videoId),
+        api.videos.getFlashcards(videoId),
+        api.videos.getVizData(videoId),
       ]);
 
       setTimeline(timelineRes.timeline || []);
       setHighlights(highlightsRes.highlights || []);
       setQuestions(questionsRes.questions || []);
       setBriefing(briefingRes.briefing || null);
+      setFlashcards(flashcardsRes.flashcards || []);
+      setVisualData(vizDataRes.visual_data || null);
+      setCoverImageUrl(vizDataRes.cover_image_url || null);
+      setCoverImageFailed(false);
     } catch (err) {
       console.error('Metadata fetch error:', err);
-    } finally {
-      setIsLoadingMetadata(false);
     }
-  };
+  }, [videoId]);
 
   useEffect(() => {
     if (!isLoadingTranscript && segments.length > 0) {
       fetchAllMetadata();
     }
-  }, [isLoadingTranscript, segments]);
+  }, [fetchAllMetadata, isLoadingTranscript, segments]);
+
+  useEffect(() => {
+    setCurrentFlashcardIndex(0);
+    setIsFlashcardFlipped(false);
+  }, [videoId, flashcards.length]);
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
@@ -293,7 +319,7 @@ export default function VideoLessonPage() {
                          <h3 className="text-2xl font-black text-slate-900 tracking-tight">Lecture Objective</h3>
                       </div>
                       <p className="text-base md:text-lg font-bold text-slate-600 leading-relaxed italic mb-6 max-w-3xl">
-                        "{briefing.objective}"
+                        &ldquo;{briefing.objective}&rdquo;
                       </p>
                       <div className="flex flex-wrap gap-2">
                          {briefing.key_terms.map((term, i) => (
@@ -313,6 +339,8 @@ export default function VideoLessonPage() {
                        { id: 'timeline', label: 'Timeline Structure', icon: Clock },
                        { id: 'highlights', label: 'Key Highlights', icon: Zap },
                        { id: 'questions', label: 'Concept Clarification', icon: HelpCircle },
+                       { id: 'flashcards', label: 'Flashcards', icon: BookOpen },
+                       { id: 'visuals', label: 'Infographic', icon: Eye },
                      ].map((tab) => (
                        <button 
                          key={tab.id}
@@ -361,7 +389,7 @@ export default function VideoLessonPage() {
                                   </div>
                                   <div className="space-y-3">
                                      <h4 className="text-2xl font-black text-slate-900 leading-tight">{item.reason}</h4>
-                                     <p className="text-base font-bold text-slate-500 italic">"{item.context}"</p>
+                                     <p className="text-base font-bold text-slate-500 italic">&ldquo;{item.context}&rdquo;</p>
                                   </div>
                                </div>
                             </div>
@@ -394,6 +422,155 @@ export default function VideoLessonPage() {
                                </div>
                             </div>
                           ))}
+                       </div>
+                     )}
+
+                     {activeTab === 'flashcards' && (
+                       <div className="space-y-6">
+                          {flashcards.length === 0 && (
+                            <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold">
+                              Flashcards are not available yet.
+                            </div>
+                          )}
+                          {flashcards.length > 0 && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-black">
+                                  Card {currentFlashcardIndex + 1} / {flashcards.length}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setIsFlashcardFlipped(false);
+                                      setCurrentFlashcardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
+                                    }}
+                                    className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                                    aria-label="Previous flashcard"
+                                  >
+                                    <ChevronLeft size={18} />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setIsFlashcardFlipped(false);
+                                      setCurrentFlashcardIndex((prev) => (prev + 1) % flashcards.length);
+                                    }}
+                                    className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                                    aria-label="Next flashcard"
+                                  >
+                                    <ChevronRight size={18} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="relative [perspective:1200px]">
+                                <button
+                                  key={flashcards[currentFlashcardIndex].id || currentFlashcardIndex}
+                                  onClick={() => setIsFlashcardFlipped((prev) => !prev)}
+                                  className="w-full max-w-[360px] mx-auto aspect-[9/16] rounded-[32px] text-left focus:outline-none focus:ring-2 focus:ring-[#FF4F6E]/40 animate-in fade-in slide-in-from-bottom-4 duration-300"
+                                  aria-label="Flip flashcard"
+                                >
+                                  <div
+                                    className={cn(
+                                      "relative w-full h-full [transform-style:preserve-3d] transition-transform duration-500",
+                                      isFlashcardFlipped ? "[transform:rotateY(180deg)]" : "[transform:rotateY(0deg)]"
+                                    )}
+                                  >
+                                    <div className="absolute inset-0 rounded-[32px] border border-slate-200 shadow-lg [backface-visibility:hidden] overflow-hidden">
+                                      <Image
+                                        src={flashcardBackgroundImages[currentFlashcardIndex % flashcardBackgroundImages.length]}
+                                        alt="Flashcard background"
+                                        fill
+                                        className="object-cover"
+                                        unoptimized={true}
+                                      />
+                                      <div className="absolute inset-0 bg-white/78" />
+                                      <div className="absolute inset-0 p-8">
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 font-black mb-3">Front</p>
+                                        <p className="text-2xl font-black text-slate-900 leading-snug">
+                                        {flashcards[currentFlashcardIndex].front}
+                                        </p>
+                                        {flashcards[currentFlashcardIndex].hint ? (
+                                          <p className="absolute bottom-8 left-8 right-8 text-xs font-bold text-slate-600">
+                                            Hint: {flashcards[currentFlashcardIndex].hint}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                    </div>
+
+                                    <div className="absolute inset-0 rounded-[32px] border border-slate-800 shadow-lg [transform:rotateY(180deg)] [backface-visibility:hidden] overflow-hidden">
+                                      <Image
+                                        src={flashcardBackgroundImages[currentFlashcardIndex % flashcardBackgroundImages.length]}
+                                        alt="Flashcard background back"
+                                        fill
+                                        className="object-cover"
+                                        unoptimized={true}
+                                      />
+                                      <div className="absolute inset-0 bg-slate-900/76" />
+                                      <div className="absolute inset-0 p-8">
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-black mb-3">Back</p>
+                                        <p className="text-xl font-black text-white leading-snug">
+                                          {flashcards[currentFlashcardIndex].back}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                       </div>
+                     )}
+
+                     {activeTab === 'visuals' && (
+                       <div className="space-y-6">
+                          {coverImageUrl && !coverImageFailed ? (
+                            <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-slate-200">
+                              <Image
+                                src={coverImageUrl}
+                                alt="Visual cover"
+                                fill
+                                className="object-cover"
+                                unoptimized={true}
+                                onError={() => setCoverImageFailed(true)}
+                              />
+                            </div>
+                          ) : null}
+                          {coverImageFailed ? (
+                            <div className="p-6 rounded-3xl bg-amber-50 border border-amber-100 text-amber-800 font-bold">
+                              Cover image could not be loaded from the generated URL.
+                            </div>
+                          ) : null}
+
+                          {visualData?.infographic?.title ? (
+                            <h4 className="text-2xl font-black text-slate-900">{visualData.infographic.title}</h4>
+                          ) : null}
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {(visualData?.infographic?.sections || []).map((section, i) => (
+                              <div key={`${section.label || 'section'}-${i}`} className="p-5 rounded-3xl bg-slate-50 border border-slate-200 space-y-2">
+                                <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-black">{section.label || 'Section'}</p>
+                                <p className="text-lg font-black text-slate-900">{section.value || '-'}</p>
+                                <p className="text-sm font-bold text-slate-600">{section.description || ''}</p>
+                              </div>
+                            ))}
+                          </div>
+
+                          {(visualData?.infographic?.key_takeaways || []).length > 0 ? (
+                            <div className="p-6 rounded-3xl bg-emerald-50 border border-emerald-100">
+                              <p className="text-xs uppercase tracking-[0.15em] text-emerald-600 font-black mb-3">Key Takeaways</p>
+                              <ul className="space-y-2">
+                                {(visualData.infographic?.key_takeaways || []).map((item, i) => (
+                                  <li key={`${item}-${i}`} className="text-sm font-bold text-emerald-900">{item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+
+                          {!coverImageUrl && !visualData?.infographic?.title && (visualData?.infographic?.sections || []).length === 0 ? (
+                            <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold">
+                              Visualization data is not available yet.
+                            </div>
+                          ) : null}
                        </div>
                      )}
                   </div>

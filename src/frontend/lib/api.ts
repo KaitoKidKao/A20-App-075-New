@@ -166,5 +166,21 @@ export const api = {
       if (!res.ok) throw new Error('Failed to fetch briefing.');
       return res.json();
     },
+
+    async getFlashcards(videoId: string) {
+      const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/flashcards`, {
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to fetch flashcards.');
+      return res.json();
+    },
+
+    async getVizData(videoId: string) {
+      const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/viz-data`, {
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to fetch visualization data.');
+      return res.json();
+    },
   },
 };

@@ -1,6 +1,7 @@
 import json
 import logging
 from pathlib import Path
+from urllib.parse import quote_plus
 from faster_whisper import WhisperModel
 from openai import AsyncOpenAI
 from src.backend import config
@@ -325,7 +326,7 @@ class AIService:
                - "value": Một số liệu hoặc từ khóa quan trọng nhất.
                - "description": Một đoạn mô tả ngắn (1 câu) giải thích chi tiết hơn.
              - "key_takeaways": 3 điểm rút ra quan trọng nhất từ bài học.
-           - "image_prompt": Một mô tả ngắn bằng tiếng Anh (khoảng 10-15 từ) để sinh ảnh minh họa cho bài giảng này (ví dụ: 'A futuristic digital library with holographic data screens, educational style').
+           - "image_prompt": Một mô tả chi tiết bằng tiếng Anh (25-35 từ) để sinh ảnh bìa nghệ thuật cho bài giảng. Yêu cầu: Miêu tả một bối cảnh ấn tượng liên quan đến nội dung bài học, sử dụng các từ khóa như 'cinematic lighting', 'high resolution', 'professional digital art', 'vibrant colors', 'photorealistic'. KHÔNG bao gồm chữ trong ảnh.
 
         Định dạng trả về DUY NHẤT là JSON. Không giải thích gì thêm.
 
@@ -345,9 +346,12 @@ class AIService:
             
             # Sinh URL ảnh từ Pollinations.ai dựa trên image_prompt
             # Ta lấy từ visual_data.image_prompt hoặc mặc định
-            image_prompt = result.get("visual_data", {}).get("image_prompt", "educational illustration")
-            safe_prompt = "".join(c if c.isalnum() or c == " " else "" for c in image_prompt).replace(" ", "+")
-            result["cover_image_url"] = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1024&height=768&nologo=true"
+            image_prompt = (result.get("visual_data", {}).get("image_prompt") or "educational illustration").strip()
+            safe_prompt = quote_plus(image_prompt)
+            result["cover_image_url"] = (
+                f"https://image.pollinations.ai/prompt/{safe_prompt}"
+                "?width=1024&height=768&nologo=true&model=flux"
+            )
             
             # Caching
             video_id = transcript_data["video_id"]
