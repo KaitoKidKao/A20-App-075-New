@@ -4,16 +4,9 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
-import { DemoRoleSwitcher } from '../DemoRoleSwitcher';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
 import { ProfileHeader } from './ProfileHeader';
 import { Footer } from './Footer';
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

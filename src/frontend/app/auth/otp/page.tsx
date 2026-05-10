@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
@@ -93,7 +92,7 @@ export default function OTPPage() {
         
         <div className="text-center">
            <p className="text-sm font-medium text-slate-500">
-              Didn't get the OTP? <button type="button" className="text-[#FF4F6E] font-bold hover:underline ml-1">Resend OTP</button>
+              Didn&apos;t get the OTP? <button type="button" className="text-[#FF4F6E] font-bold hover:underline ml-1">Resend OTP</button>
            </p>
         </div>
       </form>

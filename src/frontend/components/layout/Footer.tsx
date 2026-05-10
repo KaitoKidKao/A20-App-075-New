@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Accessibility, Mail, MapPin, Phone, Globe, ArrowRight } from 'lucide-react';
+import { Mail, MapPin, Phone, Globe, ArrowRight } from 'lucide-react';
 
 export function Footer() {
   return (

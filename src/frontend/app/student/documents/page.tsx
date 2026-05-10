@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Heart, ChevronLeft, ChevronRight, CheckCircle, BookOpen, Clock, Users } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,15 @@ export default function EnrolledCourses() {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [activeTab, setActiveTab] = React.useState('enrolled');
   
-  const allCourses: Record<number, any[]> = {
+  interface Course {
+    id: number;
+    title: string;
+    instructor: string;
+    cat: string;
+    thumb: string;
+  }
+
+  const allCourses: Record<number, Course[]> = {
     1: [
       { id: 1, title: 'Information About UI/UX Design Degree', instructor: 'David Benitez', cat: 'Design', thumb: 'https://picsum.photos/seed/uiux1/800/450' },
       { id: 2, title: 'Wordpress for Beginners - Master Wordpress Quickly', instructor: 'Ana Reyes', cat: 'Wordpress', thumb: 'https://picsum.photos/seed/wp1/800/450' },

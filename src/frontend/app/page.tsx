@@ -3,14 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Sparkles, 
   Zap, 
-  ArrowRight,
-  Heart,
   Eye,
   MessageSquare,
-  ShieldCheck,
-  Users,
   CheckCircle2,
   Play
 } from 'lucide-react';
@@ -163,7 +158,7 @@ export default function LandingPage() {
                 </div>
                 <div className="lg:w-1/2 space-y-10">
                    <span className="text-[#FF4F6E] font-black uppercase tracking-[0.3em] text-xs">Our Core Values</span>
-                   <h2 className="text-4xl md:text-6xl font-black leading-tight">Equality isn't a feature. <br /> It's the <span className="text-[#FF4F6E]">Foundation</span>.</h2>
+                   <h2 className="text-4xl md:text-6xl font-black leading-tight">Equality isn&apos;t a feature. <br /> It&apos;s the <span className="text-[#FF4F6E]">Foundation</span>.</h2>
                    <p className="text-xl text-slate-500 font-medium leading-relaxed">
                       We believe every student deserves to be heard and to hear. Dreams is built to erase the invisible walls in classrooms.
                    </p>
@@ -192,7 +187,7 @@ export default function LandingPage() {
            <div className="max-w-[1440px] mx-auto px-8 md:px-20 relative z-10 flex flex-col lg:flex-row items-center gap-20">
               <div className="lg:w-1/2 space-y-10">
                  <h2 className="text-5xl md:text-7xl font-black leading-tight">Ready to start your <span className="text-[#FF4F6E]">Dreams</span> journey?</h2>
-                 <p className="text-xl text-slate-400 font-medium">Join a global community of students who are redefining what it means to "listen" and "learn".</p>
+                 <p className="text-xl text-slate-400 font-medium">Join a global community of students who are redefining what it means to &quot;listen&quot; and &quot;learn&quot;.</p>
                  <div className="flex flex-col sm:flex-row gap-6">
                     <button 
                       onClick={handleStart}

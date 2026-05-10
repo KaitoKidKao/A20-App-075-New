@@ -17,6 +17,29 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+/** HamNoSys / mô tả tư thế từ từ điển VSL (backend enrich) */
+export interface VSLInfo {
+  mouth?: string;
+  body?: string;
+  head?: string;
+  shoulder?: string;
+  eyegaze?: string;
+  eyebrow?: string;
+  eyelids?: string;
+  hand?: string;
+}
+
+export interface HandsSignGloss {
+  time: number;
+  word: string;
+  vsl_info: VSLInfo | null;
+}
+
+export interface HandsSignResponse {
+  video_id: string;
+  handsign_data: HandsSignGloss[];
+}
+
 const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   const storage = localStorage.getItem('udl-app-storage');
@@ -180,6 +203,14 @@ export const api = {
         headers: getHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch visualization data.');
+      return res.json();
+    },
+
+    async getHandsSign(videoId: string): Promise<HandsSignResponse> {
+      const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/handsign`, {
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to fetch sign language data.');
       return res.json();
     },
   },

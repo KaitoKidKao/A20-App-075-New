@@ -9,8 +9,6 @@ import {
   Users, 
   Clock,
   ArrowUpRight,
-  ArrowDownRight,
-  CheckCircle2,
   UploadCloud,
   FileVideo,
   Sparkles,
@@ -18,10 +16,9 @@ import {
   ShieldCheck,
   Plus
 } from 'lucide-react';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatusBadge, type Status } from '@/components/ui/StatusBadge';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import Image from 'next/image';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -225,7 +222,7 @@ export default function AdminDashboardPage() {
                               </div>
                            </td>
                            <td className="px-8 py-6">
-                              <StatusBadge status={job.status as any} />
+                              <StatusBadge status={job.status as Status} />
                            </td>
                            <td className="px-8 py-6 text-right">
                               <button className="p-2 hover:bg-white hover:shadow-md rounded-xl transition-all">

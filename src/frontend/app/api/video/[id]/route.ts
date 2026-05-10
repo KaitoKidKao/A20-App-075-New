@@ -55,11 +55,7 @@ export async function GET(
   }
 
   const files = fs.readdirSync(VIDEO_DIR);
-  let videoFile = files.find((f) => f.startsWith(videoId));
-
-  if (!videoFile && files.length > 0) {
-    videoFile = files.find((f) => f.endsWith('.mp4') || f.endsWith('.mkv') || f.endsWith('.avi'));
-  }
+  const videoFile = files.find((f) => f.startsWith(`${videoId}.`));
 
   if (!videoFile) {
     return NextResponse.json({ error: 'Video file not found' }, { status: 404 });

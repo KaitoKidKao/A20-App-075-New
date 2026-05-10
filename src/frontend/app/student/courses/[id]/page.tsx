@@ -2,15 +2,11 @@
 
 import React, { useState } from 'react';
 import { 
-  ChevronLeft, 
   Play, 
   Clock, 
-  FileText, 
   CheckCircle, 
   Sparkles,
   Zap,
-  Layout,
-  BookOpen,
   ArrowRight,
   MonitorPlay,
   Layers,
@@ -19,7 +15,6 @@ import {
   Share2,
   Heart,
   ChevronDown,
-  Info,
   Award,
   Users,
   MessageSquare,
@@ -27,18 +22,25 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { mockLectures } from '@/lib/mockData';
-import { cn } from '@/lib/utils';
 
 export default function CourseDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const [activeAccordion, setActiveAccordion] = useState<number | null>(0);
   
   const courseId = Number(params.id);
 
-  const allCoursesData: Record<number, any> = {
+  interface Course {
+    id?: number;
+    title: string;
+    instructor: string;
+    cat: string;
+    thumb: string;
+    desc: string;
+  }
+
+  const allCoursesData: Record<number, Course> = {
     1: { title: 'Information About UI/UX Design Degree', instructor: 'David Benitez', cat: 'Design', thumb: 'https://picsum.photos/seed/uiux1/800/450', desc: 'Become a professional UX designer from scratch.' },
     2: { title: 'Wordpress for Beginners - Master Wordpress Quickly', instructor: 'Ana Reyes', cat: 'Wordpress', thumb: 'https://picsum.photos/seed/wp1/800/450', desc: 'Learn to build stunning websites with Wordpress.' },
     3: { title: 'Sketch from A to Z (2024): Become an app designer', instructor: 'Andrew Pirtle', cat: 'Design', thumb: 'https://picsum.photos/seed/sketch1/800/450', desc: 'Master Sketch for mobile and web design.' },
@@ -148,7 +150,7 @@ export default function CourseDetailPage() {
             
             {/* What you'll learn */}
             <div className="border-2 border-slate-100 rounded-2xl p-8 space-y-6">
-              <h2 className="text-xl font-black text-slate-900">What you'll learn</h2>
+              <h2 className="text-xl font-black text-slate-900">What you&apos;ll learn</h2>
               <div className="grid md:grid-cols-2 gap-4">
                 {[
                   "Become a professional UX designer",

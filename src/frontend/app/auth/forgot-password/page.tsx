@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
       <div className="space-y-6 text-center lg:text-left animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="space-y-3">
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Check Your Email</h1>
-          <p className="text-slate-500 font-medium">We've sent a password reset link to <span className="text-slate-900 font-bold">{email}</span></p>
+          <p className="text-slate-500 font-medium">We&apos;ve sent a password reset link to <span className="text-slate-900 font-bold">{email}</span></p>
         </div>
         <Link 
           href="/auth/otp"
@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
           Enter OTP
         </Link>
         <button onClick={() => setIsSent(false)} className="w-full text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">
-          Didn't receive email? Resend
+          Didn&apos;t receive email? Resend
         </button>
       </div>
     );

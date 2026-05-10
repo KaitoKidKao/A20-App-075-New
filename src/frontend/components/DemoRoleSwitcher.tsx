@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { 
-  Users, 
   BookOpen, 
   ShieldCheck,
   X,

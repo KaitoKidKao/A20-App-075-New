@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LockscreenPage() {
   const router = useRouter();
@@ -27,9 +28,11 @@ export default function LockscreenPage() {
         <div className="relative group">
            <div className="absolute inset-0 bg-gradient-to-br from-[#FF4F6E] to-indigo-600 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
            <div className="relative w-32 h-32 rounded-full border-4 border-white shadow-2xl overflow-hidden">
-              <img 
+              <Image 
                 src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=256&h=256&auto=format&fit=crop" 
                 alt="User Avatar" 
+                width={128}
+                height={128}
                 className="w-full h-full object-cover"
               />
            </div>

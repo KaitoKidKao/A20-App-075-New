@@ -5,16 +5,6 @@ import {
   BookOpen, 
   Library, 
   CheckCircle, 
-  Clock, 
-  Play, 
-  User, 
-  MoreHorizontal,
-  Star,
-  Sparkles,
-  LayoutDashboard,
-  ArrowRight,
-  TrendingUp,
-  Award,
   Heart
 } from 'lucide-react';
 import Image from 'next/image';

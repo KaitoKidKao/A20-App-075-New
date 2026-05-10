@@ -41,7 +41,7 @@ export default function TestAvatarPage() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
-    let interval: any;
+    let interval: NodeJS.Timeout;
     if (isPlaying) {
       interval = setInterval(() => {
         setTime((prev) => (prev + 0.1) % 8);

@@ -6,7 +6,6 @@ import {
   User, 
   Moon, 
   Sun,
-  ChevronDown,
   LogOut
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';

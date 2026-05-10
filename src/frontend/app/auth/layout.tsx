@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
 
 export default function AuthLayout({
   children,
@@ -72,10 +73,12 @@ export default function AuthLayout({
                 <div className="absolute inset-0 bg-indigo-100/30 rounded-full blur-3xl animate-pulse" />
                 
                 {/* Main Illustration Image */}
-                <img 
+                <Image 
                   key={pathname}
                   src={illustrationSrc} 
                   alt="Learning Illustration" 
+                  width={400}
+                  height={400}
                   className="w-full h-full object-contain relative z-10 drop-shadow-2xl transition-all duration-700 animate-in fade-in zoom-in-95"
                 />
              </div>
@@ -101,7 +104,7 @@ export default function AuthLayout({
       <div className="flex-1 flex flex-col justify-center items-center p-8 lg:p-20 relative bg-[#FFF9FA]">
         {/* Back to Home Link (Top Right) */}
         <div className="absolute top-10 right-10">
-           <a href="/" className="text-sm font-bold text-[#FF4F6E] hover:underline">Back to Home</a>
+           <Link href="/" className="text-sm font-bold text-[#FF4F6E] hover:underline">Back to Home</Link>
         </div>
         
         <div className="w-full max-w-[440px]">

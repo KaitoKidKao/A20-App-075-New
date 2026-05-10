@@ -15,12 +15,14 @@ import {
   List,
   Eye,
   Film,
-  CheckCircle
+  CheckCircle,
+  Hand,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { api } from '@/lib/api';
+import { api, type HandsSignGloss } from '@/lib/api';
+import SignAvatar2D from '@/components/SignAvatar2D';
 
 interface TranscriptSegment {
   start: number;
@@ -86,6 +88,7 @@ export default function VideoLessonPage() {
   const params = useParams();
   const videoId = params.id as string;
   const videoRef = useRef<HTMLVideoElement>(null);
+  const videoSourceModeRef = useRef<'byId' | 'demo'>('byId');
   
   const [activeTab, setActiveTab] = useState('transcript');
   const [currentTime, setCurrentTime] = useState(0);
@@ -101,6 +104,7 @@ export default function VideoLessonPage() {
   const [visualData, setVisualData] = useState<VisualData | null>(null);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [coverImageFailed, setCoverImageFailed] = useState(false);
+  const [handsignGlosses, setHandsSignGlosses] = useState<HandsSignGloss[]>([]);
   
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
   const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
@@ -108,6 +112,11 @@ export default function VideoLessonPage() {
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
   const [isFlashcardFlipped, setIsFlashcardFlipped] = useState(false);
+  /** Ưu tiên stream file theo videoId (Next proxy → data/uploads/videos); lỗi thì dùng video mẫu. */
+  const [videoSourceMode, setVideoSourceMode] = useState<'byId' | 'demo'>('byId');
+  const [videoBroken, setVideoBroken] = useState(false);
+
+  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `/api/video/${videoId}`;
 
   useEffect(() => {
     const fetchTranscript = async () => {
@@ -126,6 +135,15 @@ export default function VideoLessonPage() {
 
     fetchTranscript();
   }, [videoId]);
+
+  useEffect(() => {
+    setVideoSourceMode('byId');
+    setVideoBroken(false);
+  }, [videoId]);
+
+  useEffect(() => {
+    videoSourceModeRef.current = videoSourceMode;
+  }, [videoSourceMode]);
 
   const fetchAllMetadata = useCallback(async () => {
     try {
@@ -149,6 +167,17 @@ export default function VideoLessonPage() {
     } catch (err) {
       console.error('Metadata fetch error:', err);
     }
+
+    try {
+      const handsignRes = await api.videos.getHandsSign(videoId);
+      const raw = handsignRes.handsign_data || [];
+      setHandsSignGlosses(
+        [...raw].sort((a, b) => (Number(a.time) || 0) - (Number(b.time) || 0))
+      );
+    } catch (err) {
+      console.error('Handsign fetch error:', err);
+      setHandsSignGlosses([]);
+    }
   }, [videoId]);
 
   useEffect(() => {
@@ -161,6 +190,17 @@ export default function VideoLessonPage() {
     setCurrentFlashcardIndex(0);
     setIsFlashcardFlipped(false);
   }, [videoId, flashcards.length]);
+
+  useEffect(() => {
+    setHandsSignGlosses([]);
+  }, [videoId]);
+
+  const seekToSeconds = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = seconds;
+      videoRef.current.play();
+    }
+  };
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
@@ -211,19 +251,28 @@ export default function VideoLessonPage() {
           {/* Left Column: Player & Smart Content (Wider) */}
           <div className="lg:col-span-7 space-y-8">
             
-            {/* Main Video Player */}
+            {/* Main Video Player — Giai đoạn D: ưu tiên /api/video/[id] khớp file đã upload */}
             <div className="bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group">
-              
-              {/* Video Element (Using reliable local demo video) */}
+              {videoSourceMode === 'demo' && (
+                <div className="absolute top-4 left-4 z-20 pointer-events-none rounded-full bg-amber-500/95 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 shadow-lg max-w-[90%]">
+                  Demo: không tìm thấy file video cho ID này trên máy chủ — đang phát video mẫu (timeline có thể lệch).
+                </div>
+              )}
+
               <video
+                key={`${videoId}-${videoSourceMode}`}
                 ref={videoRef}
                 onTimeUpdate={handleTimeUpdate}
-                className="w-full h-full object-cover opacity-90"
+                className={cn('w-full h-full object-cover opacity-90', videoBroken && 'hidden')}
                 controls
-                src="/demo-video.mp4"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  document.getElementById('video-fallback')?.classList.remove('hidden');
+                src={videoSrc}
+                preload="metadata"
+                onError={() => {
+                  if (videoSourceModeRef.current === 'byId') {
+                    setVideoSourceMode('demo');
+                    return;
+                  }
+                  setVideoBroken(true);
                 }}
               />
 
@@ -243,8 +292,14 @@ export default function VideoLessonPage() {
                 </div>
               )}
 
-              {/* Fallback if Video API is missing */}
-              <div id="video-fallback" className="absolute inset-0 flex flex-col items-center justify-center text-white/50 hidden">
+              {/* Fallback if cả proxy và demo đều lỗi */}
+              <div
+                id="video-fallback"
+                className={cn(
+                  'absolute inset-0 flex flex-col items-center justify-center text-white/50',
+                  !videoBroken && 'hidden'
+                )}
+              >
                  <Film size={64} className="mb-6 opacity-30" />
                  <p className="font-black tracking-[0.2em] uppercase text-sm">Video Feed Unavailable</p>
                  <p className="text-[11px] mt-3 max-w-xs text-center opacity-60 font-bold">The video file appears to be corrupted or missing.</p>
@@ -341,6 +396,7 @@ export default function VideoLessonPage() {
                        { id: 'questions', label: 'Concept Clarification', icon: HelpCircle },
                        { id: 'flashcards', label: 'Flashcards', icon: BookOpen },
                        { id: 'visuals', label: 'Infographic', icon: Eye },
+                       { id: 'handsign', label: 'VSL Avatar', icon: Hand },
                      ].map((tab) => (
                        <button 
                          key={tab.id}
@@ -444,7 +500,7 @@ export default function VideoLessonPage() {
                                       setIsFlashcardFlipped(false);
                                       setCurrentFlashcardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
                                     }}
-                                    className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                                    className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center"
                                     aria-label="Previous flashcard"
                                   >
                                     <ChevronLeft size={18} />
@@ -454,7 +510,7 @@ export default function VideoLessonPage() {
                                       setIsFlashcardFlipped(false);
                                       setCurrentFlashcardIndex((prev) => (prev + 1) % flashcards.length);
                                     }}
-                                    className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                                    className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center"
                                     aria-label="Next flashcard"
                                   >
                                     <ChevronRight size={18} />
@@ -483,14 +539,14 @@ export default function VideoLessonPage() {
                                         className="object-cover"
                                         unoptimized={true}
                                       />
-                                      <div className="absolute inset-0 bg-white/78" />
+                                      <div className="absolute inset-0 bg-white/78 dark:bg-slate-900/76" />
                                       <div className="absolute inset-0 p-8">
-                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 font-black mb-3">Front</p>
-                                        <p className="text-2xl font-black text-slate-900 leading-snug">
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-black mb-3">Front</p>
+                                        <p className="text-2xl font-black text-slate-900 dark:text-slate-50 leading-snug">
                                         {flashcards[currentFlashcardIndex].front}
                                         </p>
                                         {flashcards[currentFlashcardIndex].hint ? (
-                                          <p className="absolute bottom-8 left-8 right-8 text-xs font-bold text-slate-600">
+                                          <p className="absolute bottom-8 left-8 right-8 text-xs font-bold text-slate-600 dark:text-slate-200">
                                             Hint: {flashcards[currentFlashcardIndex].hint}
                                           </p>
                                         ) : null}
@@ -505,10 +561,10 @@ export default function VideoLessonPage() {
                                         className="object-cover"
                                         unoptimized={true}
                                       />
-                                      <div className="absolute inset-0 bg-slate-900/76" />
+                                      <div className="absolute inset-0 bg-slate-900/76 dark:bg-slate-950/84" />
                                       <div className="absolute inset-0 p-8">
                                         <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-black mb-3">Back</p>
-                                        <p className="text-xl font-black text-white leading-snug">
+                                        <p className="text-xl font-black text-white dark:text-slate-50 leading-snug">
                                           {flashcards[currentFlashcardIndex].back}
                                         </p>
                                       </div>
@@ -571,6 +627,50 @@ export default function VideoLessonPage() {
                               Visualization data is not available yet.
                             </div>
                           ) : null}
+                       </div>
+                     )}
+
+                     {activeTab === 'handsign' && (
+                       <div className="space-y-8">
+                         {handsignGlosses.length === 0 ? (
+                           <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold text-center leading-relaxed">
+                             Chưa có dữ liệu thủ ngữ VSL. Dữ liệu xuất hiện sau khi video được xử lý xong trên server và bạn đang xem đúng bài cùng tài khoản đã upload.
+                           </div>
+                         ) : (
+                           <>
+                             <div className="flex flex-col items-center gap-4">
+                               <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-black text-center">
+                                 Đồng bộ theo thời gian phát video
+                               </p>
+                               <SignAvatar2D vslData={handsignGlosses} currentTime={currentTime} />
+                             </div>
+                             <div>
+                               <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Chuỗi gloss</p>
+                               <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1">
+                                 {handsignGlosses.map((g, i) => {
+                                   const nextT = handsignGlosses[i + 1]?.time ?? Infinity;
+                                   const isGlossActive = currentTime >= g.time && currentTime < nextT;
+                                   return (
+                                     <button
+                                       key={`${g.time}-${g.word}-${i}`}
+                                       type="button"
+                                       onClick={() => seekToSeconds(g.time)}
+                                       className={cn(
+                                         'text-xs font-bold px-3 py-2 rounded-2xl border transition-all',
+                                         isGlossActive
+                                           ? 'bg-[#FF4F6E] text-white border-[#FF4F6E]'
+                                           : 'bg-white text-slate-600 border-slate-200 hover:border-[#FF4F6E]/40'
+                                       )}
+                                     >
+                                       {g.word.replace(/_/g, ' ')}
+                                       <span className="opacity-70 ml-1 tabular-nums">{formatTime(g.time)}</span>
+                                     </button>
+                                   );
+                                 })}
+                               </div>
+                             </div>
+                           </>
+                         )}
                        </div>
                      )}
                   </div>

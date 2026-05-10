@@ -1,9 +1,8 @@
 import json
 import logging
 from pathlib import Path
-from urllib.parse import quote_plus
 from faster_whisper import WhisperModel
-from openai import AsyncOpenAI
+from openai import OpenAI
 from src.backend import config
 
 logger = logging.getLogger(__name__)
@@ -88,7 +87,7 @@ class AIService:
             logger.warning("⚠️ Không tìm thấy OPENAI_API_KEY. Bỏ qua bước tóm tắt.")
             return ["Vui lòng cấu hình API Key để sử dụng tính năng tóm tắt."]
 
-        client = AsyncOpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         
         # Kết hợp các đoạn text lại để gửi sang LLM
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
@@ -107,7 +106,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 Đang gọi LLM ({config.DEFAULT_MODEL}) để tóm tắt nội dung...")
-            response = await client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=config.DEFAULT_MODEL, 
                 messages=[{"role": "user", "content": prompt}],
                 max_completion_tokens=500  # Thay max_tokens bằng max_completion_tokens theo thông báo lỗi
@@ -132,7 +131,7 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = AsyncOpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         
         # Chuẩn bị transcript có kèm timestamp để AI dễ phân tích
         formatted_transcript = ""
@@ -158,7 +157,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 [Batching] Đang trích xuất Timeline, Highlights & Questions cho {transcript_data['video_id']}...")
-            response = await client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -178,6 +177,48 @@ class AIService:
         except Exception as e:
             logger.error(f"❌ Lỗi khi trích xuất metadata: {e}")
             return {"error": str(e)}
+
+    @staticmethod
+    def _gloss_key_forms(raw: str) -> set[str]:
+        """Các biến thể so khớp từ gloss: gốc, gạch dưới, khoảng trắng."""
+        s = (raw or "").strip().lower()
+        if not s:
+            return set()
+        spaced = s.replace("_", " ").strip()
+        underscored = s.replace(" ", "_").strip()
+        return {x for x in {s, spaced, underscored} if x}
+
+    @classmethod
+    def _resolve_vsl_entry(
+        cls,
+        raw_word: str,
+        vsl_dict: dict,
+        synonyms_map: dict,
+    ) -> tuple[str | None, dict | None]:
+        """
+        Tra từ điển VSL: khớp trực tiếp theo mọi dạng từ, sau đó tra synonyms (canonical -> danh sách).
+        Trả về (key_chuẩn_trong_dictionary, vsl_info) hoặc (None, None).
+        """
+        gloss_forms = cls._gloss_key_forms(raw_word)
+        if not gloss_forms:
+            return None, None
+
+        for key, info in vsl_dict.items():
+            if cls._gloss_key_forms(key) & gloss_forms:
+                return key, info
+
+        for main_word, syns in synonyms_map.items():
+            if main_word not in vsl_dict:
+                continue
+            if cls._gloss_key_forms(main_word) & gloss_forms:
+                return main_word, vsl_dict[main_word]
+            if not isinstance(syns, list):
+                continue
+            for syn in syns:
+                if cls._gloss_key_forms(str(syn)) & gloss_forms:
+                    return main_word, vsl_dict[main_word]
+        return None, None
+
     @classmethod
     async def generate_handsign_data(cls, transcript_data: dict) -> list:
         """
@@ -187,7 +228,7 @@ class AIService:
         if not api_key:
             return []
 
-        client = AsyncOpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         vsl_data = cls.get_vsl_data()
         vsl_dict = vsl_data.get("dictionary", {})
         
@@ -207,6 +248,7 @@ class AIService:
         2. "word" PHẢI là từ gốc tiếng Việt, viết thường, các từ ghép nối bằng dấu gạch dưới (ví dụ: "ăn_cơm", "xin_chào").
         3. Ưu tiên sử dụng các từ khóa sau nếu phù hợp ngữ cảnh: {", ".join(available_keywords[:200])}...
         4. Loại bỏ các từ hư từ, chỉ giữ lại từ mang nội dung chính.
+        5. Mật độ gloss: trung bình khoảng 1 gloss mỗi 3–8 giây nói (ưu tiên ý chính), tránh liệt kê quá dày hoặc trùng nghĩa liên tiếp. "time" phải trùng mốc [start] của đoạn tương ứng trong input khi có thể.
         
         Input:
         {formatted_text[:4000]}
@@ -216,7 +258,7 @@ class AIService:
 
         try:
             logger.info(f"🤟 [VSL] Đang dịch transcript sang VSL cho {transcript_data['video_id']}...")
-            response = await client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -225,24 +267,19 @@ class AIService:
             ai_result = json.loads(response.choices[0].message.content)
             raw_glosses = ai_result.get("glosses", []) or ai_result.get("data", [])
             
-            # Làm giàu dữ liệu với HamNoSys
+            # Làm giàu dữ liệu với HamNoSys và xử lý từ đồng nghĩa
             final_glosses = []
-            
+            synonyms_map = vsl_data.get("synonyms", {})
+
             for item in raw_glosses:
-                word = item.get("word", "").lower()
-                # Thử tra cứu với cả dấu gạch dưới và dấu cách
-                word_variants = [word, word.replace(" ", "_"), word.replace("_", " ")]
-                
-                vsl_info = None
-                for variant in word_variants:
-                    if variant in vsl_dict:
-                        vsl_info = vsl_dict[variant]
-                        item["word"] = variant # Cập nhật lại từ chuẩn trong từ điển
-                        break
-                
+                raw = item.get("word", "")
+                canon, vsl_info = cls._resolve_vsl_entry(raw, vsl_dict, synonyms_map)
+                if canon:
+                    item["word"] = canon
                 item["vsl_info"] = vsl_info
                 final_glosses.append(item)
-            
+
+            final_glosses.sort(key=lambda x: float(x.get("time", 0) or 0))
             return final_glosses
         except Exception as e:
             logger.error(f"❌ Lỗi khi sinh Handsign Data: {e}")
@@ -258,7 +295,7 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = AsyncOpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
         truncated_text = full_text[:4000]
 
@@ -277,7 +314,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 Đang tạo Pre-lecture Briefing cho {transcript_data['video_id']}...")
-            response = await client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -307,7 +344,7 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = AsyncOpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
         truncated_text = full_text[:6000]
 
@@ -326,7 +363,7 @@ class AIService:
                - "value": Một số liệu hoặc từ khóa quan trọng nhất.
                - "description": Một đoạn mô tả ngắn (1 câu) giải thích chi tiết hơn.
              - "key_takeaways": 3 điểm rút ra quan trọng nhất từ bài học.
-           - "image_prompt": Một mô tả chi tiết bằng tiếng Anh (25-35 từ) để sinh ảnh bìa nghệ thuật cho bài giảng. Yêu cầu: Miêu tả một bối cảnh ấn tượng liên quan đến nội dung bài học, sử dụng các từ khóa như 'cinematic lighting', 'high resolution', 'professional digital art', 'vibrant colors', 'photorealistic'. KHÔNG bao gồm chữ trong ảnh.
+           - "image_prompt": Một mô tả ngắn bằng tiếng Anh (khoảng 10-15 từ) để sinh ảnh minh họa cho bài giảng này (ví dụ: 'A futuristic digital library with holographic data screens, educational style').
 
         Định dạng trả về DUY NHẤT là JSON. Không giải thích gì thêm.
 
@@ -336,7 +373,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 [Notebook LLM] Đang trích xuất dữ liệu trực quan & Flashcards cho {transcript_data['video_id']}...")
-            response = await client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -346,12 +383,9 @@ class AIService:
             
             # Sinh URL ảnh từ Pollinations.ai dựa trên image_prompt
             # Ta lấy từ visual_data.image_prompt hoặc mặc định
-            image_prompt = (result.get("visual_data", {}).get("image_prompt") or "educational illustration").strip()
-            safe_prompt = quote_plus(image_prompt)
-            result["cover_image_url"] = (
-                f"https://image.pollinations.ai/prompt/{safe_prompt}"
-                "?width=1024&height=768&nologo=true&model=flux"
-            )
+            image_prompt = result.get("visual_data", {}).get("image_prompt", "educational illustration")
+            safe_prompt = "".join(c if c.isalnum() or c == " " else "" for c in image_prompt).replace(" ", "+")
+            result["cover_image_url"] = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1024&height=768&nologo=true"
             
             # Caching
             video_id = transcript_data["video_id"]
