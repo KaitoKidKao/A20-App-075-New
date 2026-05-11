@@ -21,9 +21,9 @@ export function TopBar() {
   };
 
   return (
-    <header className="flex flex-col sticky top-0 z-50 shadow-sm relative bg-white">
+    <header className="fixed top-0 left-0 right-0 z-50 shadow-sm bg-[var(--app-surface)] border-b border-[var(--app-border-subtle)]">
       {/* Main Header */}
-      <div className="h-20 bg-white border-b border-slate-100 px-8 grid grid-cols-3 items-center relative z-50">
+      <div className="h-20 bg-[var(--app-surface)] border-b border-[var(--app-border-subtle)] px-8 grid grid-cols-3 items-center relative z-50">
         {/* Left Side (Empty for now) */}
         <div></div>
 

@@ -1,13 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   Play, 
   FileText, 
   Sparkles,
   Clock,
-  ChevronLeft,
-  ChevronRight,
   Zap,
   HelpCircle,
   BookOpen,
@@ -17,12 +15,17 @@ import {
   Film,
   CheckCircle,
   Hand,
+  Sparkle,
+  Brain,
+  Lightbulb,
+  Rocket,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { api, type HandsSignGloss } from '@/lib/api';
 import SignAvatar2D from '@/components/SignAvatar2D';
+import { InfographicViewer, type InfographicData } from '@/components/infographic/InfographicViewer';
 
 interface TranscriptSegment {
   start: number;
@@ -60,19 +63,8 @@ interface FlashcardItem {
   hint?: string | null;
 }
 
-interface VisualSection {
-  icon?: string;
-  label?: string;
-  value?: string;
-  description?: string;
-}
-
 interface VisualData {
-  infographic?: {
-    title?: string;
-    sections?: VisualSection[];
-    key_takeaways?: string[];
-  };
+  infographic?: InfographicData;
   charts?: Record<string, unknown>;
 }
 
@@ -102,8 +94,6 @@ export default function VideoLessonPage() {
   const [briefing, setBriefing] = useState<BriefingData | null>(null);
   const [flashcards, setFlashcards] = useState<FlashcardItem[]>([]);
   const [visualData, setVisualData] = useState<VisualData | null>(null);
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
-  const [coverImageFailed, setCoverImageFailed] = useState(false);
   const [handsignGlosses, setHandsSignGlosses] = useState<HandsSignGloss[]>([]);
   
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
@@ -112,6 +102,9 @@ export default function VideoLessonPage() {
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
   const [isFlashcardFlipped, setIsFlashcardFlipped] = useState(false);
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+  const dragStartXRef = useRef<number | null>(null);
+  const dragMovedRef = useRef(false);
   /** Ưu tiên stream file theo videoId (Next proxy → data/uploads/videos); lỗi thì dùng video mẫu. */
   const [videoSourceMode, setVideoSourceMode] = useState<'byId' | 'demo'>('byId');
   const [videoBroken, setVideoBroken] = useState(false);
@@ -161,9 +154,30 @@ export default function VideoLessonPage() {
       setQuestions(questionsRes.questions || []);
       setBriefing(briefingRes.briefing || null);
       setFlashcards(flashcardsRes.flashcards || []);
-      setVisualData(vizDataRes.visual_data || null);
-      setCoverImageUrl(vizDataRes.cover_image_url || null);
-      setCoverImageFailed(false);
+      const vizData = vizDataRes.visual_data || null;
+      if (vizData && vizData.infographic) {
+        const infData = vizData.infographic;
+        // Inject mock properties to demonstrate new features
+        if (!infData.chartData) {
+          infData.chartData = [
+            { name: 'Core Concepts', value: 45 },
+            { name: 'Practical Apps', value: 25 },
+            { name: 'Case Studies', value: 20 },
+            { name: 'Theory', value: 10 },
+          ];
+          infData.chartType = 'pie';
+          infData.category = 'technology';
+          infData.type = 'info';
+        }
+        if (infData.sections) {
+          infData.sections = infData.sections.map((s: Record<string, unknown>, i: number) => ({
+            ...s,
+            icon: ['Zap', 'Target', 'Layers', 'TrendingUp'][i % 4],
+            advanced_detail: (s.advanced_detail as string) || 'Advanced deep dive: This metric relies on sub-linear optimization techniques and scales logarithmically with dataset size.',
+          }));
+        }
+      }
+      setVisualData(vizData);
     } catch (err) {
       console.error('Metadata fetch error:', err);
     }
@@ -189,6 +203,7 @@ export default function VideoLessonPage() {
   useEffect(() => {
     setCurrentFlashcardIndex(0);
     setIsFlashcardFlipped(false);
+    setDragOffsetX(0);
   }, [videoId, flashcards.length]);
 
   useEffect(() => {
@@ -229,6 +244,24 @@ export default function VideoLessonPage() {
       setIsLoadingSummary(false);
     }
   };
+
+  const activeSegment = useMemo(
+    () => segments.find((s) => currentTime >= s.start && currentTime <= s.end),
+    [segments, currentTime]
+  );
+
+  const visibleCaptionWords = useMemo(() => {
+    if (!activeSegment) return [] as string[];
+
+    const words = activeSegment.text.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [] as string[];
+
+    const elapsed = Math.max(0, currentTime - activeSegment.start);
+    const duration = Math.max(0.2, activeSegment.end - activeSegment.start);
+    const progress = Math.min(1, elapsed / duration);
+    const visibleCount = Math.max(1, Math.ceil(progress * words.length));
+    return words.slice(0, visibleCount);
+  }, [activeSegment, currentTime]);
 
   return (
     <div className="min-h-screen bg-transparent relative overflow-hidden">
@@ -276,19 +309,30 @@ export default function VideoLessonPage() {
                 }}
               />
 
-              {/* Subtitle Overlay - Speech Bubble Style */}
-              {segments.find(s => currentTime >= s.start && currentTime <= s.end) && (
-                <div 
-                  key={segments.find(s => currentTime >= s.start && currentTime <= s.end)?.text}
-                  className="absolute bottom-32 right-12 w-fit max-w-[45%] pointer-events-none z-30 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out"
+              {/* Subtitle Overlay - bottom-center with realtime word reveal */}
+              {activeSegment && (
+                <div
+                  key={`${activeSegment.start}-${activeSegment.end}`}
+                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[92%] md:w-[86%] pointer-events-none z-30"
                 >
-                   <div className="bg-slate-900/90 backdrop-blur-2xl text-white px-7 py-5 rounded-[32px] rounded-br-none shadow-2xl border border-white/20 relative">
-                      <p className="text-sm md:text-base font-black leading-snug tracking-tight text-right">
-                        {segments.find(s => currentTime >= s.start && currentTime <= s.end)?.text}
+                  <div className="rounded-2xl border border-white/15 bg-slate-900/24 dark:bg-slate-950/28 backdrop-blur-sm px-4 md:px-5 py-2.5 shadow-[0_6px_16px_rgba(0,0,0,0.18)]">
+                    <div className="flex items-center gap-3">
+                      <span className="shrink-0 rounded-lg bg-white/18 px-2 py-1 text-[11px] md:text-xs font-black text-white/95 tabular-nums">
+                        {formatTime(activeSegment.start)}
+                      </span>
+                      <p className="text-left text-xs md:text-sm font-black leading-relaxed tracking-tight text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.45)]">
+                      {visibleCaptionWords.map((word, idx) => (
+                        <span
+                          key={`${word}-${idx}`}
+                          className="inline-block mr-2 caption-word-pop"
+                          style={{ animationDelay: `${idx * 24}ms` }}
+                        >
+                          {word}
+                        </span>
+                      ))}
                       </p>
-                      {/* Speech Bubble Tail */}
-                      <div className="absolute -bottom-2 right-0 w-6 h-6 bg-slate-900/90 [clip-path:polygon(100%_0,0_0,100%_100%)]" />
-                   </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -389,7 +433,7 @@ export default function VideoLessonPage() {
 
                {/* Visual Tabs Section */}
                <div className="bg-white/95 backdrop-blur-md rounded-[40px] p-8 md:p-10 border border-white/20 shadow-xl shadow-slate-200/20">
-                  <div className="flex items-center gap-8 border-b border-slate-100 overflow-x-auto no-scrollbar mb-10">
+                  <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-b border-slate-100 mb-10 pb-2">
                      {[
                        { id: 'timeline', label: 'Timeline Structure', icon: Clock },
                        { id: 'highlights', label: 'Key Highlights', icon: Zap },
@@ -490,40 +534,56 @@ export default function VideoLessonPage() {
                           )}
                           {flashcards.length > 0 && (
                             <>
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-center">
                                 <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-black">
                                   Card {currentFlashcardIndex + 1} / {flashcards.length}
                                 </p>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => {
-                                      setIsFlashcardFlipped(false);
-                                      setCurrentFlashcardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
-                                    }}
-                                    className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center"
-                                    aria-label="Previous flashcard"
-                                  >
-                                    <ChevronLeft size={18} />
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setIsFlashcardFlipped(false);
-                                      setCurrentFlashcardIndex((prev) => (prev + 1) % flashcards.length);
-                                    }}
-                                    className="w-11 h-11 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center"
-                                    aria-label="Next flashcard"
-                                  >
-                                    <ChevronRight size={18} />
-                                  </button>
-                                </div>
                               </div>
 
-                              <div className="relative [perspective:1200px]">
+                              <div className="relative [perspective:1200px] flex justify-center">
+                                <Sparkle className="absolute -top-5 left-[16%] w-5 h-5 text-[#FF4F6E]/65 dark:text-pink-300/70" />
+                                <Brain className="absolute top-[18%] -left-2 w-5 h-5 text-indigo-500/55 dark:text-indigo-300/70" />
+                                <Lightbulb className="absolute top-[20%] -right-2 w-5 h-5 text-amber-500/60 dark:text-amber-300/75" />
+                                <Rocket className="absolute -bottom-5 right-[14%] w-5 h-5 text-emerald-500/60 dark:text-emerald-300/70" />
                                 <button
                                   key={flashcards[currentFlashcardIndex].id || currentFlashcardIndex}
-                                  onClick={() => setIsFlashcardFlipped((prev) => !prev)}
-                                  className="w-full max-w-[360px] mx-auto aspect-[9/16] rounded-[32px] text-left focus:outline-none focus:ring-2 focus:ring-[#FF4F6E]/40 animate-in fade-in slide-in-from-bottom-4 duration-300"
+                                  onPointerDown={(e) => {
+                                    dragStartXRef.current = e.clientX;
+                                    dragMovedRef.current = false;
+                                    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                                  }}
+                                  onPointerMove={(e) => {
+                                    if (dragStartXRef.current === null) return;
+                                    const delta = e.clientX - dragStartXRef.current;
+                                    if (Math.abs(delta) > 4) dragMovedRef.current = true;
+                                    setDragOffsetX(delta);
+                                  }}
+                                  onPointerUp={() => {
+                                    const threshold = 70;
+                                    if (dragOffsetX <= -threshold) {
+                                      setIsFlashcardFlipped(false);
+                                      setCurrentFlashcardIndex((prev) => (prev + 1) % flashcards.length);
+                                    } else if (dragOffsetX >= threshold) {
+                                      setIsFlashcardFlipped(false);
+                                      setCurrentFlashcardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
+                                    } else if (!dragMovedRef.current) {
+                                      setIsFlashcardFlipped((prev) => !prev);
+                                    }
+                                    dragStartXRef.current = null;
+                                    dragMovedRef.current = false;
+                                    setDragOffsetX(0);
+                                  }}
+                                  onPointerCancel={() => {
+                                    dragStartXRef.current = null;
+                                    dragMovedRef.current = false;
+                                    setDragOffsetX(0);
+                                  }}
+                                  className="block w-full max-w-[380px] mx-auto aspect-[3/4] rounded-[32px] text-left focus:outline-none focus:ring-2 focus:ring-[#FF4F6E]/40 animate-in fade-in slide-in-from-bottom-4 duration-300 touch-pan-y select-none"
                                   aria-label="Flip flashcard"
+                                  style={{
+                                    transform: `translateX(${dragOffsetX}px) rotate(${dragOffsetX * 0.03}deg)`,
+                                    transition: dragStartXRef.current === null ? 'transform 180ms ease-out' : 'none',
+                                  }}
                                 >
                                   <div
                                     className={cn(
@@ -539,14 +599,20 @@ export default function VideoLessonPage() {
                                         className="object-cover"
                                         unoptimized={true}
                                       />
-                                      <div className="absolute inset-0 bg-white/78 dark:bg-slate-900/76" />
-                                      <div className="absolute inset-0 p-8">
-                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-black mb-3">Front</p>
-                                        <p className="text-2xl font-black text-slate-900 dark:text-slate-50 leading-snug">
+                                      <div className="absolute inset-0 bg-white/52 dark:bg-slate-900/50" />
+                                      <div className="absolute inset-0 p-8 flex flex-col items-center justify-center text-center">
+                                        <div className="absolute top-4 right-4 rounded-full bg-white/55 dark:bg-slate-900/45 p-1.5 border border-white/50 dark:border-slate-400/30">
+                                          <Sparkle size={14} className="text-[#FF4F6E] dark:text-pink-300" />
+                                        </div>
+                                        <div className="absolute bottom-4 left-4 rounded-full bg-white/50 dark:bg-slate-900/45 p-1.5 border border-white/50 dark:border-slate-400/30">
+                                          <Lightbulb size={14} className="text-amber-500 dark:text-amber-300" />
+                                        </div>
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-black mb-3">Question</p>
+                                        <p className="text-lg md:text-xl font-black text-slate-900 dark:text-slate-50 leading-snug">
                                         {flashcards[currentFlashcardIndex].front}
                                         </p>
                                         {flashcards[currentFlashcardIndex].hint ? (
-                                          <p className="absolute bottom-8 left-8 right-8 text-xs font-bold text-slate-600 dark:text-slate-200">
+                                          <p className="absolute bottom-8 left-8 right-8 text-[11px] md:text-xs font-bold text-slate-600 dark:text-slate-200 text-center">
                                             Hint: {flashcards[currentFlashcardIndex].hint}
                                           </p>
                                         ) : null}
@@ -561,10 +627,16 @@ export default function VideoLessonPage() {
                                         className="object-cover"
                                         unoptimized={true}
                                       />
-                                      <div className="absolute inset-0 bg-slate-900/76 dark:bg-slate-950/84" />
-                                      <div className="absolute inset-0 p-8">
-                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-black mb-3">Back</p>
-                                        <p className="text-xl font-black text-white dark:text-slate-50 leading-snug">
+                                      <div className="absolute inset-0 bg-slate-900/58 dark:bg-slate-950/64" />
+                                      <div className="absolute inset-0 p-8 flex flex-col items-center justify-center text-center">
+                                        <div className="absolute top-4 right-4 rounded-full bg-black/35 dark:bg-white/10 p-1.5 border border-white/25">
+                                          <Brain size={14} className="text-cyan-200 dark:text-cyan-300" />
+                                        </div>
+                                        <div className="absolute bottom-4 left-4 rounded-full bg-black/30 dark:bg-white/10 p-1.5 border border-white/25">
+                                          <Rocket size={14} className="text-emerald-200 dark:text-emerald-300" />
+                                        </div>
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-black mb-3">Answer</p>
+                                        <p className="text-base md:text-lg font-black text-white dark:text-slate-50 leading-snug">
                                           {flashcards[currentFlashcardIndex].back}
                                         </p>
                                       </div>
@@ -572,6 +644,9 @@ export default function VideoLessonPage() {
                                   </div>
                                 </button>
                               </div>
+                              <p className="text-center text-[11px] text-slate-400 font-bold">
+                                Drag left or right to browse cards. Tap to flip.
+                              </p>
                             </>
                           )}
                        </div>
@@ -579,56 +654,16 @@ export default function VideoLessonPage() {
 
                      {activeTab === 'visuals' && (
                        <div className="space-y-6">
-                          {coverImageUrl && !coverImageFailed ? (
-                            <div className="relative aspect-[16/9] rounded-3xl overflow-hidden border border-slate-200">
-                              <Image
-                                src={coverImageUrl}
-                                alt="Visual cover"
-                                fill
-                                className="object-cover"
-                                unoptimized={true}
-                                onError={() => setCoverImageFailed(true)}
-                              />
-                            </div>
-                          ) : null}
-                          {coverImageFailed ? (
-                            <div className="p-6 rounded-3xl bg-amber-50 border border-amber-100 text-amber-800 font-bold">
-                              Cover image could not be loaded from the generated URL.
-                            </div>
-                          ) : null}
-
-                          {visualData?.infographic?.title ? (
-                            <h4 className="text-2xl font-black text-slate-900">{visualData.infographic.title}</h4>
-                          ) : null}
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {(visualData?.infographic?.sections || []).map((section, i) => (
-                              <div key={`${section.label || 'section'}-${i}`} className="p-5 rounded-3xl bg-slate-50 border border-slate-200 space-y-2">
-                                <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-black">{section.label || 'Section'}</p>
-                                <p className="text-lg font-black text-slate-900">{section.value || '-'}</p>
-                                <p className="text-sm font-bold text-slate-600">{section.description || ''}</p>
-                              </div>
-                            ))}
-                          </div>
-
-                          {(visualData?.infographic?.key_takeaways || []).length > 0 ? (
-                            <div className="p-6 rounded-3xl bg-emerald-50 border border-emerald-100">
-                              <p className="text-xs uppercase tracking-[0.15em] text-emerald-600 font-black mb-3">Key Takeaways</p>
-                              <ul className="space-y-2">
-                                {(visualData.infographic?.key_takeaways || []).map((item, i) => (
-                                  <li key={`${item}-${i}`} className="text-sm font-bold text-emerald-900">{item}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          ) : null}
-
-                          {!coverImageUrl && !visualData?.infographic?.title && (visualData?.infographic?.sections || []).length === 0 ? (
+                          {visualData?.infographic ? (
+                            <InfographicViewer data={visualData.infographic} />
+                          ) : (
                             <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold">
                               Visualization data is not available yet.
                             </div>
-                          ) : null}
+                          )}
                        </div>
                      )}
+
 
                      {activeTab === 'handsign' && (
                        <div className="space-y-8">
@@ -795,6 +830,26 @@ export default function VideoLessonPage() {
 
         </div>
       </div>
+      <style jsx global>{`
+        @keyframes captionWordPop {
+          0% {
+            opacity: 0;
+            transform: translateY(8px) scale(0.86);
+          }
+          70% {
+            opacity: 1;
+            transform: translateY(-2px) scale(1.04);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .caption-word-pop {
+          animation: captionWordPop 260ms ease-out both;
+        }
+      `}</style>
     </div>
   );
 }

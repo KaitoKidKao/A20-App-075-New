@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -8,8 +8,6 @@ import {
   BookOpen, 
   Upload,
   Settings,
-  ChevronLeft,
-  ChevronRight,
   MessageSquare,
   FileText,
   LogOut,
@@ -18,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = false;
 
   const sectionLabelClass = cn(
     "text-[11px] font-black uppercase tracking-widest mb-3 px-3",
@@ -57,8 +55,7 @@ export function AppSidebar() {
   return (
     <aside 
       className={cn(
-        "flex flex-col bg-[var(--app-surface)] border-r border-[var(--app-border-subtle)] transition-all duration-300 h-auto",
-        collapsed ? "w-[72px]" : "w-[240px]"
+        "sticky top-20 self-start h-[calc(100vh-80px)] w-[240px] min-w-[240px] shrink-0 flex flex-col bg-[var(--app-surface)] border-r border-[var(--app-border-subtle)]"
       )}
     >
       <div className="flex-1 overflow-y-auto px-3 py-6 scrollbar-hide">
@@ -124,16 +121,6 @@ export function AppSidebar() {
             })}
           </nav>
         </div>
-      </div>
-
-      {/* Simplified Footer / Toggle */}
-      <div className="p-3 border-t border-[var(--app-border-subtle)]">
-        <button 
-          onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center p-2.5 rounded-xl text-[var(--app-text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-text)] transition-colors"
-        >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
       </div>
     </aside>
   );

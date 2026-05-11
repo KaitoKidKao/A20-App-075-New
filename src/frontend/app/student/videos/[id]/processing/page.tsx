@@ -94,7 +94,7 @@ export default function VideoProcessingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FDFEFE] py-12 px-6">
+    <div className="min-h-screen bg-transparent py-12 px-6">
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
         
         <button 
