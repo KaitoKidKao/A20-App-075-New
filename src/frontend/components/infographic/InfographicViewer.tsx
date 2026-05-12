@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { motion, type Variants } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import { Download, LayoutDashboard, Target, Users, Zap, TrendingUp, Layers, HelpCircle, CheckCircle, BarChart3, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,8 @@ export interface InfographicData {
   key_takeaways?: string[];
   chartData?: Array<{ name: string; value: number; [key: string]: unknown }>;
   chartType?: 'pie' | 'bar';
+  cover_image_url?: string | null;
+  image_prompt?: string;
 }
 
 interface Props {
@@ -66,6 +69,8 @@ export function InfographicViewer({ data }: Props) {
   const category = data.category || 'default';
   const type = data.type || 'info';
   const title = data.title || 'Infographic Overview';
+  const sections = data.sections || [];
+  const hasVisualContent = sections.length > 0 || Boolean(data.chartData?.length) || Boolean(data.key_takeaways?.length);
   
   const gradientClass = CATEGORY_COLORS[category];
   const textClass = CATEGORY_TEXT_COLORS[category];
@@ -90,7 +95,7 @@ export function InfographicViewer({ data }: Props) {
     }
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -100,7 +105,7 @@ export function InfographicViewer({ data }: Props) {
     }
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
   };
@@ -160,7 +165,7 @@ export function InfographicViewer({ data }: Props) {
             </h2>
             {level === 'beginner' && (
               <p className="mt-4 text-white/80 font-medium max-w-2xl text-sm md:text-base">
-                Mục tiêu của biểu đồ này là giúp bạn có cái nhìn tổng quan cơ bản nhất về chủ đề đang được đề cập một cách trực quan.
+                This view gives you the fastest visual overview of the topic before you explore the details.
               </p>
             )}
           </div>
@@ -174,6 +179,27 @@ export function InfographicViewer({ data }: Props) {
           whileInView="show"
           viewport={{ once: true, margin: "-50px" }}
         >
+          {data.cover_image_url && (
+            <motion.div variants={itemVariants} className="mb-10">
+              <div className="relative aspect-[16/9] overflow-hidden rounded-[32px] border border-slate-100 bg-slate-50 shadow-sm">
+                <Image
+                  src={data.cover_image_url}
+                  alt={`${title} visual cover`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 900px"
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {!hasVisualContent && (
+            <motion.div variants={itemVariants} className="p-8 rounded-3xl bg-slate-50 border border-slate-100 text-center">
+              <p className="text-sm font-black uppercase tracking-widest text-slate-400">No visual sections available yet</p>
+              <p className="mt-3 text-sm font-bold text-slate-500">The infographic will appear here after the AI generates structured visual data.</p>
+            </motion.div>
+          )}
+
           {/* Render Chart if available */}
           {data.chartData && data.chartData.length > 0 && (
              <motion.div variants={itemVariants} className="mb-12">
@@ -193,7 +219,7 @@ export function InfographicViewer({ data }: Props) {
           {/* Render Sections based on Template Type */}
           {type === 'process' ? (
              <div className="space-y-6">
-                {(data.sections || []).map((section, i) => {
+                {sections.map((section, i) => {
                   const IconComp = section.icon && IconMap[section.icon] ? IconMap[section.icon] : CheckCircle;
                   return (
                     <motion.div key={i} variants={itemVariants} className="flex gap-6 relative group">
@@ -201,7 +227,7 @@ export function InfographicViewer({ data }: Props) {
                           <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-lg text-white transition-transform group-hover:scale-110", gradientClass)}>
                              <IconComp size={20} />
                           </div>
-                          {i < (data.sections?.length || 0) - 1 && (
+                          {i < sections.length - 1 && (
                             <div className="w-1 h-full bg-slate-100 mt-2 rounded-full" />
                           )}
                        </div>
@@ -221,7 +247,7 @@ export function InfographicViewer({ data }: Props) {
              </div>
           ) : type === 'comparison' ? (
             <div className="grid md:grid-cols-2 gap-6">
-               {(data.sections || []).map((section, i) => {
+               {sections.map((section, i) => {
                   const IconComp = section.icon && IconMap[section.icon] ? IconMap[section.icon] : Layers;
                   return (
                     <motion.div key={i} variants={itemVariants} className={cn("p-8 rounded-[32px] border-2 transition-all hover:shadow-xl", i === 0 ? "border-slate-100" : `border-${category}-100 ${bgLightClass}`)}>
@@ -244,7 +270,7 @@ export function InfographicViewer({ data }: Props) {
           ) : (
              // Default 'stats' or 'info' layout
              <div className="grid sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                {(data.sections || []).map((section, i) => {
+                {sections.map((section, i) => {
                    const IconComp = section.icon && IconMap[section.icon] ? IconMap[section.icon] : Zap;
                    return (
                      <motion.div key={i} variants={itemVariants} className="p-8 rounded-[32px] bg-slate-50 border border-slate-100 hover:bg-white hover:shadow-xl transition-all group">

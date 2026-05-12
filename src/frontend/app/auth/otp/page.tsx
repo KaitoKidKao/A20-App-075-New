@@ -56,7 +56,9 @@ export default function OTPPage() {
           {otp.map((data, index) => (
             <input
               key={index}
-              ref={(el) => (inputs.current[index] = el)}
+              ref={(el) => {
+                inputs.current[index] = el;
+              }}
               type="text"
               maxLength={1}
               value={data}

@@ -66,6 +66,7 @@ interface FlashcardItem {
 interface VisualData {
   infographic?: InfographicData;
   charts?: Record<string, unknown>;
+  cover_image_url?: string | null;
 }
 
 const flashcardBackgroundImages = Array.from({ length: 10 }, (_, i) => `/assets/images/flashcards/flashcard_${i + 1}.png`);
@@ -97,6 +98,8 @@ export default function VideoLessonPage() {
   const [handsignGlosses, setHandsSignGlosses] = useState<HandsSignGloss[]>([]);
   
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+  const [metadataError, setMetadataError] = useState('');
   const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
@@ -139,6 +142,8 @@ export default function VideoLessonPage() {
   }, [videoSourceMode]);
 
   const fetchAllMetadata = useCallback(async () => {
+    setIsLoadingMetadata(true);
+    setMetadataError('');
     try {
       const [timelineRes, highlightsRes, questionsRes, briefingRes, flashcardsRes, vizDataRes] = await Promise.all([
         api.videos.getTimeline(videoId),
@@ -154,32 +159,16 @@ export default function VideoLessonPage() {
       setQuestions(questionsRes.questions || []);
       setBriefing(briefingRes.briefing || null);
       setFlashcards(flashcardsRes.flashcards || []);
-      const vizData = vizDataRes.visual_data || null;
-      if (vizData && vizData.infographic) {
-        const infData = vizData.infographic;
-        // Inject mock properties to demonstrate new features
-        if (!infData.chartData) {
-          infData.chartData = [
-            { name: 'Core Concepts', value: 45 },
-            { name: 'Practical Apps', value: 25 },
-            { name: 'Case Studies', value: 20 },
-            { name: 'Theory', value: 10 },
-          ];
-          infData.chartType = 'pie';
-          infData.category = 'technology';
-          infData.type = 'info';
-        }
-        if (infData.sections) {
-          infData.sections = infData.sections.map((s: Record<string, unknown>, i: number) => ({
-            ...s,
-            icon: ['Zap', 'Target', 'Layers', 'TrendingUp'][i % 4],
-            advanced_detail: (s.advanced_detail as string) || 'Advanced deep dive: This metric relies on sub-linear optimization techniques and scales logarithmically with dataset size.',
-          }));
-        }
+      const nextVisualData = vizDataRes.visual_data || null;
+      if (nextVisualData?.infographic && vizDataRes.cover_image_url) {
+        nextVisualData.infographic.cover_image_url = vizDataRes.cover_image_url;
       }
-      setVisualData(vizData);
+      setVisualData(nextVisualData);
     } catch (err) {
       console.error('Metadata fetch error:', err);
+      setMetadataError('Learning assets are not ready yet. Please refresh after processing completes.');
+    } finally {
+      setIsLoadingMetadata(false);
     }
 
     try {
@@ -263,6 +252,12 @@ export default function VideoLessonPage() {
     return words.slice(0, visibleCount);
   }, [activeSegment, currentTime]);
 
+  const renderPanelState = (message: string) => (
+    <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold text-center leading-relaxed">
+      {message}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-transparent relative overflow-hidden">
       {/* Subtle Overlay to ensure readability */}
@@ -288,7 +283,7 @@ export default function VideoLessonPage() {
             <div className="bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group">
               {videoSourceMode === 'demo' && (
                 <div className="absolute top-4 left-4 z-20 pointer-events-none rounded-full bg-amber-500/95 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 shadow-lg max-w-[90%]">
-                  Demo: không tìm thấy file video cho ID này trên máy chủ — đang phát video mẫu (timeline có thể lệch).
+                  Demo mode: this video file was not found on the server, so the sample video is playing.
                 </div>
               )}
 
@@ -459,6 +454,7 @@ export default function VideoLessonPage() {
 
                   <div className="min-h-[350px]">
                      {activeTab === 'timeline' && (
+                       isLoadingMetadata ? renderPanelState('Loading timeline...') : metadataError ? renderPanelState(metadataError) : timeline.length === 0 ? renderPanelState('Timeline is not available yet.') : (
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           {timeline.map((item, i) => (
                             <div 
@@ -473,9 +469,11 @@ export default function VideoLessonPage() {
                             </div>
                           ))}
                        </div>
+                       )
                      )}
 
                      {activeTab === 'highlights' && (
+                       isLoadingMetadata ? renderPanelState('Loading highlights...') : metadataError ? renderPanelState(metadataError) : highlights.length === 0 ? renderPanelState('Highlights are not available yet.') : (
                        <div className="space-y-6">
                           {highlights.map((item, i) => (
                             <div key={i} className="bg-[#FF4F6E]/5 rounded-[32px] p-8 md:p-10 border border-[#FF4F6E]/10 relative group overflow-hidden transition-all hover:bg-[#FF4F6E]/10">
@@ -495,9 +493,11 @@ export default function VideoLessonPage() {
                             </div>
                           ))}
                        </div>
+                       )
                      )}
 
                      {activeTab === 'questions' && (
+                       isLoadingMetadata ? renderPanelState('Loading concept clarifications...') : metadataError ? renderPanelState(metadataError) : questions.length === 0 ? renderPanelState('Concept clarifications are not available yet.') : (
                        <div className="space-y-8">
                           {questions.map((item, i) => (
                             <div key={i} className="bg-white border-2 border-slate-50 rounded-[40px] p-10 shadow-lg hover:shadow-2xl transition-all">
@@ -523,16 +523,15 @@ export default function VideoLessonPage() {
                             </div>
                           ))}
                        </div>
+                       )
                      )}
 
                      {activeTab === 'flashcards' && (
                        <div className="space-y-6">
-                          {flashcards.length === 0 && (
-                            <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold">
-                              Flashcards are not available yet.
-                            </div>
-                          )}
-                          {flashcards.length > 0 && (
+                          {isLoadingMetadata && renderPanelState('Loading flashcards...')}
+                          {!isLoadingMetadata && metadataError && renderPanelState(metadataError)}
+                          {!isLoadingMetadata && !metadataError && flashcards.length === 0 && renderPanelState('Flashcards are not available yet.')}
+                          {!isLoadingMetadata && !metadataError && flashcards.length > 0 && (
                             <>
                               <div className="flex items-center justify-center">
                                 <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-black">
@@ -654,12 +653,10 @@ export default function VideoLessonPage() {
 
                      {activeTab === 'visuals' && (
                        <div className="space-y-6">
-                          {visualData?.infographic ? (
+                          {isLoadingMetadata ? renderPanelState('Loading infographic...') : metadataError ? renderPanelState(metadataError) : visualData?.infographic ? (
                             <InfographicViewer data={visualData.infographic} />
                           ) : (
-                            <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold">
-                              Visualization data is not available yet.
-                            </div>
+                            renderPanelState('Visualization data is not available yet.')
                           )}
                        </div>
                      )}
@@ -667,20 +664,20 @@ export default function VideoLessonPage() {
 
                      {activeTab === 'handsign' && (
                        <div className="space-y-8">
-                         {handsignGlosses.length === 0 ? (
-                           <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold text-center leading-relaxed">
-                             Chưa có dữ liệu thủ ngữ VSL. Dữ liệu xuất hiện sau khi video được xử lý xong trên server và bạn đang xem đúng bài cùng tài khoản đã upload.
-                           </div>
+                         {isLoadingMetadata ? (
+                           renderPanelState('Loading VSL avatar data...')
+                         ) : handsignGlosses.length === 0 ? (
+                           renderPanelState('VSL avatar data is not available yet. It will appear after server processing completes for this video.')
                          ) : (
                            <>
                              <div className="flex flex-col items-center gap-4">
                                <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-black text-center">
-                                 Đồng bộ theo thời gian phát video
+                                 Synced to video playback time
                                </p>
                                <SignAvatar2D vslData={handsignGlosses} currentTime={currentTime} />
                              </div>
                              <div>
-                               <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Chuỗi gloss</p>
+                               <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Gloss sequence</p>
                                <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1">
                                  {handsignGlosses.map((g, i) => {
                                    const nextT = handsignGlosses[i + 1]?.time ?? Infinity;
@@ -748,6 +745,8 @@ export default function VideoLessonPage() {
                 <div className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
                    {rightPanelTab === 'transcript' ? (
                      <>
+                        {isLoadingTranscript && renderPanelState('Loading transcript...')}
+                        {!isLoadingTranscript && segments.length === 0 && renderPanelState('Transcript is not available yet.')}
                         {segments.map((s, i) => {
                            const isActive = currentTime >= s.start && currentTime <= s.end;
                            return (

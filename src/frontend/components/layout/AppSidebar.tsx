@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils';
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const collapsed = false;
 
   const sectionLabelClass = cn(
     "text-[11px] font-black uppercase tracking-widest mb-3 px-3",
@@ -52,20 +51,22 @@ export function AppSidebar() {
     { icon: LogOut, label: 'Logout', href: '/auth/login' },
   ];
 
+  const isItemActive = (href: string) => href !== '#' && (pathname === href || pathname.startsWith(`${href}/`));
+
   return (
     <aside 
       className={cn(
-        "sticky top-20 self-start h-[calc(100vh-80px)] w-[240px] min-w-[240px] shrink-0 flex flex-col bg-[var(--app-surface)] border-r border-[var(--app-border-subtle)]"
+        "sticky top-20 self-start hidden h-[calc(100vh-80px)] w-[240px] min-w-[240px] shrink-0 flex-col bg-[var(--app-surface)] border-r border-[var(--app-border-subtle)] lg:flex"
       )}
     >
       <div className="flex-1 overflow-y-auto px-3 py-6 scrollbar-hide">
         <div className="mb-6">
-          <p className={cn(sectionLabelClass, collapsed && "opacity-0")}>
+          <p className={sectionLabelClass}>
             Main Menu
           </p>
           <nav className="space-y-1">
             {learningItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = isItemActive(item.href);
               return (
                 <Link 
                   key={item.label}
@@ -73,7 +74,7 @@ export function AppSidebar() {
                   className={itemClass(isActive)}
                 >
                   <item.icon size={18} className={iconClass(isActive)} />
-                  {!collapsed && <span className="text-[13px]">{item.label}</span>}
+                  <span className="text-[13px]">{item.label}</span>
                 </Link>
               );
             })}
@@ -81,12 +82,12 @@ export function AppSidebar() {
         </div>
 
         <div className="mt-8">
-          <p className={cn(sectionLabelClass, collapsed && "opacity-0")}>
+          <p className={sectionLabelClass}>
             Tools
           </p>
           <nav className="space-y-1">
             {toolItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = isItemActive(item.href);
               return (
                 <Link 
                   key={item.label}
@@ -94,7 +95,7 @@ export function AppSidebar() {
                   className={itemClass(isActive)}
                 >
                   <item.icon size={18} className={iconClass(isActive)} />
-                  {!collapsed && <span className="text-[13px]">{item.label}</span>}
+                  <span className="text-[13px]">{item.label}</span>
                 </Link>
               );
             })}
@@ -102,12 +103,12 @@ export function AppSidebar() {
         </div>
 
         <div className="mt-8">
-          <p className={cn(sectionLabelClass, collapsed && "opacity-0")}>
+          <p className={sectionLabelClass}>
             Account Settings
           </p>
           <nav className="space-y-1">
             {accountItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = isItemActive(item.href);
               return (
                 <Link 
                   key={item.label}
@@ -115,7 +116,7 @@ export function AppSidebar() {
                   className={itemClass(isActive)}
                 >
                   <item.icon size={18} className={iconClass(isActive)} />
-                  {!collapsed && <span className="text-[13px]">{item.label}</span>}
+                  <span className="text-[13px]">{item.label}</span>
                 </Link>
               );
             })}

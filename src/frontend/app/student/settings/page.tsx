@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   User, 
@@ -16,7 +16,7 @@ import {
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = (searchParams.get('tab') as 'profile' | 'accessibility') || 'profile';
@@ -237,5 +237,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-transparent px-8 py-8 text-sm font-bold text-slate-500">Loading settings...</div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

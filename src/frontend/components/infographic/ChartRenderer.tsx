@@ -39,7 +39,12 @@ export function ChartRenderer({ type = 'pie', data = [], category = 'default' }:
 
   const palette = COLORS[category] || COLORS.default;
 
-  const renderCustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<Record<string, unknown>>; label?: string }) => {
+  const renderCustomTooltip = (props: unknown) => {
+    const { active, payload, label } = props as {
+      active?: boolean;
+      payload?: readonly { name?: unknown; value?: unknown; color?: unknown }[];
+      label?: string;
+    };
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-100">

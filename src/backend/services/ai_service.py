@@ -1,8 +1,10 @@
 import json
 import logging
 from pathlib import Path
+from urllib.parse import quote_plus
+
 from faster_whisper import WhisperModel
-from openai import OpenAI
+from openai import AsyncOpenAI
 from src.backend import config
 
 logger = logging.getLogger(__name__)
@@ -87,7 +89,7 @@ class AIService:
             logger.warning("⚠️ Không tìm thấy OPENAI_API_KEY. Bỏ qua bước tóm tắt.")
             return ["Vui lòng cấu hình API Key để sử dụng tính năng tóm tắt."]
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         
         # Kết hợp các đoạn text lại để gửi sang LLM
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
@@ -106,7 +108,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 Đang gọi LLM ({config.DEFAULT_MODEL}) để tóm tắt nội dung...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL, 
                 messages=[{"role": "user", "content": prompt}],
                 max_completion_tokens=500  # Thay max_tokens bằng max_completion_tokens theo thông báo lỗi
@@ -131,7 +133,7 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         
         # Chuẩn bị transcript có kèm timestamp để AI dễ phân tích
         formatted_transcript = ""
@@ -157,7 +159,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 [Batching] Đang trích xuất Timeline, Highlights & Questions cho {transcript_data['video_id']}...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -228,7 +230,7 @@ class AIService:
         if not api_key:
             return []
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         vsl_data = cls.get_vsl_data()
         vsl_dict = vsl_data.get("dictionary", {})
         
@@ -258,7 +260,7 @@ class AIService:
 
         try:
             logger.info(f"🤟 [VSL] Đang dịch transcript sang VSL cho {transcript_data['video_id']}...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -295,7 +297,7 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
         truncated_text = full_text[:4000]
 
@@ -314,7 +316,7 @@ class AIService:
 
         try:
             logger.info(f"🧠 Đang tạo Pre-lecture Briefing cho {transcript_data['video_id']}...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -344,36 +346,49 @@ class AIService:
         if not api_key:
             return {"error": "API Key not configured"}
 
-        client = OpenAI(api_key=api_key)
+        client = AsyncOpenAI(api_key=api_key)
         full_text = " ".join([s["text"] for s in transcript_data["segments"]])
         truncated_text = full_text[:6000]
 
         prompt = f"""
-        Bạn là một chuyên gia thiết kế đồ họa thông tin (Infographic) và phân tích dữ liệu. Dựa trên nội dung bài giảng dưới đây, hãy trích xuất dữ liệu để tạo Flashcards và một bộ tài liệu trực quan hóa cao (Infographic & Charts).
+        You are an educational content designer. Extract flashcards and a visual infographic dataset from the lecture transcript below.
 
-        Yêu cầu đầu ra định dạng JSON với các khóa sau:
-        1. "flashcards": Danh sách 5-10 thẻ học tập. Mỗi thẻ có "front" (câu hỏi/khái niệm) và "back" (câu trả lời/định nghĩa ngắn gọn).
-        2. "visual_data": 
-           - "charts": Dữ liệu cho các biểu đồ (topic_distribution, knowledge_density, skills_radar như yêu cầu trước).
-           - "infographic": Dữ liệu cho một Infographic chuyên nghiệp bao gồm:
-             - "title": Tiêu đề chính của Infographic.
-             - "sections": Danh sách 3-5 phần nội dung chính. Mỗi phần có:
-               - "icon": Tên icon (ví dụ: 'brain', 'clock', 'target', 'lightbulb', 'star' - dùng chuẩn Lucide/FontAwesome).
-               - "label": Tiêu đề của phần.
-               - "value": Một số liệu hoặc từ khóa quan trọng nhất.
-               - "description": Một đoạn mô tả ngắn (1 câu) giải thích chi tiết hơn.
-             - "key_takeaways": 3 điểm rút ra quan trọng nhất từ bài học.
-           - "image_prompt": Một mô tả ngắn bằng tiếng Anh (khoảng 10-15 từ) để sinh ảnh minh họa cho bài giảng này (ví dụ: 'A futuristic digital library with holographic data screens, educational style').
+        Return exactly one JSON object with this schema:
+        {{
+          "flashcards": [{{"front": string, "back": string, "hint": string}}],
+          "visual_data": {{
+            "infographic": {{
+              "title": string,
+              "type": "stats" | "process" | "comparison" | "info",
+              "category": "technology" | "health" | "finance" | "default",
+              "chartType": "pie" | "bar",
+              "chartData": [{{"name": string, "value": number}}],
+              "sections": [{{
+                "icon": "Target" | "Users" | "Zap" | "TrendingUp" | "Layers" | "HelpCircle" | "CheckCircle" | "BarChart3" | "Activity" | "LayoutDashboard",
+                "label": string,
+                "value": string,
+                "description": string,
+                "advanced_detail": string
+              }}],
+              "key_takeaways": [string],
+              "image_prompt": string
+            }}
+          }}
+        }}
 
-        Định dạng trả về DUY NHẤT là JSON. Không giải thích gì thêm.
+        Rules:
+        - Generate 5-10 flashcards.
+        - Use only information supported by the transcript. Do not invent statistics.
+        - Omit chartData if the transcript does not support numeric or categorical data.
+        - Keep text concise and classroom-friendly.
 
-        Nội dung:
+        Transcript:
         {truncated_text}
         """
 
         try:
             logger.info(f"🧠 [Notebook LLM] Đang trích xuất dữ liệu trực quan & Flashcards cho {transcript_data['video_id']}...")
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 response_format={ "type": "json_object" }
@@ -381,10 +396,14 @@ class AIService:
             
             result = json.loads(response.choices[0].message.content)
             
-            # Sinh URL ảnh từ Pollinations.ai dựa trên image_prompt
-            # Ta lấy từ visual_data.image_prompt hoặc mặc định
-            image_prompt = result.get("visual_data", {}).get("image_prompt", "educational illustration")
-            safe_prompt = "".join(c if c.isalnum() or c == " " else "" for c in image_prompt).replace(" ", "+")
+            visual_data = result.get("visual_data", {})
+            infographic = visual_data.get("infographic", {})
+            image_prompt = (
+                infographic.get("image_prompt")
+                or visual_data.get("image_prompt")
+                or "educational classroom infographic illustration"
+            ).strip()
+            safe_prompt = quote_plus(image_prompt)
             result["cover_image_url"] = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1024&height=768&nologo=true"
             
             # Caching
