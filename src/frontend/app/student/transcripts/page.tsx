@@ -19,7 +19,7 @@ export default function TranscriptsPage() {
           <div className="bg-primary/10 text-primary p-2 rounded-lg">
             <FileText size={28} />
           </div>
-          Quản lý Transcript
+          Quản lý phụ đề
         </h1>
         <p className="text-neutral mt-2">Xem lại, chỉnh sửa và tải xuống bản ghi chép từ các lớp học LIVE trước đó.</p>
       </div>

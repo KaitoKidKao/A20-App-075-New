@@ -19,7 +19,7 @@ export default function RootLayout({
       className="antialiased h-full"
       suppressHydrationWarning
     >
-      <body className="h-full flex flex-col font-sans overflow-x-hidden">
+      <body className="h-full flex flex-col font-sans overflow-x-hidden" suppressHydrationWarning>
         <ThemeController />
         <ClientShell>
           {children}

@@ -25,12 +25,12 @@ function cn(...inputs: ClassValue[]) {
 }
 
 function mapStatusToUI(status: string) {
-  if (status === 'queued') return { step: 1, progress: 10, label: 'Waiting in processing queue...' };
-  if (status === 'extracting_audio') return { step: 2, progress: 35, label: 'Extracting high-quality audio track...' };
-  if (status === 'transcribing') return { step: 3, progress: 70, label: 'AI is transcribing and analyzing the lecture...' };
-  if (status === 'completed') return { step: 4, progress: 100, label: 'Complete. Your lesson is ready.' };
+  if (status === 'queued') return { step: 1, progress: 10, label: 'Đang chờ trong hàng đợi xử lý...' };
+  if (status === 'extracting_audio') return { step: 2, progress: 35, label: 'Đang trích xuất âm thanh chất lượng cao...' };
+  if (status === 'transcribing') return { step: 3, progress: 70, label: 'AI đang chép lời và phân tích bài giảng...' };
+  if (status === 'completed') return { step: 4, progress: 100, label: 'Hoàn tất. Bài học của bạn đã sẵn sàng.' };
   if (status?.startsWith('failed')) return { step: -1, progress: 0, label: status };
-  return { step: 0, progress: 5, label: 'Initializing processing pipeline...' };
+  return { step: 0, progress: 5, label: 'Đang khởi tạo tiến trình xử lý...' };
 }
 
 export default function VideoProcessingPage() {
@@ -87,10 +87,10 @@ export default function VideoProcessingPage() {
   const isComplete = progress === 100 && currentStatus === 'completed';
 
   const pipelineSteps = [
-    { id: 1, icon: Film, title: 'Prepare File', desc: 'Validate and optimize the uploaded video.' },
-    { id: 2, icon: Music, title: 'Extract Audio', desc: 'Create a clean audio track for transcription.' },
-    { id: 3, icon: Zap, title: 'AI Whisper', desc: 'Transcribe and analyze the lecture audio.' },
-    { id: 4, icon: FileText, title: 'Finalize', desc: 'Generate captions, summaries, and learning assets.' }
+    { id: 1, icon: Film, title: 'Chuẩn bị tệp', desc: 'Kiểm tra và tối ưu video đã tải lên.' },
+    { id: 2, icon: Music, title: 'Tách âm thanh', desc: 'Tạo bản âm thanh sạch để chép lời.' },
+    { id: 3, icon: Zap, title: 'AI Whisper', desc: 'Chép lời và phân tích nội dung bài giảng.' },
+    { id: 4, icon: FileText, title: 'Hoàn thiện', desc: 'Tạo phụ đề, tóm tắt và tài nguyên học tập.' }
   ];
 
   return (
@@ -102,7 +102,7 @@ export default function VideoProcessingPage() {
           className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-[#FF4F6E] transition-colors"
         >
           <ChevronLeft size={16} />
-          <span>Back to Upload</span>
+          <span>Quay lại trang tải lên</span>
         </button>
 
         <div className="bg-white rounded-[40px] border border-slate-50 shadow-2xl shadow-slate-200/50 overflow-hidden relative">
@@ -122,12 +122,12 @@ export default function VideoProcessingPage() {
                       ID: {videoId.slice(0, 8)}
                    </div>
                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                     {isComplete ? 'Processing Complete!' : isFailed ? 'Processing Failed' : 'AI Processing in Progress'}
+                     {isComplete ? 'Xử lý hoàn tất!' : isFailed ? 'Xử lý thất bại' : 'AI đang xử lý bài giảng'}
                    </h1>
                    <p className="text-sm font-bold text-slate-400 max-w-md">
-                     {isComplete ? 'The system has finished extracting and optimizing your lesson.'
-                       : isFailed ? 'Something went wrong while processing this video. Please review the error below.'
-                       : 'The system is using AI to generate captions, summaries, and learning assets. You can leave this page while it continues.'}
+                     {isComplete ? 'Hệ thống đã hoàn tất trích xuất và tối ưu bài giảng của bạn.'
+                       : isFailed ? 'Có lỗi xảy ra khi xử lý video. Vui lòng xem thông báo lỗi bên dưới.'
+                       : 'Hệ thống đang dùng AI để tạo phụ đề, tóm tắt và tài nguyên học tập. Bạn có thể rời trang trong khi tiến trình vẫn chạy.'}
                    </p>
                 </div>
 
@@ -191,9 +191,9 @@ export default function VideoProcessingPage() {
                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-red-500 shadow-sm mb-6">
                     <AlertTriangle size={24} />
                  </div>
-                 <h3 className="text-xl font-black text-red-600">Technical Processing Error</h3>
+                 <h3 className="text-xl font-black text-red-600">Lỗi kỹ thuật khi xử lý</h3>
                  <p className="text-red-500/80 font-bold text-sm max-w-md mx-auto">{failMessage}</p>
-                 <p className="text-[11px] font-black uppercase tracking-widest text-red-400 pt-4">Tip: check FFmpeg on the server or try another video format.</p>
+                 <p className="text-[11px] font-black uppercase tracking-widest text-red-400 pt-4">Gợi ý: kiểm tra FFmpeg trên máy chủ hoặc thử định dạng video khác.</p>
               </div>
             ) : (
               <div className="text-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
@@ -212,13 +212,13 @@ export default function VideoProcessingPage() {
                      onClick={() => router.push(`/student/videos/${videoId}`)}
                      className="flex-1 py-5 bg-[#FF4F6E] text-white rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
                    >
-                     Open Lesson <ArrowRight size={18} />
+                     Vào bài học <ArrowRight size={18} />
                    </button>
                    <button 
                      onClick={() => router.push('/student/documents')}
                      className="px-8 py-5 bg-white text-slate-900 border border-slate-200 rounded-[20px] font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition-all"
                    >
-                     Back to Courses
+                     Quay lại khóa học
                    </button>
                  </>
                ) : isFailed ? (
@@ -226,11 +226,11 @@ export default function VideoProcessingPage() {
                    onClick={() => router.push('/student/upload')}
                    className="w-full py-5 bg-slate-900 text-white rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
                  >
-                   Back to Upload
+                   Quay lại trang tải lên
                  </button>
                ) : (
                  <div className="w-full flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <Info size={14} /> You can close the browser. Processing will continue on the backend.
+                    <Info size={14} /> Bạn có thể đóng trình duyệt. Tiến trình vẫn tiếp tục ở backend.
                  </div>
                )}
             </div>

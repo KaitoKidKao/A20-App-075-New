@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useRef } from 'react';
 import { 
@@ -56,11 +56,11 @@ export default function UploadVideo() {
           router.push(`/student/videos/${data.video_id}/processing`);
         }, 800);
       } else {
-        throw new Error('Server did not return a video_id.');
+        throw new Error('Máy chủ không trả về video_id.');
       }
     } catch (error: unknown) {
       clearInterval(progressInterval);
-      const message = error instanceof Error ? error.message : 'Connection failed. Please ensure backend is running.';
+      const message = error instanceof Error ? error.message : 'Kết nối thất bại. Vui lòng kiểm tra backend đang chạy.';
       setErrorMsg(message);
       setIsUploading(false);
       setUploadProgress(0);
@@ -74,10 +74,10 @@ export default function UploadVideo() {
         {/* Header Title */}
         <div className="space-y-2">
            <h1 className="text-4xl font-black text-slate-900 tracking-tight italic">
-             Share your <span className="text-[#FF4F6E]">Knowledge</span>
+             Chia sẻ <span className="text-[#FF4F6E]">bài giảng</span> của bạn
            </h1>
            <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">
-             Upload lectures to generate AI insights and accessibility features
+             Tải bài giảng để tạo phân tích AI và tính năng trợ năng
            </p>
         </div>
 
@@ -98,7 +98,7 @@ export default function UploadVideo() {
 
               {errorMsg && (
                 <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-black animate-in fade-in slide-in-from-top-2">
-                  ❌ {errorMsg}
+                  âŒ {errorMsg}
                 </div>
               )}
 
@@ -117,15 +117,15 @@ export default function UploadVideo() {
                     {selectedFile ? <CheckCircle2 size={40} /> : <UploadCloud size={40} />}
                   </div>
                   <h3 className="text-xl font-black text-slate-900 mb-2">
-                    {selectedFile ? 'Ready to Process!' : 'Drag & Drop Video'}
+                    {selectedFile ? 'Sẵn sàng xử lý!' : 'Kéo & thả video'}
                   </h3>
                   <p className="text-sm font-bold text-slate-400 text-center max-w-[240px]">
-                    {selectedFile ? selectedFile.name : 'MP4, MOV or AVI files. Maximum 500MB.'}
+                    {selectedFile ? selectedFile.name : 'Hỗ trợ MP4, MOV, AVI. Dung lượng tối đa 500MB.'}
                   </p>
                   
                   {selectedFile && (
                     <div className="mt-4 px-4 py-1.5 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-widest">
-                       {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Valid
+                       {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Hợp lệ
                     </div>
                   )}
                 </div>
@@ -142,7 +142,7 @@ export default function UploadVideo() {
                   </div>
                   
                   <h3 className="text-xl font-black text-slate-900 mb-2">
-                    {uploadProgress >= 100 ? 'Analysis Complete!' : 'Processing AI...'}
+                    {uploadProgress >= 100 ? 'Phân tích hoàn tất!' : 'AI đang xử lý...'}
                   </h3>
                   
                   <div className="w-full max-w-xs bg-slate-100 rounded-full h-3 mb-4 overflow-hidden">
@@ -165,7 +165,7 @@ export default function UploadVideo() {
                        : 'bg-[#FF4F6E] text-white shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] hover:scale-[1.02] active:scale-95'
                    }`}
                  >
-                   {isUploading ? 'System working...' : 'Start AI Extraction'}
+                   {isUploading ? 'Hệ thống đang xử lý...' : 'Bắt đầu trích xuất AI'}
                  </button>
                  
                  <div className="flex items-center gap-4 p-4 bg-[#FF4F6E]/5 rounded-2xl border border-[#FF4F6E]/10">
@@ -173,7 +173,7 @@ export default function UploadVideo() {
                        <Sparkles size={20} fill="currentColor" />
                     </div>
                     <div className="text-[11px] font-bold text-slate-500 leading-tight">
-                       Transcribing audio and generating <span className="text-[#FF4F6E]">visual summaries</span> for inclusive learning.
+                       Đang chép lời âm thanh và tạo <span className="text-[#FF4F6E]">tóm tắt trực quan</span> cho học tập toàn diện.
                     </div>
                  </div>
               </div>
@@ -185,7 +185,7 @@ export default function UploadVideo() {
                   <div className="absolute inset-0 bg-[#FF4F6E] rounded-full blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity" />
                   <Image 
                     src="/assets/images/upload-magic.png" 
-                    alt="Magic Upload Illustration" 
+                    alt="Minh họa tải video" 
                     fill
                     className="object-contain relative z-10"
                   />
@@ -193,10 +193,10 @@ export default function UploadVideo() {
 
                <div className="grid grid-cols-2 gap-4">
                   {[
-                    { label: 'Auto Captions', icon: FileVideo },
-                    { label: 'Visual Notes', icon: Sparkles },
-                    { label: 'Fast Sync', icon: Zap },
-                    { label: 'HD Quality', icon: Play },
+                    { label: 'Phụ đề tự động', icon: FileVideo },
+                    { label: 'Ghi chú trực quan', icon: Sparkles },
+                    { label: 'Đồng bộ nhanh', icon: Zap },
+                    { label: 'Chất lượng HD', icon: Play },
                   ].map((item, i) => (
                     <div key={i} className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl flex items-center gap-3">
                        <item.icon size={16} className="text-[#FF4F6E]" />
@@ -212,3 +212,4 @@ export default function UploadVideo() {
     </div>
   );
 }
+

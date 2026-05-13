@@ -65,9 +65,9 @@ export default function EnrolledCourses() {
            <h2 className="text-xl font-black text-slate-900 capitalize">{activeTab}</h2>
            <div className="flex items-center gap-2">
               {[
-                { id: 'enrolled', label: 'Enrolled (09)' },
-                { id: 'active', label: 'Active (05)' },
-                { id: 'completed', label: 'Completed (03)' }
+                { id: 'enrolled', label: 'Đã đăng ký (09)' },
+                { id: 'active', label: 'Đang học (05)' },
+                { id: 'completed', label: 'Hoàn thành (03)' }
               ].map((tab) => (
                 <button 
                   key={tab.id}
@@ -123,7 +123,7 @@ export default function EnrolledCourses() {
                   href={`/student/courses/${course.id}`}
                   className="block w-full bg-slate-900 text-white text-[11px] font-black py-2.5 rounded-lg text-center uppercase tracking-widest hover:bg-primary transition-colors"
                 >
-                  View Course
+                  Xem khóa học
                 </Link>
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function EnrolledCourses() {
         </div>
         {/* Pagination placeholder */}
         <div className="flex items-center justify-between pt-10 border-t border-slate-50">
-           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Page {currentPage} of 3</p>
+           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Trang {currentPage} / 3</p>
            <div className="flex items-center gap-2">
               {[1, 2, 3].map((num) => (
                 <button 

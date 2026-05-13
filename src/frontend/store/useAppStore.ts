@@ -19,7 +19,7 @@ interface AppState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (user: User, token: string) => void;
+  login: (user: User, token?: string) => void;
   logout: () => void;
 
   currentRole: Role;
@@ -45,21 +45,15 @@ export const useAppStore = create<AppState>()(
       user: null,
       token: null,
       isAuthenticated: false,
-      login: (user, token) => {
-        if (typeof document !== 'undefined') {
-          document.cookie = `udl_token=${encodeURIComponent(token)}; path=/; max-age=86400; samesite=lax`;
-        }
+      login: (user) => {
         set({
           user,
-          token,
+          token: null,
           isAuthenticated: true,
           currentRole: user.role
         });
       },
       logout: () => {
-        if (typeof document !== 'undefined') {
-          document.cookie = 'udl_token=; path=/; max-age=0; samesite=lax';
-        }
         set({ user: null, token: null, isAuthenticated: false });
       },
 
@@ -80,6 +74,14 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'udl-app-storage',
+      version: 2,
+      migrate: (persistedState: unknown) => {
+        const state = (persistedState as { state?: Record<string, unknown> })?.state || {};
+        return {
+          ...state,
+          token: null,
+        };
+      },
     }
   )
 );

@@ -12,9 +12,9 @@ import Link from 'next/link';
 
 export default function StudentDashboard() {
   const stats = [
-    { label: 'Enrolled Courses', value: '12', icon: Library, bg: 'bg-primary/10', text: 'text-primary' },
-    { label: 'Active Courses', value: '03', icon: BookOpen, bg: 'bg-primary/10', text: 'text-primary' },
-    { label: 'Completed Courses', value: '10', icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-600' },
+    { label: 'Khóa học đã đăng ký', value: '12', icon: Library, bg: 'bg-primary/10', text: 'text-primary' },
+    { label: 'Khóa học đang học', value: '03', icon: BookOpen, bg: 'bg-primary/10', text: 'text-primary' },
+    { label: 'Khóa học đã hoàn thành', value: '10', icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-600' },
   ];
 
   const recentEnrolled = [
@@ -48,11 +48,11 @@ export default function StudentDashboard() {
         {/* Simple Quiz Banner */}
         <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between">
            <div className="space-y-1">
-              <h3 className="text-sm font-black text-slate-900">Quiz : Build Responsive Real World</h3>
-              <p className="text-xs font-bold text-slate-400">Answered : 15/22</p>
+              <h3 className="text-sm font-black text-slate-900">Quiz: Build Responsive Real World</h3>
+              <p className="text-xs font-bold text-slate-400">Đã trả lời: 15/22</p>
            </div>
            <button className="bg-primary text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all">
-              Continue Quiz
+              Tiếp tục quiz
            </button>
         </div>
 
@@ -74,7 +74,7 @@ export default function StudentDashboard() {
         {/* Recently Enrolled Courses */}
         <section>
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-black text-slate-900">Recently Enrolled Courses</h2>
+            <h2 className="text-xl font-black text-slate-900">Khóa học mới đăng ký</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {recentEnrolled.map((course) => (
@@ -110,7 +110,7 @@ export default function StudentDashboard() {
                     href={`/student/courses/${course.id}`}
                     className="block w-full bg-slate-900 text-white text-[11px] font-black py-2.5 rounded-lg text-center uppercase tracking-widest hover:bg-primary transition-colors"
                   >
-                    View Course
+                    Xem khóa học
                   </Link>
                 </div>
               </div>
@@ -122,7 +122,7 @@ export default function StudentDashboard() {
         <div className="grid lg:grid-cols-2 gap-8 pb-10">
           {/* Recent Courses */}
           <section className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-black text-slate-900 mb-8 border-b border-slate-50 pb-4">Recent Courses</h3>
+            <h3 className="text-lg font-black text-slate-900 mb-8 border-b border-slate-50 pb-4">Khóa học gần đây</h3>
             <div className="space-y-6">
               {[
                 { name: 'Build Responsive Real World Websites..', sub: 'Information About UI/UX Design Degree', prog: 95 },
@@ -146,7 +146,7 @@ export default function StudentDashboard() {
 
           {/* Latest Quizzes */}
           <section className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-black text-slate-900 mb-8 border-b border-slate-50 pb-4">Latest Quizzes</h3>
+            <h3 className="text-lg font-black text-slate-900 mb-8 border-b border-slate-50 pb-4">Quiz mới nhất</h3>
             <div className="space-y-6">
               {[
                 { name: 'Sketch from A to Z (2024)', sub: 'Correct Answer : 15/22 • Date : 15 Jan 2025', prog: 95, color: 'text-emerald-500' },

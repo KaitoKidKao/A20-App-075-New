@@ -17,6 +17,7 @@ export async function GET(
 ) {
   const { id: videoId } = await params;
   const token = request.cookies.get('udl_token')?.value;
+  const requestedLang = request.nextUrl.searchParams.get('lang') || 'vi';
 
   try {
     // Fetch transcript from BE
@@ -26,7 +27,8 @@ export async function GET(
     });
     const data = await res.json();
 
-    if (!data.segments || data.segments.length === 0) {
+    const segments = data?.segments_by_language?.[requestedLang] || data?.segments || [];
+    if (!segments || segments.length === 0) {
       // Return empty VTT if no transcript
       const emptyVTT = 'WEBVTT\n\n';
       return new NextResponse(emptyVTT, {
@@ -38,7 +40,7 @@ export async function GET(
     // Build WebVTT content
     let vtt = 'WEBVTT\n\n';
 
-    data.segments.forEach((seg: { start: number; end: number; text: string }, i: number) => {
+    segments.forEach((seg: { start: number; end: number; text: string }, i: number) => {
       vtt += `${i + 1}\n`;
       vtt += `${toVTTTime(seg.start)} --> ${toVTTTime(seg.end)}\n`;
       vtt += `${seg.text.trim()}\n\n`;

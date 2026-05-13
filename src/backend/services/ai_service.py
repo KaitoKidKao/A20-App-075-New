@@ -1,9 +1,9 @@
 import json
 import logging
 from pathlib import Path
+from typing import Any
 from urllib.parse import quote_plus
 
-from faster_whisper import WhisperModel
 from openai import AsyncOpenAI
 from src.backend import config
 
@@ -22,6 +22,27 @@ class AIService:
     # Khởi tạo Whisper Model (Lazy Loading)
     _whisper_model = None
 
+    @staticmethod
+    def build_bilingual_transcript(original_transcript: dict, vi_transcript: dict) -> dict:
+        original_language = (original_transcript.get("language") or "").lower() or "unknown"
+        original_segments = original_transcript.get("segments", []) or []
+        vi_segments = vi_transcript.get("segments", []) or []
+
+        segments_by_language: dict[str, list[dict[str, Any]]] = {"vi": vi_segments}
+        if original_language and original_language != "vi":
+            segments_by_language[original_language] = original_segments
+        elif original_language == "vi":
+            segments_by_language["vi"] = original_segments
+
+        return {
+            "video_id": vi_transcript.get("video_id") or original_transcript.get("video_id"),
+            "language": "vi",
+            "source_language": original_language,
+            "available_languages": sorted(segments_by_language.keys()),
+            "segments": vi_segments,
+            "segments_by_language": segments_by_language,
+        }
+
     @classmethod
     def get_vsl_data(cls):
         if cls._vsl_data is None:
@@ -38,6 +59,7 @@ class AIService:
         if cls._whisper_model is None:
             logger.info(f"🤖 Đang tải mô hình Whisper ({cls.MODEL_SIZE}) trên CPU...")
             # compute_type="int8" giúp chạy nhanh hơn trên CPU mà vẫn giữ độ chính xác ổn
+            from faster_whisper import WhisperModel
             cls._whisper_model = WhisperModel(cls.MODEL_SIZE, device="cpu", compute_type="int8")
         return cls._whisper_model
 
@@ -110,15 +132,16 @@ class AIService:
             logger.info(f"🧠 Đang gọi LLM ({config.DEFAULT_MODEL}) để tóm tắt nội dung...")
             response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL, 
-                messages=[{"role": "user", "content": prompt}],
-                max_completion_tokens=500  # Thay max_tokens bằng max_completion_tokens theo thông báo lỗi
+                messages=[
+                    {"role": "system", "content": "Bạn là trợ lý giáo dục chuyên nghiệp. Bạn CHỈ ĐƯỢC PHÉP tóm tắt bằng TIẾNG VIỆT."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=500
             )
             
             summary_text = response.choices[0].message.content
             bullet_points = [line.strip() for line in summary_text.split("\n") if line.strip().startswith("-")]
             
-            # Lưu summary vào cùng file transcript hoặc file riêng
-            # Ở đây ta giả định trả về để API hiển thị
             return bullet_points
         except Exception as e:
             logger.error(f"❌ Lỗi khi gọi LLM: {e}")
@@ -161,7 +184,10 @@ class AIService:
             logger.info(f"🧠 [Batching] Đang trích xuất Timeline, Highlights & Questions cho {transcript_data['video_id']}...")
             response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": "Bạn là chuyên gia phân tích giáo dục. Bạn CHỈ ĐƯỢC PHÉP trả lời bằng TIẾNG VIỆT."},
+                    {"role": "user", "content": prompt}
+                ],
                 response_format={ "type": "json_object" }
             )
             
@@ -234,8 +260,7 @@ class AIService:
         vsl_data = cls.get_vsl_data()
         vsl_dict = vsl_data.get("dictionary", {})
         
-        # Lấy danh sách 500 từ vựng phổ biến nhất từ từ điển để "gợi ý" cho AI
-        available_keywords = list(vsl_dict.keys())[:1000] # Giới hạn để tránh quá tải Prompt
+        available_keywords = list(vsl_dict.keys())[:1000]
         
         segments = transcript_data["segments"]
         formatted_text = ""
@@ -269,7 +294,6 @@ class AIService:
             ai_result = json.loads(response.choices[0].message.content)
             raw_glosses = ai_result.get("glosses", []) or ai_result.get("data", [])
             
-            # Làm giàu dữ liệu với HamNoSys và xử lý từ đồng nghĩa
             final_glosses = []
             synonyms_map = vsl_data.get("synonyms", {})
 
@@ -286,7 +310,6 @@ class AIService:
         except Exception as e:
             logger.error(f"❌ Lỗi khi sinh Handsign Data: {e}")
             return []
-
 
     @classmethod
     async def generate_pre_lecture_briefing(cls, transcript_data: dict) -> dict:
@@ -318,7 +341,10 @@ class AIService:
             logger.info(f"🧠 Đang tạo Pre-lecture Briefing cho {transcript_data['video_id']}...")
             response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": "Bạn là trợ lý giáo dục. Bạn CHỈ ĐƯỢC PHÉP trả lời bằng TIẾNG VIỆT."},
+                    {"role": "user", "content": prompt}
+                ],
                 response_format={ "type": "json_object" }
             )
             
@@ -351,38 +377,81 @@ class AIService:
         truncated_text = full_text[:6000]
 
         prompt = f"""
-        You are an educational content designer. Extract flashcards and a visual infographic dataset from the lecture transcript below.
+        HÃY CHÚ Ý: BẠN PHẢI TRẢ LỜI BẰNG TIẾNG VIỆT 100%. 
+        TUYỆT ĐỐI KHÔNG SỬ DỤNG TIẾNG ANH CHO CÁC TRƯỜNG: "front", "back", "hint", "title", "label", "value", "description", "advanced_detail", "key_takeaways".
+        
+        Bạn là một chuyên gia thiết kế nội dung giáo dục. Hãy trích xuất danh sách Flashcards và dữ liệu trực quan (Infographic) từ bản ghi chép bài giảng (transcript) dưới đây.
 
-        Return exactly one JSON object with this schema:
+        Yêu cầu QUAN TRỌNG:
+        1. TẤT CẢ nội dung (tiêu đề, mô tả, flashcards, key takeaways) PHẢI là tiếng Việt tự nhiên và chính xác.
+        2. Flashcards phải giúp sinh viên ôn tập các khái niệm quan trọng nhất.
+        3. Dữ liệu trực quan phải làm nổi bật các con số hoặc quy trình cốt lõi.
+
+        Trả về DUY NHẤT một đối tượng JSON theo cấu trúc sau (Lưu ý: TẤT CẢ GIÁ TRỊ PHẢI LÀ TIẾNG VIỆT):
         {{
-          "flashcards": [{{"front": string, "back": string, "hint": string}}],
+          "flashcards": [
+            {{
+              "front": "Câu hỏi ôn tập (tiếng Việt)",
+              "back": "Câu trả lời chi tiết (tiếng Việt)",
+              "hint": "Gợi ý ngắn gọn (tiếng Việt)"
+            }}
+          ],
           "visual_data": {{
             "infographic": {{
-              "title": string,
+              "title": "Tiêu đề Infographic (tiếng Việt)",
               "type": "stats" | "process" | "comparison" | "info",
               "category": "technology" | "health" | "finance" | "default",
               "chartType": "pie" | "bar",
-              "chartData": [{{"name": string, "value": number}}],
+              "chartData": [{{"name": "Tên hạng mục (tiếng Việt)", "value": number}}],
               "sections": [{{
-                "icon": "Target" | "Users" | "Zap" | "TrendingUp" | "Layers" | "HelpCircle" | "CheckCircle" | "BarChart3" | "Activity" | "LayoutDashboard",
-                "label": string,
-                "value": string,
-                "description": string,
-                "advanced_detail": string
+                "icon": "Tên icon (chọn từ danh sách gợi ý)",
+                "label": "Nhãn mục (tiếng Việt)",
+                "value": "Giá trị hoặc tiêu đề phụ (tiếng Việt)",
+                "description": "Mô tả chi tiết (tiếng Việt)",
+                "advanced_detail": "Thông tin chuyên sâu (tiếng Việt)"
               }}],
-              "key_takeaways": [string],
-              "image_prompt": string
+              "key_takeaways": ["Ý chính 1 (tiếng Việt)", "Ý chính 2 (tiếng Việt)"],
+              "image_prompt": "Mô tả hình ảnh bằng TIẾNG ANH (trường duy nhất được dùng tiếng Anh)"
             }}
           }}
         }}
 
-        Rules:
-        - Generate 5-10 flashcards.
-        - Use only information supported by the transcript. Do not invent statistics.
-        - Omit chartData if the transcript does not support numeric or categorical data.
-        - Keep text concise and classroom-friendly.
+        Quy tắc quan trọng:
+        - TUYỆT ĐỐI KHÔNG chia nội dung theo các cấp độ "Cơ bản", "Trung cấp", "Nâng cao" hoặc "Beginner", "Intermediate", "Advanced".
+        - TẤT CẢ văn bản hiển thị cho người dùng (front, back, title, label, value, description, key_takeaways) PHẢI LÀ TIẾNG VIỆT.
+        - Chỉ có trường "image_prompt" là viết bằng TIẾNG ANH.
+        - Tạo 5-10 flashcards (tiếng Việt).
+        - Chỉ sử dụng thông tin có trong transcript. Không tự bịa ra số liệu.
+        - Bỏ qua chartData nếu transcript không có dữ liệu định lượng hoặc phân loại rõ ràng.
 
-        Transcript:
+        Ví dụ mẫu (JSON):
+        {{
+          "flashcards": [
+            {{"front": "Học máy (Machine Learning) là gì?", "back": "Là một lĩnh vực của AI cho phép hệ thống học từ dữ liệu.", "hint": "Khả năng tự học"}}
+          ],
+          "visual_data": {{
+            "infographic": {{
+              "title": "Tác động của Công nghệ AI",
+              "type": "info",
+              "category": "technology",
+              "chartType": "bar",
+              "chartData": [],
+              "sections": [
+                {{
+                  "icon": "Zap",
+                  "label": "Tốc độ xử lý",
+                  "value": "Nhanh hơn 50%",
+                  "description": "AI giúp tự động hóa các tác vụ lặp lại.",
+                  "advanced_detail": "Phân tích chi tiết về hiệu suất quy trình công việc."
+                }}
+              ],
+              "key_takeaways": ["AI là tương lai của ngành công nghiệp", "Dữ liệu là cốt lõi"],
+              "image_prompt": "Futuristic AI technology workspace, high-tech classroom, flat design"
+            }}
+          }}
+        }}
+
+        Bản ghi chép (Transcript):
         {truncated_text}
         """
 
@@ -390,7 +459,10 @@ class AIService:
             logger.info(f"🧠 [Notebook LLM] Đang trích xuất dữ liệu trực quan & Flashcards cho {transcript_data['video_id']}...")
             response = await client.chat.completions.create(
                 model=config.DEFAULT_MODEL,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": "Bạn là chuyên gia giáo dục. Bạn CHỈ ĐƯỢC PHÉP trả lời bằng TIẾNG VIỆT. Tuyệt đối không dùng tiếng Anh cho các nội dung hiển thị."},
+                    {"role": "user", "content": prompt}
+                ],
                 response_format={ "type": "json_object" }
             )
             
@@ -419,3 +491,234 @@ class AIService:
             logger.error(f"❌ Lỗi khi tạo dữ liệu Notebook: {e}")
             return {"error": str(e)}
 
+    @classmethod
+    async def translate_transcript_to_vi(cls, transcript_data: dict) -> dict:
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return transcript_data
+
+        client = AsyncOpenAI(api_key=api_key)
+        segments = transcript_data.get('segments', [])
+        if not segments:
+            return transcript_data
+
+        logger.info(f'🌐 Đang dịch transcript của {transcript_data.get("video_id", "")} sang tiếng Việt...')
+        full_text = "\n".join([f"[{i}] {s['text']}" for i, s in enumerate(segments)])
+        
+        prompt = f"""
+        Bạn là một biên dịch viên chuyên nghiệp. Hãy dịch các câu hội thoại sau sang tiếng Việt tự nhiên, phù hợp với ngữ cảnh giáo dục.
+        Trả về ĐÚNG định dạng ban đầu, chỉ thay đổi phần văn bản thành tiếng Việt. Giữ nguyên các index.
+        
+        Văn bản gốc:
+        {full_text}
+        """
+
+        try:
+            response = await client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                max_completion_tokens=2000
+            )
+            
+            translated_text = response.choices[0].message.content
+            translated_dict = {}
+            for line in translated_text.split("\n"):
+                line = line.strip()
+                if line.startswith("[") and "]" in line:
+                    idx_str = line[1:line.find("]")]
+                    if idx_str.isdigit():
+                        translated_dict[int(idx_str)] = line[line.find("]")+1:].strip()
+            
+            translated_segments = []
+            for i, s in enumerate(segments):
+                new_s = s.copy()
+                if i in translated_dict:
+                    new_s['text'] = translated_dict[i]
+                translated_segments.append(new_s)
+                
+            new_transcript_data = transcript_data.copy()
+            new_transcript_data['segments'] = translated_segments
+            new_transcript_data['language'] = 'vi'
+            
+            video_id = transcript_data.get('video_id')
+            if video_id:
+                transcript_path = cls.TRANSCRIPT_DIR / f"{video_id}.json"
+                with open(transcript_path, 'w', encoding='utf-8') as f:
+                    json.dump(new_transcript_data, f, ensure_ascii=False, indent=2)
+            
+            logger.info('✅ Dịch xong transcript sang tiếng Việt.')
+            return new_transcript_data
+            
+        except Exception as e:
+            logger.error(f'❌ Lỗi khi dịch transcript: {e}')
+            return transcript_data
+
+    @classmethod
+    async def translate_transcript_to_language_json(
+        cls,
+        transcript_data: dict,
+        target_language: str,
+    ) -> dict:
+        target = (target_language or "").strip().lower()
+        if target not in {"vi", "en"}:
+            return transcript_data
+
+        source = (transcript_data.get("language") or "").strip().lower()
+        if source == target:
+            return transcript_data
+
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return transcript_data
+
+        segments = transcript_data.get("segments", [])
+        if not segments:
+            return transcript_data
+
+        client = AsyncOpenAI(api_key=api_key)
+        logger.info(
+            "Translating transcript to %s for video_id=%s",
+            target,
+            transcript_data.get("video_id", ""),
+        )
+
+        if target == "vi":
+            translator_system = "Bạn là biên dịch viên chuyên nghiệp. Dịch chính xác sang tiếng Việt tự nhiên và mang tính học thuật."
+            translator_user = (
+                "Dịch nội dung bài giảng sang tiếng Việt tự nhiên. "
+                "Trả về DUY NHẤT đối tượng JSON với khóa 'items'. "
+                "Mỗi mục: {index:number, text:string}. Giữ nguyên index."
+            )
+        else:
+            translator_system = "You are a professional translator. Translate accurately to natural English."
+            translator_user = (
+                "Translate to natural English for educational content. "
+                "Return only JSON object with key 'items'. "
+                "Each item: {index:number, text:string}. Keep index unchanged."
+            )
+
+        try:
+            async def _translate_chunk(chunk_start: int, chunk_segments: list[dict], max_retry: int = 2) -> list[dict]:
+                payload = [
+                    {
+                        "index": chunk_start + idx,
+                        "start": seg.get("start"),
+                        "end": seg.get("end"),
+                        "text": seg.get("text", ""),
+                    }
+                    for idx, seg in enumerate(chunk_segments)
+                ]
+                last_error = None
+                for _ in range(max_retry + 1):
+                    try:
+                        response = await client.chat.completions.create(
+                            model=config.DEFAULT_MODEL,
+                            messages=[
+                                {"role": "system", "content": translator_system},
+                                {
+                                    "role": "user",
+                                    "content": (
+                                        f"{translator_user}\n"
+                                        "Do not merge or drop rows. Return exactly the same number of items as input.\n\n"
+                                        f"Input JSON:\n{json.dumps(payload, ensure_ascii=False)}"
+                                    ),
+                                },
+                            ],
+                            response_format={"type": "json_object"},
+                        )
+                        parsed = json.loads(response.choices[0].message.content)
+                        items = parsed.get("items", [])
+                        if len(items) != len(chunk_segments):
+                            raise ValueError("Translated item count mismatch")
+
+                        out: list[dict] = []
+                        for idx, seg in enumerate(chunk_segments):
+                            expected_index = chunk_start + idx
+                            item = items[idx]
+                            got_index = int(item.get("index")) if item.get("index") is not None else None
+                            if got_index != expected_index:
+                                raise ValueError(f"Index mismatch: expected {expected_index}, got {got_index}")
+                            translated_text = str(item.get("text", "")).strip()
+                            if not translated_text:
+                                raise ValueError(f"Empty translation at index {expected_index}")
+                            out.append(
+                                {
+                                    "start": seg.get("start"),
+                                    "end": seg.get("end"),
+                                    "text": translated_text,
+                                }
+                            )
+                        return out
+                    except Exception as ex:
+                        last_error = ex
+                raise RuntimeError(f"Chunk translation failed at start={chunk_start}: {last_error}")
+
+            chunk_size = 20
+            translated_segments: list[dict] = []
+            for i in range(0, len(segments), chunk_size):
+                chunk = segments[i : i + chunk_size]
+                translated_chunk = await _translate_chunk(i, chunk)
+                translated_segments.extend(translated_chunk)
+
+            result = transcript_data.copy()
+            result["segments"] = translated_segments
+            result["language"] = target
+            return result
+        except Exception as e:
+            logger.error("Translate transcript to %s failed: %s", target, e)
+            return transcript_data
+
+    @classmethod
+    async def generate_handsign_from_text(cls, text: str) -> list:
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return []
+
+        client = AsyncOpenAI(api_key=api_key)
+        vsl_data = cls.get_vsl_data()
+        vsl_dict = vsl_data.get('dictionary', {})
+        
+        available_keywords = list(vsl_dict.keys())[:1000]
+        keywords_str = ', '.join(available_keywords[:50])
+
+        prompt = f"""
+        Bạn là chuyên gia Ngôn ngữ ký hiệu Việt Nam (VSL). Hãy chuyển đổi nội dung tóm tắt dưới đây sang danh sách các từ khóa VSL (Glosses).
+        
+        Yêu cầu:
+        1. Trả về định dạng JSON: {{"glosses": [{{"time": float, "word": str}}]}}
+        2. "word" PHẢI là từ gốc tiếng Việt, viết thường, các từ ghép nối bằng dấu gạch dưới (ví dụ: "công_nghệ", "học_tập").
+        3. Chọn lọc những từ CHÍNH, mang ý nghĩa cốt lõi nhất (động từ, danh từ). Bỏ qua các từ nối, mạo từ.
+        4. Gợi ý một vài từ trong từ điển VSL: {keywords_str}...
+        5. Gán thời gian mô phỏng (time) bắt đầu từ 0.0, tăng dần 0.5s đến 1s cho mỗi từ.
+
+        Nội dung:
+        {text}
+        """
+
+        try:
+            logger.info('🧠 Đang tạo VSL Glosses từ Tóm tắt...')
+            response = await client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
+            )
+            
+            result_json = json.loads(response.choices[0].message.content)
+            raw_glosses = result_json.get('glosses', [])
+            
+            processed = []
+            synonyms_map = vsl_data.get('synonyms', {})
+            for g in raw_glosses:
+                word = g.get('word')
+                if not word: continue
+                matched_word, vsl_info = cls._resolve_vsl_entry(word, vsl_dict, synonyms_map)
+                processed.append({
+                    'time': g.get('time', 0),
+                    'word': matched_word or word,
+                    'vsl_info': vsl_info
+                })
+            
+            return processed
+        except Exception as e:
+            logger.error(f'❌ Lỗi khi sinh VSL Glosses từ text: {e}')
+            return []
