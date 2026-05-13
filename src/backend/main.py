@@ -9,7 +9,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 import uuid
 import logging
 import asyncio
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
+from datetime import datetime
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends, Response
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,17 +19,14 @@ from concurrent.futures import ThreadPoolExecutor
 
 from src.backend.services.video_service import VideoService
 from src.backend.services.ai_service import AIService
-<<<<<<< HEAD
 from src.backend.services.handsign_animation_service import (
     expand_handsign_segments,
     build_render_manifest,
 )
-=======
 from src.backend.services.avatar_video_service import AvatarVideoService
->>>>>>> ec52e94 (feat(app): implement Vietnamese localization and handsign updates)
 from src.backend import config
 from src.backend.database import create_db_and_tables, get_session
-from src.backend.models import User, Video, LectureData, Flashcard
+from src.backend.models import User, Video, LectureData, Flashcard, ProcessingJob
 from src.backend.auth import get_password_hash, verify_password, create_access_token, get_current_user
 from src.backend.schemas.auth import UserCreate, Token
 from sqlmodel import Session, select
@@ -57,10 +55,59 @@ app.add_middleware(
 # Thư mục lưu trữ trạng thái đơn giản (In-memory)
 processing_status = {}
 
+
+def upsert_job_status(
+    session: Session,
+    *,
+    video_id: str,
+    status: str,
+    progress: int | None = None,
+    error_message: str | None = None,
+):
+    statement = select(ProcessingJob).where(
+        ProcessingJob.video_id == video_id,
+        ProcessingJob.job_type == "video_pipeline",
+    )
+    job = session.exec(statement).first()
+    if not job:
+        job = ProcessingJob(video_id=video_id, job_type="video_pipeline", status=status)
+    job.status = status
+    if progress is not None:
+        job.progress = progress
+    if error_message is not None:
+        job.error_message = error_message
+    job.updated_at = datetime.utcnow()
+    session.add(job)
+    session.commit()
+
+
+def mark_stale_jobs_as_failed():
+    non_terminal_statuses = {
+        "queued",
+        "downloading",
+        "extracting_audio",
+        "transcribing",
+        "ai_processing",
+    }
+    with Session(engine) as session:
+        statement = select(ProcessingJob).where(ProcessingJob.status.in_(non_terminal_statuses))
+        stale_jobs = session.exec(statement).all()
+        for job in stale_jobs:
+            job.status = "failed_restart"
+            job.error_message = "Server restarted before job completion."
+            job.updated_at = datetime.utcnow()
+            session.add(job)
+            video = session.get(Video, job.video_id)
+            if video and video.status in non_terminal_statuses:
+                video.status = "failed_restart"
+                session.add(video)
+        session.commit()
+
 @app.on_event("startup")
 def on_startup():
     logger.info("🚀 Đang khởi tạo cơ sở dữ liệu...")
     create_db_and_tables()
+    mark_stale_jobs_as_failed()
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -132,6 +179,20 @@ async def run_video_pipeline(video_id: str, video_path: Path):
                     video.status = new_status
                     session.add(video)
                     session.commit()
+                progress_map = {
+                    "queued": 0,
+                    "downloading": 5,
+                    "extracting_audio": 20,
+                    "transcribing": 50,
+                    "ai_processing": 80,
+                    "completed": 100,
+                }
+                upsert_job_status(
+                    session,
+                    video_id=video_id,
+                    status=new_status,
+                    progress=progress_map.get(new_status, 0),
+                )
                 # Đồng thời cập nhật processing_status (cho tương thích ngược tạm thời)
                 processing_status[video_id] = new_status
 
@@ -201,6 +262,13 @@ async def run_video_pipeline(video_id: str, video_path: Path):
                 video.status = f"failed: {str(e)}"
                 session.add(video)
                 session.commit()
+            upsert_job_status(
+                session,
+                video_id=video_id,
+                status="failed",
+                progress=100,
+                error_message=str(e),
+            )
         processing_status[video_id] = f"failed: {str(e)}"
         logger.error(f"❌ [{video_id}] Lỗi pipeline: {e}")
 
@@ -233,6 +301,7 @@ async def register(user_data: UserCreate, session: Session = Depends(get_session
 @app.post("/api/auth/login", response_model=Token)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(), 
+    response: Response = None,
     session: Session = Depends(get_session)
 ):
     # Trong OAuth2PasswordRequestForm, 'username' sẽ chứa Email
@@ -243,11 +312,27 @@ async def login(
         raise HTTPException(status_code=401, detail="Invalid email or password.")
     
     access_token = create_access_token(data={"sub": user.email})
+    if response is not None:
+        response.set_cookie(
+            key=config.AUTH_COOKIE_NAME,
+            value=access_token,
+            httponly=True,
+            secure=config.AUTH_COOKIE_SECURE,
+            samesite=config.AUTH_COOKIE_SAMESITE,
+            max_age=config.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            path="/",
+        )
     return {
         "access_token": access_token, 
         "token_type": "bearer",
         "role": user.role
     }
+
+
+@app.post("/api/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie(key=config.AUTH_COOKIE_NAME, path="/")
+    return {"message": "Logged out"}
 
 # --- Video Endpoints ---
 
@@ -287,6 +372,12 @@ async def upload_video(
         session.add(new_video)
         session.commit()
 
+        upsert_job_status(
+            session,
+            video_id=video_id,
+            status="queued",
+            progress=0,
+        )
         processing_status[video_id] = "queued"
         background_tasks.add_task(run_video_pipeline, video_id, video_path)
 
@@ -329,6 +420,12 @@ async def process_url(
     )
     session.add(new_video)
     session.commit()
+    upsert_job_status(
+        session,
+        video_id=video_id,
+        status="queued",
+        progress=0,
+    )
 
     async def download_and_run_pipeline(vid: str, vurl: str):
         try:
@@ -338,6 +435,12 @@ async def process_url(
                     video.status = "downloading"
                     sub_session.add(video)
                     sub_session.commit()
+                upsert_job_status(
+                    sub_session,
+                    video_id=vid,
+                    status="downloading",
+                    progress=5,
+                )
             
             processing_status[vid] = "downloading"
             vpath = await VideoService.download_video(vurl, vid)
@@ -358,6 +461,13 @@ async def process_url(
                     video.status = f"failed_download: {str(e)}"
                     sub_session.add(video)
                     sub_session.commit()
+                upsert_job_status(
+                    sub_session,
+                    video_id=vid,
+                    status="failed",
+                    progress=100,
+                    error_message=str(e),
+                )
             processing_status[vid] = f"failed_download: {str(e)}"
             logger.error(f"❌ Lỗi tải video {vid}: {e}")
 
@@ -397,6 +507,29 @@ async def get_video_status(
         raise HTTPException(status_code=403, detail="Bạn không có quyền xem trạng thái video này.")
         
     return {"video_id": video_id, "status": video.status}
+
+
+@app.get("/api/videos/{video_id}/job-status")
+async def get_video_job_status(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    statement = select(ProcessingJob).where(
+        ProcessingJob.video_id == video_id,
+        ProcessingJob.job_type == "video_pipeline",
+    )
+    job = session.exec(statement).first()
+    if not job:
+        return {"video_id": video_id, "status": "not_found", "progress": 0}
+    return {
+        "video_id": video_id,
+        "status": job.status,
+        "progress": job.progress,
+        "error_message": job.error_message,
+        "updated_at": job.updated_at,
+    }
 
 # Helper kiểm tra quyền truy cập dữ liệu bài giảng
 def check_video_access(video_id: str, user: User, session: Session):
@@ -585,23 +718,14 @@ async def get_avatar_video(
 @app.get("/api/avatar-video/{video_id}")
 async def serve_avatar_video(
     video_id: str,
-    token: str = "",
+    current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
     """Serve file video avatar đã concat từ local disk.
     Thẻ <video> không gửi được header Authorization, nên accept token qua query param.
     """
     # Xác thực bằng query parameter token
-    if not token:
-        raise HTTPException(status_code=401, detail="Token required")
-    try:
-        from jose import jwt as jose_jwt
-        payload = jose_jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
-        email = payload.get("sub")
-        if not email:
-            raise HTTPException(status_code=401, detail="Invalid token")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    check_video_access(video_id, current_user, session)
 
     video_path = AvatarVideoService.get_avatar_video_path(video_id)
     if not video_path.exists():

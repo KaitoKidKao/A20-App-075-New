@@ -28,7 +28,7 @@ export default function LoginPage() {
       login(response.user, response.access_token);
 
       if (response.user.role === 'admin') {
-        router.push('/admin/dashboard');
+        router.push('/admin');
       } else {
         router.push('/student/library');
       }

@@ -10,6 +10,7 @@ REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
 UPLOADS_DIR = "data/uploads"
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 # --- Auth ---
 ENVIRONMENT = os.getenv("ENVIRONMENT", os.getenv("ENV", "development")).lower()
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
@@ -21,6 +22,9 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "500"))
+AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "access_token")
+AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
+AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "lax")
 
 
 def _parse_cors_origins(raw: str) -> list[str]:

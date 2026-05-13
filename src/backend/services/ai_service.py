@@ -3,7 +3,6 @@ import logging
 from pathlib import Path
 from urllib.parse import quote_plus
 
-from faster_whisper import WhisperModel
 from openai import AsyncOpenAI
 from src.backend import config
 
@@ -38,6 +37,7 @@ class AIService:
         if cls._whisper_model is None:
             logger.info(f"🤖 Đang tải mô hình Whisper ({cls.MODEL_SIZE}) trên CPU...")
             # compute_type="int8" giúp chạy nhanh hơn trên CPU mà vẫn giữ độ chính xác ổn
+            from faster_whisper import WhisperModel
             cls._whisper_model = WhisperModel(cls.MODEL_SIZE, device="cpu", compute_type="int8")
         return cls._whisper_model
 

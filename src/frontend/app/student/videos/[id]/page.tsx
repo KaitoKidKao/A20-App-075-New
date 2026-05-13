@@ -193,10 +193,7 @@ export default function VideoLessonPage() {
       if (!rawUrl) {
         setAvatarVideoUrl(null);
       } else if (typeof rawUrl === 'string' && rawUrl.startsWith('/api/avatar-video/')) {
-        const storage = localStorage.getItem('udl-app-storage');
-        const token = storage ? JSON.parse(storage)?.state?.token : null;
-        const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
-        setAvatarVideoUrl(`${backendBaseUrl}${rawUrl}${tokenQuery}`);
+        setAvatarVideoUrl(`${backendBaseUrl}${rawUrl}`);
       } else {
         setAvatarVideoUrl(rawUrl);
       }
@@ -235,10 +232,7 @@ export default function VideoLessonPage() {
         throw new Error('Backend chưa trả về URL video avatar.');
       }
       if (typeof rawUrl === 'string' && rawUrl.startsWith('/api/avatar-video/')) {
-        const storage = localStorage.getItem('udl-app-storage');
-        const token = storage ? JSON.parse(storage)?.state?.token : null;
-        const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
-        setAvatarVideoUrl(`${backendBaseUrl}${rawUrl}${tokenQuery}`);
+        setAvatarVideoUrl(`${backendBaseUrl}${rawUrl}`);
       } else {
         setAvatarVideoUrl(rawUrl);
       }
