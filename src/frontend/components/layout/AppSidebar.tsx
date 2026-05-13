@@ -18,7 +18,7 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   const sectionLabelClass = cn(
-    "text-[11px] font-black uppercase tracking-widest mb-3 px-3",
+    "font-heading text-[11px] font-extrabold uppercase tracking-widest mb-3 px-3",
     "text-[var(--app-text-muted)]"
   );
 
@@ -26,8 +26,8 @@ export function AppSidebar() {
     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
     isActive
-      ? "bg-primary/10 text-primary font-black ring-1 ring-primary/15 shadow-sm"
-      : "text-[var(--app-text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-text)] font-bold"
+      ? "bg-primary/10 text-primary font-heading font-extrabold ring-1 ring-primary/15 shadow-sm"
+      : "text-[var(--app-text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-text)] font-heading font-bold"
   );
 
   const iconClass = (isActive: boolean) => cn(
