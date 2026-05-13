@@ -116,7 +116,7 @@ export function InfographicViewer({ data }: Props) {
         <button
           onClick={handleDownload}
           disabled={isDownloading}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-800 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl text-sm font-extrabold uppercase tracking-widest hover:bg-slate-800 transition-colors disabled:opacity-50"
         >
           {isDownloading ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -139,10 +139,10 @@ export function InfographicViewer({ data }: Props) {
             <LayoutDashboard size={150} />
           </div>
           <div className="relative z-10">
-            <span className="px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-xs font-black uppercase tracking-widest mb-6 inline-block">
+            <span className="px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-xs font-extrabold uppercase tracking-widest mb-6 inline-block">
               {category}
             </span>
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight max-w-3xl">
+            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight max-w-3xl">
               {title}
             </h2>
 
@@ -173,7 +173,7 @@ export function InfographicViewer({ data }: Props) {
 
           {!hasVisualContent && (
             <motion.div variants={itemVariants} className="p-8 rounded-3xl bg-slate-50 border border-slate-100 text-center">
-              <p className="text-sm font-black uppercase tracking-widest text-slate-400">Chưa có phần trực quan</p>
+              <p className="text-sm font-extrabold uppercase tracking-widest text-slate-400">Chưa có phần trực quan</p>
               <p className="mt-3 text-sm font-bold text-slate-500">Infographic sẽ hiển thị sau khi AI tạo xong dữ liệu trực quan có cấu trúc.</p>
             </motion.div>
           )}
@@ -182,7 +182,7 @@ export function InfographicViewer({ data }: Props) {
           {data.chartData && data.chartData.length > 0 && (
              <motion.div variants={itemVariants} className="mb-12">
                 <div className={cn("p-6 rounded-3xl border border-slate-100", bgLightClass)}>
-                   <h3 className={cn("text-lg font-black mb-6 uppercase tracking-widest", textClass)}>
+                   <h3 className={cn("text-lg font-extrabold mb-6 uppercase tracking-widest", textClass)}>
                      Biểu đồ dữ liệu
                    </h3>
                    <ChartRenderer 
@@ -210,8 +210,8 @@ export function InfographicViewer({ data }: Props) {
                           )}
                        </div>
                        <div className="pb-10 pt-1">
-                          <h4 className="text-xl font-black text-slate-900 mb-2">{section.label}</h4>
-                          {section.value && <p className={cn("text-2xl font-black mb-2", textClass)}>{section.value}</p>}
+                          <h4 className="text-xl font-extrabold text-slate-900 mb-2">{section.label}</h4>
+                          {section.value && <p className={cn("font-heading text-2xl font-extrabold mb-2", textClass)}>{section.value}</p>}
                           <p className="text-slate-500 font-medium leading-relaxed">{section.description}</p>
                           {section.advanced_detail && (
                              <div className={cn("mt-4 p-4 rounded-2xl text-sm font-medium border border-slate-100", bgLightClass, textClass)}>
@@ -232,12 +232,12 @@ export function InfographicViewer({ data }: Props) {
                        <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-white shadow-md", textClass)}>
                           <IconComp size={24} />
                        </div>
-                       <h4 className="text-2xl font-black text-slate-900 mb-2">{section.label}</h4>
-                       {section.value && <p className={cn("text-3xl font-black mb-4", i === 0 ? "text-slate-600" : textClass)}>{section.value}</p>}
+                       <h4 className="text-2xl font-extrabold text-slate-900 mb-2">{section.label}</h4>
+                       {section.value && <p className={cn("font-heading text-3xl font-extrabold mb-4", i === 0 ? "text-slate-600" : textClass)}>{section.value}</p>}
                        <p className="text-slate-500 font-medium leading-relaxed">{section.description}</p>
                        {section.advanced_detail && (
                           <div className="mt-6 pt-6 border-t border-slate-200/50">
-                             <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Phân tích sâu</p>
+                             <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-2">Phân tích sâu</p>
                              <p className="text-sm font-medium text-slate-600">{section.advanced_detail}</p>
                           </div>
                        )}
@@ -257,10 +257,10 @@ export function InfographicViewer({ data }: Props) {
                               <IconComp size={20} />
                            </div>
                            {section.value && (
-                             <span className={cn("text-3xl font-black", textClass)}>{section.value}</span>
+                             <span className={cn("font-heading text-3xl font-extrabold", textClass)}>{section.value}</span>
                            )}
                         </div>
-                        <h4 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-widest text-[11px]">{section.label}</h4>
+                        <h4 className="text-lg font-extrabold text-slate-900 mb-2 uppercase tracking-widest text-[11px]">{section.label}</h4>
                         <p className="text-slate-600 font-medium text-sm leading-relaxed">{section.description}</p>
                         {section.advanced_detail && (
                            <div className="mt-4 text-xs font-medium text-slate-500 border-l-2 border-slate-200 pl-3">
@@ -280,12 +280,12 @@ export function InfographicViewer({ data }: Props) {
                   <Target size={100} />
                </div>
                <div className="relative z-10">
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-[#FF4F6E] mb-6">Điểm chính cần nhớ</h3>
+                  <h3 className="text-sm font-extrabold uppercase tracking-[0.2em] text-[#FF4F6E] mb-6">Điểm chính cần nhớ</h3>
                   <ul className="space-y-4">
                     {data.key_takeaways.map((item, i) => (
                       <li key={i} className="flex items-start gap-4">
                          <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="text-xs font-black">{i + 1}</span>
+                            <span className="text-xs font-extrabold">{i + 1}</span>
                          </div>
                          <p className="font-bold text-white/90 leading-relaxed">{item}</p>
                       </li>
@@ -296,7 +296,7 @@ export function InfographicViewer({ data }: Props) {
           )}
 
           <motion.div variants={itemVariants} className="mt-8 text-center">
-             <div className="inline-block px-4 py-1.5 bg-slate-50 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-400 border border-slate-100">
+             <div className="inline-block px-4 py-1.5 bg-slate-50 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-slate-400 border border-slate-100">
                 Tạo bởi AI Visual Engine
              </div>
           </motion.div>

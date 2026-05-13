@@ -1,8 +1,15 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
-  Play, 
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  RotateCcw,
+  SkipForward,
+  SkipBack,
   FileText, 
   Sparkles,
   Clock,
@@ -148,6 +155,16 @@ export default function VideoLessonPage() {
   const [metadataError, setMetadataError] = useState('');
   const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  
+  // Custom Video Controls State
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [duration, setDuration] = useState(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
   const [isFlashcardFlipped, setIsFlashcardFlipped] = useState(false);
@@ -230,6 +247,134 @@ export default function VideoLessonPage() {
   useEffect(() => {
     videoSourceModeRef.current = videoSourceMode;
   }, [videoSourceMode]);
+
+  // Robust duration detection
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    
+    const updateDuration = () => {
+      if (vid.duration && vid.duration !== Infinity && vid.duration > 0) {
+        setDuration(vid.duration);
+      }
+    };
+    
+    vid.addEventListener('loadedmetadata', updateDuration);
+    vid.addEventListener('durationchange', updateDuration);
+    
+    // Poll every 500ms for 5 seconds as fallback
+    let attempts = 0;
+    const poll = setInterval(() => {
+      if (vid.duration && vid.duration !== Infinity && vid.duration > 0) {
+        setDuration(vid.duration);
+        clearInterval(poll);
+      }
+      attempts++;
+      if (attempts > 10) clearInterval(poll);
+    }, 500);
+    
+    return () => {
+      vid.removeEventListener('loadedmetadata', updateDuration);
+      vid.removeEventListener('durationchange', updateDuration);
+      clearInterval(poll);
+    };
+  }, [videoSrc]);
+
+  useEffect(() => {
+    const closeMenu = () => setShowSpeedMenu(false);
+    if (showSpeedMenu) {
+      window.addEventListener('click', closeMenu);
+    }
+    return () => window.removeEventListener('click', closeMenu);
+  }, [showSpeedMenu]);
+
+  // Video Control Handlers
+  const togglePlay = useCallback(() => {
+    if (!videoRef.current) return;
+    if (isPlaying) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play();
+    }
+  }, [isPlaying]);
+
+  const toggleMute = useCallback(() => {
+    if (!videoRef.current) return;
+    const newMuted = !isMuted;
+    videoRef.current.muted = newMuted;
+    setIsMuted(newMuted);
+  }, [isMuted]);
+
+  const handleVolumeChange = (val: number) => {
+    setVolume(val);
+    if (videoRef.current) {
+      videoRef.current.volume = val;
+      const muted = val === 0;
+      videoRef.current.muted = muted;
+      setIsMuted(muted);
+    }
+  };
+
+  const handleSeek = (val: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = val;
+      setCurrentTime(val);
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (!videoRef.current) return;
+    const container = videoRef.current.closest('.video-container-premium');
+    if (!container) return;
+    
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      container.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    }
+  };
+
+  const handlePlaybackSpeedChange = (speed: number) => {
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+    setShowSpeedMenu(false);
+  };
+
+  const skip = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime += seconds;
+    }
+  };
+
+  const handleUserActivity = useCallback(() => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    if (isPlaying) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 2500);
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowRight') {
+        skip(5);
+      } else if (e.code === 'ArrowLeft') {
+        skip(-5);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [togglePlay]);
 
   const fetchAllMetadata = useCallback(async () => {
     setIsLoadingMetadata(true);
@@ -413,8 +558,8 @@ export default function VideoLessonPage() {
         {/* Header - Inclusive Title */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
-              <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight italic">
-                Bài học <span className="text-[#FF4F6E]">trực quan</span> nâng cao
+              <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">
+                BÀI HỌC <span className="text-[#FF4F6E]">TRỰC QUAN</span> NÂNG CAO
               </h1>
            </div>
            {/* Sign Language toggle removed per user request */}
@@ -424,10 +569,15 @@ export default function VideoLessonPage() {
           {/* Left Column: Player & Smart Content (Wider) */}
           <div className="lg:col-span-7 space-y-8">
             
-            {/* Main Video Player — Giai đoạn D: ưu tiên /api/video/[id] khớp file đã upload */}
-            <div className="bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group">
+            <div 
+              className="video-container-premium bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group cursor-pointer"
+              onMouseMove={handleUserActivity}
+              onMouseEnter={() => setShowControls(true)}
+              onMouseLeave={() => isPlaying && setShowControls(false)}
+              onClick={togglePlay}
+            >
               {videoSourceMode === 'demo' && (
-                <div className="absolute top-4 left-4 z-20 pointer-events-none rounded-full bg-amber-500/95 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 shadow-lg max-w-[90%]">
+                <div className="absolute top-4 left-4 z-20 pointer-events-none rounded-full bg-amber-500/95 text-white text-[10px] font-extrabold uppercase tracking-widest px-4 py-2 shadow-lg max-w-[90%]">
                   Chế độ demo: không tìm thấy file video trên máy chủ, hệ thống đang phát video mẫu.
                 </div>
               )}
@@ -436,10 +586,14 @@ export default function VideoLessonPage() {
                 key={`${videoId}-${videoSourceMode}`}
                 ref={videoRef}
                 onTimeUpdate={handleTimeUpdate}
-                className={cn('w-full h-full object-cover opacity-90', videoBroken && 'hidden')}
-                controls
+                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
+                className={cn('w-full h-full object-cover transition-opacity duration-500', videoBroken && 'hidden', isPlaying ? 'opacity-100' : 'opacity-80')}
                 src={videoSrc}
                 preload="metadata"
+                playsInline
                 onError={() => {
                   if (videoSourceModeRef.current === 'byId') {
                     setVideoSourceMode('demo');
@@ -449,15 +603,121 @@ export default function VideoLessonPage() {
                 }}
               />
 
-              {/* Subtitle Overlay - bottom-center with realtime word reveal */}
+              {/* Big Center Play Button (only when paused or hovering) */}
+              <div className={cn(
+                "absolute inset-0 flex items-center justify-center z-20 transition-all duration-300 pointer-events-none",
+                (!isPlaying || showControls) ? "opacity-100 scale-100" : "opacity-0 scale-90"
+              )}>
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 shadow-2xl">
+                  {isPlaying ? <Pause size={32} className="text-white fill-white" /> : <Play size={32} className="text-white fill-white ml-1" />}
+                </div>
+              </div>
+
+              {/* Custom Controls Bar */}
+              <div className={cn(
+                "absolute bottom-0 left-0 right-0 z-40 p-6 pt-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-all duration-500",
+                showControls ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0 pointer-events-none"
+              )}>
+                {/* Progress Bar */}
+                <div className="relative group/progress mb-4">
+                   <input 
+                     type="range"
+                     min="0"
+                     max={duration || 0}
+                     step="0.1"
+                     value={currentTime}
+                     onChange={(e) => handleSeek(parseFloat(e.target.value))}
+                     className="absolute inset-0 w-full h-1.5 opacity-0 cursor-pointer z-10"
+                     onClick={(e) => e.stopPropagation()}
+                   />
+                   <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#FF4F6E] to-[#FF8C94] relative"
+                        style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+                      >
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg scale-0 group-hover/progress:scale-100 transition-transform" />
+                      </div>
+                   </div>
+                </div>
+
+                <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                   <div className="flex items-center gap-6">
+                      <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform">
+                        {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+                      </button>
+                      
+                      <div className="flex items-center gap-2">
+                        <button onClick={toggleMute} className="text-white/80 hover:text-white transition-colors">
+                          {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                        </button>
+                        <input 
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={isMuted ? 0 : volume}
+                          onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                          className="w-16 h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-[#FF4F6E]"
+                        />
+                      </div>
+
+                      <div className="text-[12px] font-extrabold text-white/70 tracking-widest font-heading">
+                        {formatTime(currentTime)} <span className="mx-1 opacity-30">/</span> {formatTime(duration)}
+                      </div>
+                   </div>
+
+                   <div className="flex items-center gap-4 relative">
+                      {/* Speed Selection Menu */}
+                      {showSpeedMenu && (
+                        <div className="absolute bottom-full mb-4 right-0 bg-slate-900/95 backdrop-blur-md rounded-2xl p-2 border border-white/10 shadow-2xl min-w-[100px] z-[60] flex flex-col gap-1 overflow-hidden">
+                          {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
+                            <button
+                              key={speed}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePlaybackSpeedChange(speed);
+                              }}
+                              className={cn(
+                                "px-4 py-2 text-[11px] font-extrabold rounded-xl transition-all text-left",
+                                playbackSpeed === speed 
+                                  ? "bg-[#FF4F6E] text-white" 
+                                  : "text-white/60 hover:bg-white/10 hover:text-white"
+                              )}
+                            >
+                              {speed === 1 ? 'Chuẩn' : `${speed}x`}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowSpeedMenu(!showSpeedMenu);
+                        }} 
+                        className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-[10px] font-black text-white/90 transition-colors font-heading"
+                      >
+                        {playbackSpeed === 1 ? '1x' : `${playbackSpeed}x`}
+                      </button>
+                      <button onClick={toggleFullscreen} className="text-white/80 hover:text-white hover:scale-110 transition-transform">
+                        <Maximize size={20} />
+                      </button>
+                   </div>
+                </div>
+              </div>
+
+              {/* Subtitle Overlay - moved up slightly to avoid overlapping controls */}
               {activeSegment && (
                 <div
                   key={`${activeSegment.start}-${activeSegment.end}`}
-                  className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[92%] md:w-[86%] pointer-events-none z-30"
+                  className={cn(
+                    "absolute left-1/2 -translate-x-1/2 w-[92%] md:w-[86%] pointer-events-none z-30 transition-all duration-500",
+                    showControls ? "bottom-24" : "bottom-12"
+                  )}
                 >
                   <div className="px-1 md:px-2 py-1">
                     <div className="flex items-center gap-2 justify-center">
-                      <p className="text-center text-xs md:text-sm font-black leading-relaxed tracking-tight text-white">
+                      <p className="text-center text-xs md:text-sm font-extrabold leading-relaxed tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                       {visibleCaptionWords.map((word, idx) => (
                         <span
                           key={`${word}-${idx}`}
@@ -477,12 +737,12 @@ export default function VideoLessonPage() {
               <div
                 id="video-fallback"
                 className={cn(
-                  'absolute inset-0 flex flex-col items-center justify-center text-white/50',
+                  'absolute inset-0 flex flex-col items-center justify-center text-white/50 z-10',
                   !videoBroken && 'hidden'
                 )}
               >
                  <Film size={64} className="mb-6 opacity-30" />
-                 <p className="font-black tracking-[0.2em] uppercase text-sm">Không thể phát video</p>
+                 <p className="font-extrabold tracking-[0.2em] uppercase text-sm">Không thể phát video</p>
                  <p className="text-[11px] mt-3 max-w-xs text-center opacity-60 font-bold">The video file appears to be corrupted or missing.</p>
               </div>
               
@@ -501,7 +761,7 @@ export default function VideoLessonPage() {
                         <Sparkles size={32} />
                      </div>
                      <div className="space-y-1">
-                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Trí tuệ trực quan</h3>
+                        <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">TRÍ TUỆ TRỰC QUAN</h3>
                         <p className="text-sm font-bold text-slate-400 uppercase tracking-widest text-[10px]">Tóm tắt AI tức thì cho người học trực quan</p>
                      </div>
                   </div>
@@ -509,7 +769,7 @@ export default function VideoLessonPage() {
                   <button 
                     onClick={handleGetSummary}
                     disabled={isLoadingSummary}
-                    className="w-full md:w-auto px-10 py-5 bg-[#FF4F6E] text-white rounded-[24px] font-black text-sm uppercase tracking-widest shadow-2xl shadow-[#FF4F6E]/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                    className="w-full md:w-auto px-10 py-5 bg-[#FF4F6E] text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-2xl shadow-[#FF4F6E]/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
                   >
                     {isLoadingSummary ? (
                       <>
@@ -519,7 +779,7 @@ export default function VideoLessonPage() {
                     ) : (
                       <>
                         <Zap size={20} fill="currentColor" />
-                        Tạo tóm tắt bằng AI
+                        TẠO TÓM TẮT BẰNG AI
                       </>
                     )}
                   </button>
@@ -552,14 +812,14 @@ export default function VideoLessonPage() {
                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-900 shadow-sm">
                             <Target size={24} />
                          </div>
-                         <h3 className="text-2xl font-black text-slate-900 tracking-tight">Mục tiêu bài giảng</h3>
+                         <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">MỤC TIÊU BÀI GIẢNG</h3>
                       </div>
                       <p className="text-base md:text-lg font-bold text-slate-600 leading-relaxed italic mb-6 max-w-3xl">
                         &ldquo;{briefing.objective}&rdquo;
                       </p>
                       <div className="flex flex-wrap gap-2">
                          {briefing.key_terms.map((term, i) => (
-                           <span key={i} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-500 uppercase tracking-widest shadow-sm">
+                           <span key={i} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-extrabold text-slate-500 uppercase tracking-widest shadow-sm">
                              {term}
                            </span>
                          ))}
@@ -583,7 +843,7 @@ export default function VideoLessonPage() {
                          key={tab.id}
                          onClick={() => setActiveTab(tab.id)}
                          className={cn(
-                           "pb-6 text-[12px] font-black uppercase tracking-[0.15em] transition-all relative flex items-center gap-3 shrink-0",
+                           "pb-6 text-[12px] font-extrabold uppercase tracking-[0.15em] transition-all relative flex items-center gap-3 shrink-0",
                            activeTab === tab.id ? "text-[#FF4F6E]" : "text-slate-400 hover:text-slate-600"
                          )}
                        >
@@ -604,10 +864,10 @@ export default function VideoLessonPage() {
                               onClick={() => seekTo(item.time)}
                               className="flex items-start gap-5 p-6 rounded-[28px] bg-slate-50 border border-transparent hover:border-[#FF4F6E]/30 hover:bg-white hover:shadow-2xl hover:shadow-[#FF4F6E]/5 transition-all cursor-pointer group"
                             >
-                               <div className="w-16 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-[11px] font-black text-[#FF4F6E] group-hover:bg-[#FF4F6E] group-hover:text-white transition-colors shrink-0">
+                               <div className="w-16 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-[11px] font-extrabold text-[#FF4F6E] group-hover:bg-[#FF4F6E] group-hover:text-white transition-colors shrink-0">
                                   {item.time}
                                </div>
-                               <span className="text-base font-black text-slate-700 group-hover:text-slate-900 leading-snug pt-1">{item.title}</span>
+                               <span className="text-base font-extrabold text-slate-700 group-hover:text-slate-900 leading-snug pt-1">{item.title}</span>
                             </div>
                           ))}
                        </div>
@@ -624,11 +884,11 @@ export default function VideoLessonPage() {
                                </div>
                                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                                   <div className="w-24 h-24 bg-white rounded-[28px] shadow-xl shadow-[#FF4F6E]/10 flex flex-col items-center justify-center shrink-0 border border-[#FF4F6E]/20">
-                                     <span className="text-[10px] font-black text-[#FF4F6E] uppercase tracking-widest mb-1">Trọng tâm</span>
-                                     <span className="text-xl font-black text-slate-900">{item.time}</span>
+                                     <span className="text-[10px] font-extrabold text-[#FF4F6E] uppercase tracking-widest mb-1">Trọng tâm</span>
+                                     <span className="text-xl font-extrabold text-slate-900">{item.time}</span>
                                   </div>
                                   <div className="space-y-3">
-                                     <h4 className="text-2xl font-black text-slate-900 leading-tight">{item.reason}</h4>
+                                     <h4 className="text-2xl font-extrabold text-slate-900 leading-tight">{item.reason}</h4>
                                      <p className="text-base font-bold text-slate-500 italic">&ldquo;{item.context}&rdquo;</p>
                                   </div>
                                </div>
@@ -647,19 +907,19 @@ export default function VideoLessonPage() {
                                   <div className="w-14 h-14 bg-amber-50 rounded-3xl flex items-center justify-center text-amber-500">
                                      <HelpCircle size={28} />
                                   </div>
-                                  <span className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Công cụ làm rõ</span>
+                                  <span className="text-sm font-extrabold text-slate-400 uppercase tracking-[0.2em]">Công cụ làm rõ</span>
                                </div>
                                <div className="grid md:grid-cols-2 gap-10 items-start">
                                   <div className="opacity-50">
-                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Ngữ cảnh gốc</p>
+                                     <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Ngữ cảnh gốc</p>
                                      <p className="text-base font-bold text-slate-500 line-through leading-relaxed">{item.original}</p>
                                   </div>
                                   <div className="p-8 bg-amber-50/50 rounded-[32px] border border-amber-100 relative">
                                      <div className="absolute top-0 right-0 p-4 opacity-10">
                                         <Sparkles size={40} className="text-amber-500" />
                                      </div>
-                                     <p className="text-xs font-black text-amber-600 uppercase tracking-widest mb-3">Cách hiểu trực quan</p>
-                                     <p className="text-xl font-black text-slate-900 leading-tight">{item.rephrased}</p>
+                                     <p className="text-xs font-extrabold text-amber-600 uppercase tracking-widest mb-3">Cách hiểu trực quan</p>
+                                     <p className="text-xl font-extrabold text-slate-900 leading-tight">{item.rephrased}</p>
                                   </div>
                                </div>
                             </div>
@@ -676,7 +936,7 @@ export default function VideoLessonPage() {
                           {!isLoadingMetadata && !metadataError && flashcards.length > 0 && (
                             <>
                               <div className="flex items-center justify-center">
-                                <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-black">
+                                <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-extrabold">
                                   Thẻ {currentFlashcardIndex + 1} / {flashcards.length}
                                 </p>
                               </div>
@@ -748,8 +1008,8 @@ export default function VideoLessonPage() {
                                         <div className="absolute bottom-4 left-4 rounded-full bg-white/50 dark:bg-slate-900/45 p-1.5 border border-white/50 dark:border-slate-400/30">
                                           <Lightbulb size={14} className="text-amber-500 dark:text-amber-300" />
                                         </div>
-                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-black mb-3">Câu hỏi</p>
-                                        <p className="text-lg md:text-xl font-black text-slate-900 dark:text-slate-50 leading-snug">
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-extrabold mb-3">Câu hỏi</p>
+                                        <p className="text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 leading-snug">
                                         {flashcards[currentFlashcardIndex].front}
                                         </p>
                                         {flashcards[currentFlashcardIndex].hint ? (
@@ -776,8 +1036,8 @@ export default function VideoLessonPage() {
                                         <div className="absolute bottom-4 left-4 rounded-full bg-black/30 dark:bg-white/10 p-1.5 border border-white/25">
                                           <Rocket size={14} className="text-emerald-200 dark:text-emerald-300" />
                                         </div>
-                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-black mb-3">Đáp án</p>
-                                        <p className="text-base md:text-lg font-black text-white dark:text-slate-50 leading-snug">
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-extrabold mb-3">Đáp án</p>
+                                        <p className="text-base md:text-lg font-extrabold text-white dark:text-slate-50 leading-snug">
                                           {flashcards[currentFlashcardIndex].back}
                                         </p>
                                       </div>
@@ -815,7 +1075,7 @@ export default function VideoLessonPage() {
                              <div className="rounded-3xl border border-slate-200 bg-white p-5">
                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                  <div>
-                                   <p className="text-sm font-black text-slate-900">Generate Video</p>
+                                   <p className="text-sm font-extrabold text-slate-900">Generate Video</p>
                                    <p className="text-xs font-bold text-slate-500">
                                      Tạo video avatar từ dữ liệu VSL của bài học này.
                                    </p>
@@ -825,7 +1085,7 @@ export default function VideoLessonPage() {
                                    onClick={handleGenerateAvatarVideo}
                                    disabled={isGeneratingAvatar}
                                    className={cn(
-                                     'rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-widest transition-all',
+                                     'rounded-2xl px-5 py-3 text-xs font-extrabold uppercase tracking-widest transition-all',
                                      isGeneratingAvatar
                                        ? 'cursor-not-allowed bg-slate-200 text-slate-500'
                                        : 'bg-[#FF4F6E] text-white hover:bg-[#e64663]'
@@ -841,7 +1101,7 @@ export default function VideoLessonPage() {
 
                              {avatarVideoUrl && (
                                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                                 <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">
+                                 <p className="mb-3 text-xs font-extrabold uppercase tracking-widest text-slate-500">
                                    Avatar Video Preview
                                  </p>
                                  <video
@@ -853,21 +1113,21 @@ export default function VideoLessonPage() {
                              )}
 
                              <div className="flex flex-col items-center gap-4">
-                               <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-black text-center">
+                               <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-extrabold text-center">
                                  Đồng bộ theo thời gian phát video
                                </p>
                                <SignAvatar2D vslData={handsignGlosses} currentTime={currentTime} />
                                <button
                                  type="button"
                                  onClick={handleDownloadHandsSignExport}
-                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white text-xs font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
+                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white text-xs font-extrabold text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
                                >
                                  <Download size={14} />
                                  Tải manifest render (JSON)
                                </button>
                              </div>
                              <div>
-                               <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Chuỗi gloss</p>
+                               <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Chuỗi gloss</p>
                                <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1">
                                  {handsignGlosses.map((g, i) => {
                                    const nextT = handsignGlosses[i + 1]?.time ?? Infinity;
@@ -916,7 +1176,7 @@ export default function VideoLessonPage() {
                       <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", rightPanelTab === 'transcript' ? "bg-slate-900 text-white shadow-lg" : "bg-slate-200 text-slate-500")}>
                          <FileText size={20} />
                       </div>
-                      <span className="text-sm font-black uppercase tracking-widest">Phụ đề</span>
+                      <span className="text-sm font-extrabold uppercase tracking-widest">Phụ đề</span>
                    </button>
                    <button 
                      onClick={() => setRightPanelTab('lessons')}
@@ -928,7 +1188,7 @@ export default function VideoLessonPage() {
                       <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", rightPanelTab === 'lessons' ? "bg-slate-900 text-white shadow-lg" : "bg-slate-200 text-slate-500")}>
                          <List size={20} />
                       </div>
-                      <span className="text-sm font-black uppercase tracking-widest">Bài học</span>
+                      <span className="text-sm font-extrabold uppercase tracking-widest">Bài học</span>
                    </button>
                 </div>
                 <div className="px-8 pt-4">
@@ -942,7 +1202,7 @@ export default function VideoLessonPage() {
                           disabled={!enabled}
                           onClick={() => enabled && setLanguage(lang)}
                           className={cn(
-                            "px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-colors",
+                            "px-3 py-1.5 text-xs font-extrabold uppercase tracking-widest rounded-lg transition-colors",
                             language === lang ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700",
                             !enabled && "opacity-40 cursor-not-allowed hover:text-slate-500"
                           )}
@@ -971,14 +1231,14 @@ export default function VideoLessonPage() {
                                 )}
                               >
                                  <span className={cn(
-                                   "text-[10px] font-black uppercase tracking-[0.2em] mb-3 block",
+                                   "text-[10px] font-extrabold uppercase tracking-[0.2em] mb-3 block",
                                    isActive ? "text-white/70" : "text-[#FF4F6E]"
                                  )}>
                                    {formatTime(s.start)}
                                  </span>
                                  <p className={cn(
                                    "text-base leading-relaxed",
-                                   isActive ? "font-black" : "font-bold"
+                                   isActive ? "font-extrabold" : "font-bold"
                                  )}>
                                     {s.text}
                                  </p>
