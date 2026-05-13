@@ -34,6 +34,47 @@ interface TranscriptSegment {
   text: string;
 }
 
+type TranscriptByLanguage = Record<string, TranscriptSegment[]>;
+
+function isMostlyEnglish(text: string): boolean {
+  const t = (text || "").trim();
+  if (!t) return false;
+  const asciiLetters = (t.match(/[A-Za-z]/g) || []).length;
+  const viChars = (t.match(/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/gi) || []).length;
+  return asciiLetters > 25 && viChars < 5;
+}
+
+function splitSentences(text: string): string[] {
+  return (text || "")
+    .split(/(?<=[.!?。！？])\s+|\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function alignTextToTimeline(sourceText: string, timelineSegments: TranscriptSegment[]): TranscriptSegment[] {
+  const parts = splitSentences(sourceText);
+  if (parts.length === 0) return timelineSegments;
+  const result: TranscriptSegment[] = [];
+  const totalChars = parts.reduce((acc, p) => acc + p.length, 0);
+  let cursor = 0;
+  for (const seg of timelineSegments) {
+    const segDuration = Math.max(0.2, seg.end - seg.start);
+    const ratio = segDuration / Math.max(0.2, timelineSegments[timelineSegments.length - 1].end - timelineSegments[0].start);
+    const charsForSeg = Math.max(8, Math.round(totalChars * ratio));
+    let text = "";
+    while (cursor < parts.length && text.length < charsForSeg) {
+      text += (text ? " " : "") + parts[cursor];
+      cursor += 1;
+    }
+    if (!text && cursor < parts.length) {
+      text = parts[cursor];
+      cursor += 1;
+    }
+    result.push({ ...seg, text: text || seg.text });
+  }
+  return result;
+}
+
 interface TimelineItem {
   time: string;
   title: string;
@@ -89,7 +130,8 @@ export default function VideoLessonPage() {
   
   // Data state
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
-  const [language, setLanguage] = useState('');
+  const [language, setLanguage] = useState('vi');
+  const [segmentsByLanguage, setSegmentsByLanguage] = useState<TranscriptByLanguage>({});
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [highlights, setHighlights] = useState<HighlightItem[]>([]);
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
@@ -123,9 +165,44 @@ export default function VideoLessonPage() {
     const fetchTranscript = async () => {
       try {
         const data = await api.videos.getTranscript(videoId);
-        if (data.segments) {
-          setSegments(data.segments);
-          setLanguage(data.language || 'vi');
+        const fromApi = (data.segments_by_language || {}) as TranscriptByLanguage;
+        const normalized: TranscriptByLanguage = { ...fromApi };
+
+        if (!normalized.vi && Array.isArray(data.segments)) normalized.vi = data.segments;
+
+        // Legacy transcript compatibility:
+        // Some old files store mixed EN/VI in one segments array.
+        if (Array.isArray(data.segments) && !fromApi.en) {
+          const enSegments = data.segments.filter((s: TranscriptSegment) => isMostlyEnglish(s.text));
+          if (enSegments.length >= 3) {
+            normalized.en = enSegments;
+            if (!fromApi.vi) {
+              const viSegments = data.segments.filter((s: TranscriptSegment) => !isMostlyEnglish(s.text));
+              normalized.vi = viSegments.length > 0 ? viSegments : data.segments;
+            }
+            // Fallback for corrupted legacy transcript.
+            if ((normalized.vi?.length || 0) <= 1 && enSegments.length > 3) {
+              const longViText = normalized.vi?.[0]?.text || "";
+              normalized.vi = longViText
+                ? alignTextToTimeline(longViText, enSegments)
+                : enSegments;
+            }
+          }
+        }
+
+        const availableLangs = Object.keys(normalized).filter(
+          (k) => Array.isArray(normalized[k]) && normalized[k].length > 0
+        );
+        const sourceLang = String(data.source_language || '').toLowerCase();
+        const defaultLang = availableLangs.includes(sourceLang)
+          ? sourceLang
+          : (availableLangs.includes('vi') ? 'vi' : (availableLangs[0] || data.language || 'vi'));
+
+        setSegmentsByLanguage(normalized);
+        setLanguage(defaultLang);
+        setSegments(normalized[defaultLang] || data.segments || []);
+        if (!data.segments && availableLangs.length === 0) {
+          setSegments([]);
         }
       } catch (err) {
         console.error('Transcript fetch error:', err);
@@ -136,6 +213,14 @@ export default function VideoLessonPage() {
 
     fetchTranscript();
   }, [videoId]);
+
+  useEffect(() => {
+    if (!language) return;
+    const next = segmentsByLanguage[language];
+    if (Array.isArray(next)) {
+      setSegments(next);
+    }
+  }, [language, segmentsByLanguage]);
 
   useEffect(() => {
     setVideoSourceMode('byId');
@@ -370,12 +455,9 @@ export default function VideoLessonPage() {
                   key={`${activeSegment.start}-${activeSegment.end}`}
                   className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[92%] md:w-[86%] pointer-events-none z-30"
                 >
-                  <div className="rounded-2xl border border-white/15 bg-slate-900/24 dark:bg-slate-950/28 backdrop-blur-sm px-4 md:px-5 py-2.5 shadow-[0_6px_16px_rgba(0,0,0,0.18)]">
-                    <div className="flex items-center gap-3">
-                      <span className="shrink-0 rounded-lg bg-white/18 px-2 py-1 text-[11px] md:text-xs font-black text-white/95 tabular-nums">
-                        {formatTime(activeSegment.start)}
-                      </span>
-                      <p className="text-left text-xs md:text-sm font-black leading-relaxed tracking-tight text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.45)]">
+                  <div className="px-1 md:px-2 py-1">
+                    <div className="flex items-center gap-2 justify-center">
+                      <p className="text-center text-xs md:text-sm font-black leading-relaxed tracking-tight text-white">
                       {visibleCaptionWords.map((word, idx) => (
                         <span
                           key={`${word}-${idx}`}
@@ -848,6 +930,28 @@ export default function VideoLessonPage() {
                       </div>
                       <span className="text-sm font-black uppercase tracking-widest">Bài học</span>
                    </button>
+                </div>
+                <div className="px-8 pt-4">
+                  <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                    {["vi", "en"].map((lang) => {
+                      const enabled = Array.isArray(segmentsByLanguage[lang]) && segmentsByLanguage[lang].length > 0;
+                      return (
+                        <button
+                          key={lang}
+                          type="button"
+                          disabled={!enabled}
+                          onClick={() => enabled && setLanguage(lang)}
+                          className={cn(
+                            "px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-colors",
+                            language === lang ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700",
+                            !enabled && "opacity-40 cursor-not-allowed hover:text-slate-500"
+                          )}
+                        >
+                          {lang.toUpperCase()}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">

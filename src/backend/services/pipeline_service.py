@@ -53,22 +53,51 @@ async def run_video_pipeline(video_id: str, video_path: Path | str):
             transcript_data = await loop.run_in_executor(
                 executor, _run_transcription_sync, audio_path, video_id
             )
+            original_transcript = transcript_data
+            source_language = (original_transcript.get("language") or "").lower()
+            if source_language == "vi":
+                vi_transcript = original_transcript
+                en_transcript = await AIService.translate_transcript_to_language_json(
+                    original_transcript, "en"
+                )
+            else:
+                en_transcript = original_transcript if source_language == "en" else None
+                vi_transcript = await AIService.translate_transcript_to_language_json(
+                    original_transcript, "vi"
+                )
+                if en_transcript is None:
+                    en_transcript = await AIService.translate_transcript_to_language_json(
+                        vi_transcript, "en"
+                    )
 
-            if transcript_data.get("language") != "vi":
-                transcript_data = await AIService.translate_transcript_to_vi(transcript_data)
+            stored_transcript = AIService.build_bilingual_transcript(
+                original_transcript=en_transcript if (en_transcript and en_transcript.get("language") == "en") else original_transcript,
+                vi_transcript=vi_transcript,
+            )
+            if isinstance(stored_transcript, dict):
+                segments_by_language = stored_transcript.get("segments_by_language", {})
+                if en_transcript and en_transcript.get("language") == "en":
+                    segments_by_language["en"] = en_transcript.get("segments", [])
+                if vi_transcript and vi_transcript.get("language") == "vi":
+                    segments_by_language["vi"] = vi_transcript.get("segments", [])
+                stored_transcript["segments_by_language"] = segments_by_language
+                stored_transcript["available_languages"] = sorted(
+                    [k for k, v in segments_by_language.items() if isinstance(v, list) and len(v) > 0]
+                )
+                stored_transcript["source_language"] = source_language or stored_transcript.get("source_language")
 
             update_status("ai_processing")
             summary, metadata, briefing, notebook_data, handsign_data = await asyncio.gather(
-                AIService.summarize(transcript_data),
-                AIService.process_all_lecture_metadata(transcript_data),
-                AIService.generate_pre_lecture_briefing(transcript_data),
-                AIService.generate_notebook_data(transcript_data),
-                AIService.generate_handsign_data(transcript_data),
+                AIService.summarize(vi_transcript),
+                AIService.process_all_lecture_metadata(vi_transcript),
+                AIService.generate_pre_lecture_briefing(vi_transcript),
+                AIService.generate_notebook_data(vi_transcript),
+                AIService.generate_handsign_data(vi_transcript),
             )
 
             lecture_entry = LectureData(
                 video_id=video_id,
-                transcript=transcript_data,
+                transcript=stored_transcript,
                 summary=summary,
                 timeline=metadata.get("timeline"),
                 highlights=metadata.get("highlights"),

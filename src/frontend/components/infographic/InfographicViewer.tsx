@@ -62,7 +62,6 @@ const IconMap: Record<string, React.ElementType> = {
 
 export function InfographicViewer({ data }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [level, setLevel] = useState<LearnerLevel>('intermediate');
   const [isDownloading, setIsDownloading] = useState(false);
 
   // Use defaults if missing
@@ -113,24 +112,7 @@ export function InfographicViewer({ data }: Props) {
   return (
     <div className="space-y-6">
       {/* Controls Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
-        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-2xl">
-          {(['beginner', 'intermediate', 'advanced'] as LearnerLevel[]).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLevel(l)}
-              className={cn(
-                "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                level === l 
-                  ? "bg-white text-slate-900 shadow-sm" 
-                  : "text-slate-400 hover:text-slate-600"
-              )}
-            >
-              {l === 'beginner' ? 'Cơ bản' : l === 'intermediate' ? 'Trung cấp' : 'Nâng cao'}
-            </button>
-          ))}
-        </div>
-        
+      <div className="flex flex-col sm:flex-row justify-end items-center gap-4 bg-white p-4 rounded-3xl shadow-sm border border-slate-100">
         <button
           onClick={handleDownload}
           disabled={isDownloading}
@@ -163,11 +145,7 @@ export function InfographicViewer({ data }: Props) {
             <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight max-w-3xl">
               {title}
             </h2>
-            {level === 'beginner' && (
-              <p className="mt-4 text-white/80 font-medium max-w-2xl text-sm md:text-base">
-                Chế độ này giúp bạn nắm nhanh bức tranh tổng quan trước khi đi sâu vào chi tiết.
-              </p>
-            )}
+
           </div>
         </div>
 
@@ -235,7 +213,7 @@ export function InfographicViewer({ data }: Props) {
                           <h4 className="text-xl font-black text-slate-900 mb-2">{section.label}</h4>
                           {section.value && <p className={cn("text-2xl font-black mb-2", textClass)}>{section.value}</p>}
                           <p className="text-slate-500 font-medium leading-relaxed">{section.description}</p>
-                          {(level === 'advanced' || level === 'intermediate') && section.advanced_detail && (
+                          {section.advanced_detail && (
                              <div className={cn("mt-4 p-4 rounded-2xl text-sm font-medium border border-slate-100", bgLightClass, textClass)}>
                                {section.advanced_detail}
                              </div>
@@ -250,14 +228,14 @@ export function InfographicViewer({ data }: Props) {
                {sections.map((section, i) => {
                   const IconComp = section.icon && IconMap[section.icon] ? IconMap[section.icon] : Layers;
                   return (
-                    <motion.div key={i} variants={itemVariants} className={cn("p-8 rounded-[32px] border-2 transition-all hover:shadow-xl", i === 0 ? "border-slate-100" : `border-${category}-100 ${bgLightClass}`)}>
-                       <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6", i === 0 ? "bg-slate-100 text-slate-600" : `bg-white ${textClass} shadow-md`)}>
+                    <motion.div key={i} variants={itemVariants} className={cn("p-8 rounded-[32px] border-2 transition-all hover:shadow-xl border-slate-100 bg-white")}>
+                       <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 bg-white shadow-md", textClass)}>
                           <IconComp size={24} />
                        </div>
                        <h4 className="text-2xl font-black text-slate-900 mb-2">{section.label}</h4>
                        {section.value && <p className={cn("text-3xl font-black mb-4", i === 0 ? "text-slate-600" : textClass)}>{section.value}</p>}
                        <p className="text-slate-500 font-medium leading-relaxed">{section.description}</p>
-                       {level === 'advanced' && section.advanced_detail && (
+                       {section.advanced_detail && (
                           <div className="mt-6 pt-6 border-t border-slate-200/50">
                              <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Phân tích sâu</p>
                              <p className="text-sm font-medium text-slate-600">{section.advanced_detail}</p>
@@ -284,7 +262,7 @@ export function InfographicViewer({ data }: Props) {
                         </div>
                         <h4 className="text-lg font-black text-slate-900 mb-2 uppercase tracking-widest text-[11px]">{section.label}</h4>
                         <p className="text-slate-600 font-medium text-sm leading-relaxed">{section.description}</p>
-                        {(level === 'advanced' || level === 'intermediate') && section.advanced_detail && (
+                        {section.advanced_detail && (
                            <div className="mt-4 text-xs font-medium text-slate-500 border-l-2 border-slate-200 pl-3">
                              {section.advanced_detail}
                            </div>

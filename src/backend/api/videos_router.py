@@ -163,7 +163,13 @@ async def get_transcript(
     lecture = session.get(LectureData, video_id)
     if not lecture or not lecture.transcript:
         return {"video_id": video_id, "message": "Phu de chua san sang."}
-    return lecture.transcript
+    transcript = lecture.transcript
+    if isinstance(transcript, dict) and "segments_by_language" not in transcript:
+        segments = transcript.get("segments", [])
+        lang = transcript.get("language", "vi")
+        transcript["segments_by_language"] = {lang: segments}
+        transcript["available_languages"] = [lang]
+    return transcript
 
 
 @router.get("/{video_id}/summary")
