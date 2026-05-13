@@ -17,6 +17,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 from src.backend.services.video_service import VideoService
 from src.backend.services.ai_service import AIService
+from src.backend.services.handsign_animation_service import (
+    expand_handsign_segments,
+    build_render_manifest,
+)
 from src.backend import config
 from src.backend.database import create_db_and_tables, get_session
 from src.backend.models import User, Video, LectureData, Flashcard
@@ -518,6 +522,42 @@ async def get_handsign_data(
         "video_id": video_id, 
         "handsign_data": lecture.handsign_data
     }
+
+
+@app.get("/api/videos/{video_id}/handsign-segments")
+async def get_handsign_segments(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Giai đoạn 0/1: chuỗi gloss mở rộng thành các đoạn [start, end] để nội suy tay / export render.
+    """
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    raw = lecture.handsign_data if lecture and lecture.handsign_data else []
+    if not isinstance(raw, list):
+        raw = []
+    segments = expand_handsign_segments(raw)
+    return {"video_id": video_id, "segments": segments}
+
+
+@app.get("/api/videos/{video_id}/handsign-export")
+async def get_handsign_export_manifest(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Giai đoạn 1: manifest JSON (timeline + HamNoSys) cho Blender/Unity — không render trong API.
+    """
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    raw = lecture.handsign_data if lecture and lecture.handsign_data else []
+    if not isinstance(raw, list):
+        raw = []
+    segments = expand_handsign_segments(raw)
+    return build_render_manifest(video_id, segments)
 
 
 if __name__ == "__main__":

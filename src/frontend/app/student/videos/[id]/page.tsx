@@ -19,6 +19,7 @@ import {
   Brain,
   Lightbulb,
   Rocket,
+  Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
@@ -233,6 +234,21 @@ export default function VideoLessonPage() {
       setIsLoadingSummary(false);
     }
   };
+
+  const handleDownloadHandsSignExport = useCallback(async () => {
+    try {
+      const manifest = await api.videos.getHandsSignExport(videoId);
+      const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `handsign-export-${videoId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Hands sign export download error:', err);
+    }
+  }, [videoId]);
 
   const activeSegment = useMemo(
     () => segments.find((s) => currentTime >= s.start && currentTime <= s.end),
@@ -675,6 +691,14 @@ export default function VideoLessonPage() {
                                  Synced to video playback time
                                </p>
                                <SignAvatar2D vslData={handsignGlosses} currentTime={currentTime} />
+                               <button
+                                 type="button"
+                                 onClick={handleDownloadHandsSignExport}
+                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white text-xs font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
+                               >
+                                 <Download size={14} />
+                                 Tải manifest render (JSON)
+                               </button>
                              </div>
                              <div>
                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Gloss sequence</p>

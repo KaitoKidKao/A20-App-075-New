@@ -40,6 +40,27 @@ export interface HandsSignResponse {
   handsign_data: HandsSignGloss[];
 }
 
+export interface HandsSignSegment {
+  start: number;
+  end: number;
+  word: string;
+  vsl_info: VSLInfo | null;
+  hamnosys_hand?: string | null;
+}
+
+export interface HandsSignSegmentsResponse {
+  video_id: string;
+  segments: HandsSignSegment[];
+}
+
+export interface HandsSignExportManifest {
+  schema: string;
+  video_id: string;
+  fps: number;
+  segments: HandsSignSegment[];
+  notes?: string;
+}
+
 const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   const storage = localStorage.getItem('udl-app-storage');
@@ -211,6 +232,22 @@ export const api = {
         headers: getHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch sign language data.');
+      return res.json();
+    },
+
+    async getHandsSignSegments(videoId: string): Promise<HandsSignSegmentsResponse> {
+      const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/handsign-segments`, {
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to fetch handsign segments.');
+      return res.json();
+    },
+
+    async getHandsSignExport(videoId: string): Promise<HandsSignExportManifest> {
+      const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/handsign-export`, {
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to fetch handsign export manifest.');
       return res.json();
     },
   },
