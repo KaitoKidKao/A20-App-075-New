@@ -33,7 +33,7 @@ def verify_features():
             response = requests.get(url, timeout=60)
             if response.status_code == 200:
                 data = response.json()
-                print(f"✅ Thành công!")
+                print("✅ Thành công!")
                 key = name.lower()
                 content = data.get(key, data)
                 print(json.dumps(content, indent=2, ensure_ascii=False)[:500] + "...")

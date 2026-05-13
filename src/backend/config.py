@@ -1,17 +1,37 @@
 import os
+import secrets
 from dotenv import load_dotenv
 
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "")
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-5-nano")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
 UPLOADS_DIR = "data/uploads"
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 # --- Auth ---
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-for-development-only")
+ENVIRONMENT = os.getenv("ENVIRONMENT", os.getenv("ENV", "development")).lower()
+SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if ENVIRONMENT in {"production", "prod"}:
+        raise RuntimeError("SECRET_KEY is required in production.")
+    # Dev fallback is generated per process (not hardcoded)
+    SECRET_KEY = secrets.token_urlsafe(64)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "500"))
+AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "access_token")
+AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
+AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "lax")
 
-# --- System Admin (Auto-init) ---
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@a20.ai")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+def _parse_cors_origins(raw: str) -> list[str]:
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+_default_dev_origins = "http://localhost:3000,http://127.0.0.1:3000"
+CORS_ALLOW_ORIGINS = _parse_cors_origins(os.getenv("CORS_ALLOW_ORIGINS", _default_dev_origins))
+if ENVIRONMENT in {"production", "prod"} and not CORS_ALLOW_ORIGINS:
+    raise RuntimeError("CORS_ALLOW_ORIGINS must be set in production.")

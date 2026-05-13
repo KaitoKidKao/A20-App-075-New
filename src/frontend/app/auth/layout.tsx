@@ -2,13 +2,48 @@
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  
+  // Mapping paths to illustrations
+  const illustrations: Record<string, string> = {
+    '/auth/login': '/assets/images/auth-img.png',
+    '/auth/register': '/assets/images/register-img.png',
+    '/auth/forgot-password': '/assets/images/forgot-password-img.png',
+    '/auth/otp': '/assets/images/otp-img.png',
+    '/auth/reset-password': '/assets/images/set-password-img.png',
+  };
+
+  const isLockscreen = pathname.includes('/lockscreen');
+  const illustrationSrc = illustrations[pathname] || illustrations['/auth/login'];
+
+  if (isLockscreen) {
+    return (
+      <div className="min-h-screen bg-[#FFF9FA] flex flex-col items-center justify-center p-8">
+         <div className="w-full max-w-[440px] space-y-8 animate-in fade-in zoom-in duration-700">
+            {/* Logo at Top */}
+            <div className="flex flex-col items-center gap-4 mb-8">
+               <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-100">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8">
+                     <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                     <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+                  </svg>
+               </div>
+               <span className="text-2xl font-black text-slate-900 tracking-tight">Dreams</span>
+            </div>
+            {children}
+         </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#FFF9FA] flex overflow-hidden">
       {/* Left Side: Illustration & Branding */}
@@ -19,50 +54,47 @@ export default function AuthLayout({
         
         <div className="relative z-10 w-full max-w-md">
           {/* Logo/Brand */}
-          <div className="flex items-center gap-3 mb-16">
-            <span className="text-2xl font-black text-slate-900 tracking-tight">DreamsLMS</span>
+          <div className="flex items-center gap-2 mb-16">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                  <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+               </svg>
+            </div>
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+               Dreams
+            </span>
           </div>
 
           {/* Illustration Container */}
-          <div className="bg-white/60 backdrop-blur-sm border border-white/80 rounded-[40px] p-8 shadow-2xl shadow-slate-200/50 mb-12 transform hover:scale-[1.02] transition-transform duration-700">
-             <div className="aspect-square bg-gradient-to-br from-white to-slate-50 rounded-[32px] flex items-center justify-center relative overflow-hidden">
-                {/* Mock Phone/UI Illustration */}
-                <div className="w-48 h-80 bg-white rounded-[32px] border-4 border-slate-900 shadow-2xl relative flex flex-col p-4 space-y-4">
-                   <div className="w-12 h-1.5 bg-slate-100 rounded-full self-center" />
-                   <div className="w-full h-24 bg-slate-50 rounded-2xl" />
-                   <div className="space-y-2">
-                      <div className="h-2 w-full bg-slate-100 rounded-full" />
-                      <div className="h-2 w-3/4 bg-slate-100 rounded-full" />
-                   </div>
-                   <div className="w-full h-10 bg-[#FF4F6E] rounded-xl mt-auto shadow-lg shadow-[#FF4F6E]/20" />
-                </div>
+          <div className="relative mb-12 w-full max-w-[400px] mx-auto">
+             <div className="relative aspect-square">
+                {/* Decorative Background Blob */}
+                <div className="absolute inset-0 bg-indigo-100/30 rounded-full blur-3xl animate-pulse" />
                 
-                {/* Floating Elements */}
-                <div className="absolute top-10 right-10 w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-[#FF4F6E]">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                   </svg>
-                </div>
-                <div className="absolute bottom-10 left-10 w-12 h-12 bg-[#00D084] rounded-xl shadow-lg flex items-center justify-center text-white">
-                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6">
-                      <polyline points="20 6 9 17 4 12" />
-                   </svg>
-                </div>
+                {/* Main Illustration Image */}
+                <Image 
+                  key={pathname}
+                  src={illustrationSrc} 
+                  alt="Minh họa học tập" 
+                  width={400}
+                  height={400}
+                  className="w-full h-full object-contain relative z-10 drop-shadow-2xl transition-all duration-700 animate-in fade-in zoom-in-95"
+                />
              </div>
           </div>
 
           <div className="text-center space-y-4">
-            <h2 className="text-3xl font-black text-slate-900">Welcome to DreamsLMS Courses.</h2>
-            <p className="text-slate-500 font-medium leading-relaxed">
-              Platform designed to help organizations, educators, and learners manage, deliver, and track learning and training activities.
+            <h2 className="text-3xl font-black text-slate-900 leading-tight">Chào mừng đến với <br /> <span className="text-[#FF4F6E]">Dreams</span> Courses.</h2>
+            <p className="text-slate-500 font-medium leading-relaxed px-4">
+              Nền tảng giúp tổ chức, giảng viên và người học quản lý, triển khai và theo dõi hoạt động học tập, đào tạo.
             </p>
             
             {/* Pagination Dots Indicator */}
             <div className="flex justify-center gap-2 pt-4">
-              <div className="w-8 h-1.5 bg-[#FF4F6E] rounded-full" />
-              <div className="w-2 h-1.5 bg-slate-200 rounded-full" />
-              <div className="w-2 h-1.5 bg-slate-200 rounded-full" />
+              <div className={`w-8 h-1.5 bg-[#FF4F6E] rounded-full transition-all ${pathname.includes('login') ? 'translate-x-0' : 'translate-x-0'}`} />
+              <div className="w-1.5 h-1.5 bg-slate-200 rounded-full" />
+              <div className="w-1.5 h-1.5 bg-slate-200 rounded-full" />
             </div>
           </div>
         </div>
@@ -72,7 +104,7 @@ export default function AuthLayout({
       <div className="flex-1 flex flex-col justify-center items-center p-8 lg:p-20 relative bg-[#FFF9FA]">
         {/* Back to Home Link (Top Right) */}
         <div className="absolute top-10 right-10">
-           <a href="/" className="text-sm font-bold text-[#FF4F6E] hover:underline">Back to Home</a>
+           <Link href="/" className="text-sm font-bold text-[#FF4F6E] hover:underline">Về trang chủ</Link>
         </div>
         
         <div className="w-full max-w-[440px]">

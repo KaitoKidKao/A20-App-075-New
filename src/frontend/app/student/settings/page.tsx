@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   User, 
   Settings as SettingsIcon, 
@@ -16,11 +16,17 @@ import {
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 
-export default function SettingsPage() {
+function SettingsPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as 'profile' | 'accessibility') || 'profile';
-  const [activeTab, setActiveTab] = useState<'profile' | 'accessibility'>(initialTab);
+  const activeTab = (searchParams.get('tab') as 'profile' | 'accessibility') || 'profile';
   
+  const setActiveTab = (tab: 'profile' | 'accessibility') => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`/student/settings?${params.toString()}`);
+  };
+
   const { 
     fontSize, setFontSize, 
     theme, setTheme, 
@@ -28,13 +34,6 @@ export default function SettingsPage() {
     autoScroll, setAutoScroll,
     user 
   } = useAppStore();
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'profile' || tab === 'accessibility') {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
 
   const profileData = {
     firstName: user?.name.split(' ')[0] || 'Ronald',
@@ -45,11 +44,11 @@ export default function SettingsPage() {
     email: user?.email || 'student@example.com',
     gender: 'Male',
     dob: '16 Jan 2000',
-    bio: "Hello! I'm a student at DreamsLMS. I'm passionate about learning and using AI to enhance my education experience."
+    bio: "Xin chào! Tôi là học viên tại DreamsLMS. Tôi yêu thích học tập và ứng dụng AI để nâng cao trải nghiệm học của mình."
   };
 
   return (
-    <div className="min-h-screen bg-bg-main">
+    <div className="min-h-screen bg-transparent">
       <div className="px-8 md:px-12 py-8 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row gap-8">
           
@@ -65,7 +64,7 @@ export default function SettingsPage() {
               )}
             >
               <User size={18} />
-              My Profile
+              Hồ sơ của tôi
             </button>
             <button 
               onClick={() => setActiveTab('accessibility')}
@@ -77,7 +76,7 @@ export default function SettingsPage() {
               )}
             >
               <SettingsIcon size={18} />
-              Accessibility Settings
+              Cài đặt trợ năng
             </button>
           </div>
 
@@ -86,7 +85,7 @@ export default function SettingsPage() {
             {activeTab === 'profile' ? (
               <div className="card-premium p-10 bg-white animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center justify-between mb-8 pb-5 border-b border-slate-100">
-                  <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Personal Information</h2>
+                  <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Thông tin cá nhân</h2>
                   <button className="p-2 bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors border border-slate-200">
                     <Pencil size={16} />
                   </button>
@@ -94,25 +93,25 @@ export default function SettingsPage() {
 
                 <div className="grid md:grid-cols-2 gap-y-8 gap-x-10">
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">First Name</p>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tên</p>
                     <p className="text-[15px] font-bold text-slate-700">{profileData.firstName}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Last Name</p>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Họ</p>
                     <p className="text-[15px] font-bold text-slate-700">{profileData.lastName}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Email Address</p>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Địa chỉ email</p>
                     <p className="text-[15px] font-bold text-slate-700">{profileData.email}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Phone Number</p>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Số điện thoại</p>
                     <p className="text-[15px] font-bold text-slate-700">{profileData.phone}</p>
                   </div>
                 </div>
 
                 <div className="mt-10 pt-8 border-t border-slate-100">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Bio</p>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Giới thiệu</p>
                   <p className="text-[15px] font-medium text-slate-600 leading-relaxed">
                     {profileData.bio}
                   </p>
@@ -121,7 +120,7 @@ export default function SettingsPage() {
             ) : (
               <div className="card-premium p-10 bg-white animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center justify-between mb-8 pb-5 border-b border-slate-100">
-                  <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Accessibility Configuration</h2>
+                  <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Cấu hình trợ năng</h2>
                 </div>
 
                 <div className="space-y-10">
@@ -129,7 +128,7 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-slate-800">
                       <Type size={18} className="text-primary" />
-                      <h3 className="font-bold">Text Size (Font Size)</h3>
+                      <h3 className="font-bold">Cỡ chữ</h3>
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {(['S', 'M', 'L', 'XL'] as const).map((size) => (
@@ -147,14 +146,14 @@ export default function SettingsPage() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-xs text-slate-400 font-medium italic">Adjust the font size of transcripts and summaries for better readability.</p>
+                    <p className="text-xs text-slate-400 font-medium italic">Điều chỉnh cỡ chữ cho phụ đề và tóm tắt để dễ đọc hơn.</p>
                   </div>
 
                   {/* Theme Mode */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-slate-800">
                       {theme === 'light' ? <Sun size={18} className="text-primary" /> : <Moon size={18} className="text-primary" />}
-                      <h3 className="font-bold">Display Theme</h3>
+                      <h3 className="font-bold">Giao diện hiển thị</h3>
                     </div>
                     <div className="flex gap-4">
                       <button 
@@ -168,7 +167,7 @@ export default function SettingsPage() {
                            <div className="h-2 w-3/4 bg-slate-200 rounded-full" />
                            <div className="h-2 w-1/2 bg-slate-200 rounded-full" />
                         </div>
-                        <span className={cn("text-sm font-bold", theme === 'light' ? "text-primary" : "text-slate-500")}>Light Mode</span>
+                        <span className={cn("text-sm font-bold", theme === 'light' ? "text-primary" : "text-slate-500")}>Chế độ sáng</span>
                       </button>
                       <button 
                         onClick={() => setTheme('dark')}
@@ -181,7 +180,7 @@ export default function SettingsPage() {
                            <div className="h-2 w-3/4 bg-slate-800 rounded-full" />
                            <div className="h-2 w-1/2 bg-slate-800 rounded-full" />
                         </div>
-                        <span className={cn("text-sm font-bold", theme === 'dark' ? "text-primary" : "text-slate-500")}>Dark Mode</span>
+                        <span className={cn("text-sm font-bold", theme === 'dark' ? "text-primary" : "text-slate-500")}>Chế độ tối</span>
                       </button>
                     </div>
                   </div>
@@ -190,7 +189,7 @@ export default function SettingsPage() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-slate-800">
                       <Eye size={18} className="text-primary" />
-                      <h3 className="font-bold">Visual Preferences</h3>
+                      <h3 className="font-bold">Tùy chọn hiển thị</h3>
                     </div>
                     
                     <div className="space-y-3">
@@ -203,8 +202,8 @@ export default function SettingsPage() {
                                 <Check size={20} />
                              </div>
                              <div className="text-left">
-                                <p className="text-sm font-bold text-slate-700">High Contrast Mode</p>
-                                <p className="text-xs text-slate-400 font-medium">Makes text sharper and easier to read.</p>
+                                <p className="text-sm font-bold text-slate-700">Chế độ tương phản cao</p>
+                                <p className="text-xs text-slate-400 font-medium">Giúp chữ rõ nét và dễ đọc hơn.</p>
                              </div>
                           </div>
                           <div className={cn("w-12 h-6 rounded-full transition-all relative", highContrast ? "bg-primary" : "bg-slate-200")}>
@@ -221,8 +220,8 @@ export default function SettingsPage() {
                                 <ScrollText size={20} />
                              </div>
                              <div className="text-left">
-                                <p className="text-sm font-bold text-slate-700">Auto-Scroll Transcript</p>
-                                <p className="text-xs text-slate-400 font-medium">Follows the speaker automatically during playback.</p>
+                                <p className="text-sm font-bold text-slate-700">Tự cuộn phụ đề</p>
+                                <p className="text-xs text-slate-400 font-medium">Tự động bám theo lời nói trong khi phát video.</p>
                              </div>
                           </div>
                           <div className={cn("w-12 h-6 rounded-full transition-all relative", autoScroll ? "bg-primary" : "bg-slate-200")}>
@@ -238,5 +237,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-transparent px-8 py-8 text-sm font-bold text-slate-500">Đang tải cài đặt...</div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

@@ -1,61 +1,50 @@
-import os
-import sys
 import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-# Thêm thư mục gốc vào sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from sqlmodel import Session
 
 from src.backend import config
-from src.backend.database import create_db_and_tables, ensure_admin_exists
+from src.backend.api.auth_router import router as auth_router
+from src.backend.api.avatar_router import router as avatar_router
+from src.backend.api.videos_router import router as videos_router
+from src.backend.database import create_db_and_tables, engine
+from src.backend.services.job_service import mark_stale_jobs_as_failed
+from src.backend.services.pipeline_service import shutdown_pipeline_executor
 from src.backend.services.video_service import VideoService
-from src.backend.services.ai_service import AIService
-from src.backend.routers import auth, videos, users
 
-# Cấu hình Logging
-logging.basicConfig(
-    level=getattr(logging, config.LOG_LEVEL),
-    format="%(asctime)s [%(levelname)s] %(message)s"
-)
+logging.basicConfig(level=getattr(logging, config.LOG_LEVEL), format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="A20 Video Captioning & Summary API")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    create_db_and_tables()
+    VideoService.ensure_dirs()
+    with Session(engine) as session:
+        mark_stale_jobs_as_failed(session)
+    logger.info("Backend startup completed.")
+    try:
+        yield
+    finally:
+        shutdown_pipeline_executor()
+        logger.info("Backend shutdown completed.")
 
-# Cấu hình CORS
+
+app = FastAPI(title="A20 Video Captioning & Summary API", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=config.CORS_ALLOW_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Đăng ký Routers
-app.include_router(auth.router)
-app.include_router(videos.router)
-app.include_router(users.router)
+app.include_router(auth_router)
+app.include_router(videos_router)
+app.include_router(avatar_router)
 
-@app.on_event("startup")
-def on_startup():
-    logger.info("🚀 Đang khởi tạo cơ sở dữ liệu...")
-    create_db_and_tables()
-    ensure_admin_exists()
-
-@app.on_event("shutdown")
-def shutdown_event():
-    logger.info("🛑 Đang dọn dẹp tài nguyên và tắt server...")
-
-@app.get("/api/health", tags=["System"])
+@app.get("/api/health")
 def health_check():
     return {"status": "healthy", "service": "Video Captioning API"}
-
-if __name__ == "__main__":
-    import uvicorn
-    # Đảm bảo các thư mục tồn tại
-    VideoService.ensure_dirs()
-    AIService.TRANSCRIPT_DIR.mkdir(parents=True, exist_ok=True)
-    AIService.AI_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    
-    logger.info("🚀 Starting A20 Backend Server on port 8000 with reload...")
-    uvicorn.run("src.backend.main:app", host="0.0.0.0", port=8000, reload=True)

@@ -21,19 +21,19 @@ export default function LockScreenPage() {
         </div>
 
         <div className="text-center space-y-2">
-           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Hi, Ronald Richard</h1>
-           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Enter your password to unlock the screen</p>
+           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Xin chào, Ronald Richard</h1>
+           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Nhập mật khẩu để mở khóa màn hình</p>
         </div>
       </div>
 
       <form className="space-y-6">
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Password *</label>
+          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mật khẩu *</label>
           <div className="relative group">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF4F6E] transition-colors" size={20} />
             <input 
               type={showPassword ? 'text' : 'password'} 
-              placeholder="Enter password"
+              placeholder="Nhập mật khẩu"
               className="w-full pl-12 pr-12 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all font-medium text-slate-700"
             />
             <button 
@@ -47,14 +47,14 @@ export default function LockScreenPage() {
         </div>
 
         <button className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-          Unlock
+          Mở khóa
           <ArrowRight size={20} />
         </button>
 
         <div className="text-center">
            <p className="text-sm font-bold text-slate-400">
-              Not you? 
-              <Link href="/auth/login" className="text-[#FF4F6E] hover:underline ml-2">Sign In with different account</Link>
+              Không phải bạn? 
+              <Link href="/auth/login" className="text-[#FF4F6E] hover:underline ml-2">Đăng nhập bằng tài khoản khác</Link>
            </p>
         </div>
       </form>

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Accessibility, Mail, MapPin, Phone, Globe, ArrowRight } from 'lucide-react';
+import { Mail, MapPin, Phone, Globe, ArrowRight } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -14,7 +14,7 @@ export function Footer() {
               <span className="font-extrabold text-2xl tracking-tight text-slate-900">DreamsLMS</span>
             </div>
             <p className="text-slate-500 leading-relaxed text-[15px]">
-              Platform designed to help organizations, educators, and learners manage, deliver, and track learning and training activities.
+              Nền tảng hỗ trợ tổ chức, giảng viên và người học quản lý, triển khai và theo dõi hoạt động học tập, đào tạo.
             </p>
             <div className="flex gap-4">
               <button className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-primary hover:text-white transition-all"><Globe size={18} /></button>
@@ -26,40 +26,40 @@ export function Footer() {
 
           {/* Links 1 */}
           <div className="space-y-6">
-            <h4 className="font-bold text-lg">For Instructor</h4>
+            <h4 className="font-bold text-lg">Dành cho giảng viên</h4>
             <ul className="space-y-3 text-[15px] font-medium text-slate-500">
-              <li className="hover:text-primary transition-colors cursor-pointer">Search Mentors</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Login</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Register</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Booking</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Students</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Dashboard</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Tìm giảng viên</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Đăng nhập</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Đăng ký</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Lịch hẹn</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Học viên</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Bảng điều khiển</li>
             </ul>
           </div>
 
           {/* Links 2 */}
           <div className="space-y-6">
-            <h4 className="font-bold text-lg">For Student</h4>
+            <h4 className="font-bold text-lg">Dành cho học viên</h4>
             <ul className="space-y-3 text-[15px] font-medium text-slate-500">
-              <li className="hover:text-primary transition-colors cursor-pointer">Appointments</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Chat</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Login</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Register</li>
-              <li className="hover:text-primary transition-colors cursor-pointer">Instructor Dashboard</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Lịch hẹn</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Trò chuyện</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Đăng nhập</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Đăng ký</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Bảng giảng viên</li>
             </ul>
           </div>
 
           {/* Newsletter & Contact */}
           <div className="space-y-6">
-            <h4 className="font-bold text-lg">Newsletter</h4>
+            <h4 className="font-bold text-lg">Bản tin</h4>
             <div className="relative">
               <input 
                 type="text" 
-                placeholder="Enter your email address" 
+                placeholder="Nhập địa chỉ email" 
                 className="w-full pl-4 pr-32 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm"
               />
               <button className="absolute right-1.5 top-1.5 bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5">
-                Subscribe
+                Đăng ký
                 <ArrowRight size={14} />
               </button>
             </div>
@@ -82,12 +82,12 @@ export function Footer() {
       </div>
       
       {/* Bottom Bar */}
-      <div className="border-t border-slate-100 bg-[#1A1A1A] text-white/70 py-4">
-        <div className="max-w-[1400px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-semibold">
-          <p>© 2025 DreamsLMS. All rights reserved.</p>
-          <div className="flex gap-6">
-            <span className="hover:text-white cursor-pointer transition-colors">Terms & Conditions</span>
-            <span className="hover:text-white cursor-pointer transition-colors">Privacy Policy</span>
+      <div className="border-t border-slate-100 bg-[#14142B] text-white/50 py-6">
+        <div className="max-w-[1400px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-black uppercase tracking-widest">
+          <p>© 2026 Dreams. B?o luu m?i quy?n.</p>
+          <div className="flex gap-10">
+            <span className="hover:text-white cursor-pointer transition-colors">Điều khoản & điều kiện</span>
+            <span className="hover:text-white cursor-pointer transition-colors">Chính sách bảo mật</span>
           </div>
         </div>
       </div>

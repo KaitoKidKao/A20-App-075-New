@@ -1,92 +1,87 @@
-# AI20K-200 · Audio-First Accessibility Agent
+# A20-App-075
 
-Dự án hỗ trợ sinh viên khiếm thị và giảng viên tiếp cận tài liệu học thuật thông qua âm thanh có cấu trúc, sử dụng các mô hình AI OCR hiện đại.
+Backend + frontend system for video upload, transcription, and AI-generated learning artifacts.
 
-## 🏗 Cấu trúc dự án
+## Tech Stack
+
+- Backend: FastAPI (`src/backend/main.py`)
+- Frontend: Next.js (`src/frontend`)
+- Python requirement: `>=3.12` (from `pyproject.toml`)
+
+## Project Structure
 
 ```text
-├── src/
-│   ├── backend/            # Python/FastAPI Backend
-│   │   ├── agent.py        # Logic Agent (OpenAI gpt-4o-mini)
-│   │   ├── tools.py        # Công cụ trích xuất (OCR Chandra/Hunyuan)
-│   │   └── config.py       # Quản lý cấu hình
-│   └── frontend/           # Next.js/React Frontend
-├── tests/                  # Kịch bản kiểm thử (Extraction, API...)
-├── data/                   # Tài liệu mẫu (PDF, DOCX)
-├── requirements.txt        # Dependencies của Backend
-├── .env.example            # Template cấu hình môi trường
-└── README.md
+src/
+  backend/
+    main.py
+    config.py
+    auth.py
+    database.py
+    models/
+    schemas/
+    services/
+    tests/
+  frontend/
+requirements.txt
+pyproject.toml
+README.md
 ```
 
-## 🚀 Hướng dẫn cài đặt
+## Setup
 
-### 1. Tiền đề (Prerequisites)
-- **Python 3.10+**
-- **Node.js 18+**
-- **uv** (Công cụ quản lý Python package siêu tốc):
-  ```bash
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  ```
-
-### 2. Cài đặt Backend
-Di chuyển vào thư mục gốc và thực hiện:
+### 1. Backend
 
 ```bash
-# Tạo môi trường ảo
 uv venv
-source .venv/bin/activate  # Linux/macOS
-# .\.venv\Scripts\activate  # Windows
+# Linux/macOS
+source .venv/bin/activate
+# Windows PowerShell
+# .\.venv\Scripts\Activate.ps1
 
-# Cài đặt thư viện
 uv pip install -r requirements.txt
 ```
 
-### 3. Cài đặt Frontend
-Di chuyển vào thư mục frontend:
+Create `.env` from `.env.example` and set required values (at least `OPENAI_API_KEY`; set `SECRET_KEY` for stable auth tokens).
+
+### 2. Frontend
 
 ```bash
 cd src/frontend
 npm install
 ```
 
-### 4. Cấu hình môi trường
-Copy file mẫu và điền các API Key của bạn:
+## Run
+
+### Backend API
 
 ```bash
-cp .env.example .env
+uvicorn src.backend.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Các biến quan trọng:
-- `OPENAI_API_KEY`: Dùng cho Agent (gpt-5-nano).
+Health check:
 
-## 🛠 Cách chạy dự án
-
-### Chạy Backend Agent (Terminal mode)
 ```bash
-python -m src.backend.agent
+GET /api/health
 ```
 
-### Chạy Frontend (Development mode)
+### Frontend
+
 ```bash
 cd src/frontend
 npm run dev
 ```
 
-### Chạy bộ kiểm thử trích xuất (OCR & Fallback)
+## Tests
+
+Run backend tests from repository root:
+
 ```bash
-python tests/test_extraction.py
+pytest src/backend/tests/test_auth.py
+pytest src/backend/tests/test_db.py
 ```
 
-## 📖 Chiến lược trích xuất dữ liệu (PDF/DOCX)
-Dự án áp dụng quy trình trích xuất thông minh để tối ưu hiệu suất và độ chính xác:
-1.  **Luồng chính**: Sử dụng **Chandra OCR API** để xử lý các tài liệu phức tạp.
-2.  **Luồng Local**: Hỗ trợ chạy model **Chandra-OCR-2** hoặc **HunyuanOCR** trực tiếp từ HuggingFace.
-3.  **Dự phòng (Fallback)**: Tự động sử dụng **PyMuPDF** để lấy text gốc nếu OCR gặp lỗi hoặc không cần thiết.
+Optional script:
 
-## 🤝 Quy tắc đóng góp
-- Luôn cập nhật **JOURNAL.md** sau mỗi tuần làm việc.
-- Các quyết định kỹ thuật quan trọng cần ghi vào **WORKLOG.md**.
-- Tuân thủ quy tắc Agent trong **AGENTS.md**.
-
----
-*Dự án thuộc chương trình đào tạo AI20K-200.*
+```bash
+python src/backend/tests/verify_ai_features.py
+```

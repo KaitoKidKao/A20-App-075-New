@@ -1,5 +1,4 @@
 import requests
-import json
 
 BASE_URL = "http://localhost:8000/api/auth"
 
@@ -10,7 +9,8 @@ def test_auth():
     print("\n--- Testing Register ---")
     reg_data = {
         "email": "student@a20.edu.vn",
-        "password": "password123",
+        "password": "Password123",
+        "confirm_password": "Password123",
         "full_name": "Nguyen Van A",
         "role": "student"
     }
@@ -25,10 +25,14 @@ def test_auth():
     print("\n--- Testing Login ---")
     login_data = {
         "username": "student@a20.edu.vn",
-        "password": "password123"
+        "password": "Password123"
     }
     try:
-        response = requests.post(f"{BASE_URL}/login", data=login_data)
+        response = requests.post(
+            f"{BASE_URL}/login",
+            data=login_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
         print(f"Status: {response.status_code}")
         if response.status_code == 200:
             token_data = response.json()

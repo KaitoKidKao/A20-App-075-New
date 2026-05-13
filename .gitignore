@@ -19,6 +19,5 @@ build/
 .ai-log/*.jsonl
 temp/
 data/
+.grapuco/
 
-# AI Log (local only)
-.ai-log/session.jsonl

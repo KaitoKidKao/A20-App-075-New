@@ -29,6 +29,8 @@ Hệ thống Backend cung cấp giải pháp toàn diện để xử lý video b
 - **Điểm nhấn (Highlights)**: `GET /api/videos/{video_id}/highlights`
 - **Làm rõ câu hỏi (Questions)**: `GET /api/videos/{video_id}/questions`
 - **Tóm tắt khởi đầu (Briefing)**: `GET /api/videos/{video_id}/briefing`
+- **Thẻ học tập (Flashcards)**: `GET /api/videos/{video_id}/flashcards`
+- **Trực quan hóa dữ liệu (Visual Data)**: `GET /api/videos/{video_id}/viz-data`
 
 ## 4. Cơ chế tối ưu hóa hiệu năng
 

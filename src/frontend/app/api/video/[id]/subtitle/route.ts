@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Convert seconds to VTT timestamp format: HH:MM:SS.mmm
 function toVTTTime(seconds: number): string {
@@ -16,13 +16,19 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: videoId } = await params;
+  const token = request.cookies.get('udl_token')?.value;
+  const requestedLang = request.nextUrl.searchParams.get('lang') || 'vi';
 
   try {
     // Fetch transcript from BE
-    const res = await fetch(`${API_BASE}/api/videos/${videoId}/transcript`);
+    const res = await fetch(`${API_BASE}/api/videos/${videoId}/transcript`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      cache: 'no-store',
+    });
     const data = await res.json();
 
-    if (!data.segments || data.segments.length === 0) {
+    const segments = data?.segments_by_language?.[requestedLang] || data?.segments || [];
+    if (!segments || segments.length === 0) {
       // Return empty VTT if no transcript
       const emptyVTT = 'WEBVTT\n\n';
       return new NextResponse(emptyVTT, {
@@ -34,7 +40,7 @@ export async function GET(
     // Build WebVTT content
     let vtt = 'WEBVTT\n\n';
 
-    data.segments.forEach((seg: { start: number; end: number; text: string }, i: number) => {
+    segments.forEach((seg: { start: number; end: number; text: string }, i: number) => {
       vtt += `${i + 1}\n`;
       vtt += `${toVTTTime(seg.start)} --> ${toVTTTime(seg.end)}\n`;
       vtt += `${seg.text.trim()}\n\n`;

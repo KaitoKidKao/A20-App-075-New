@@ -17,8 +17,9 @@ interface User {
 interface AppState {
   // Auth State
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
-  login: (user: User) => void;
+  login: (user: User, token?: string) => void;
   logout: () => void;
 
   currentRole: Role;
@@ -42,9 +43,19 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       // Auth
       user: null,
+      token: null,
       isAuthenticated: false,
-      login: (user) => set({ user, isAuthenticated: true, currentRole: user.role }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      login: (user) => {
+        set({
+          user,
+          token: null,
+          isAuthenticated: true,
+          currentRole: user.role
+        });
+      },
+      logout: () => {
+        set({ user: null, token: null, isAuthenticated: false });
+      },
 
       currentRole: 'student',
       setRole: (role) => set({ currentRole: role }),
@@ -63,6 +74,14 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'udl-app-storage',
+      version: 2,
+      migrate: (persistedState: unknown) => {
+        const state = (persistedState as { state?: Record<string, unknown> })?.state || {};
+        return {
+          ...state,
+          token: null,
+        };
+      },
     }
   )
 );

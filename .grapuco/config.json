@@ -1,0 +1,24 @@
+{
+  "repoId": "d6e951cd-8c1e-468b-9499-1d263118c18f",
+  "repoName": "A20-App-075",
+  "server": "https://api.grapuco.com",
+  "language": "typescript",
+  "features": {
+    "embeddings": true,
+    "dataFlowAnalysis": true
+  },
+  "ignore": [
+    "node_modules",
+    "dist",
+    ".next",
+    ".git",
+    ".grapuco",
+    "__pycache__",
+    "vendor",
+    "target",
+    "build"
+  ],
+  "workspaceId": "bc99fe07-ab51-455e-b25c-bf6456acddbb",
+  "workspaceName": "A20_075",
+  "lastPush": "2026-04-28T16:26:31.517Z"
+}
