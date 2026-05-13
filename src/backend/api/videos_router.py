@@ -2,7 +2,6 @@ import os
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
 from sqlmodel import Session, select
 
 from src.backend import config
@@ -307,23 +306,6 @@ async def get_avatar_video(
     if not cached:
         return {"video_id": video_id, "avatar_video_url": None}
     return cached
-
-
-@router.get("/avatar-video/{video_id}")
-async def serve_avatar_video(
-    video_id: str,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
-    check_video_access(video_id, current_user, session)
-    video_path = AvatarVideoService.get_avatar_video_path(video_id)
-    if not video_path.exists():
-        raise HTTPException(status_code=404, detail="Avatar video file not found.")
-    return FileResponse(
-        path=str(video_path),
-        media_type="video/mp4",
-        filename=f"{video_id}_avatar.mp4",
-    )
 
 
 @router.get("/{video_id}/handsign-segments")

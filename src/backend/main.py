@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +17,21 @@ from src.backend.services.video_service import VideoService
 logging.basicConfig(level=getattr(logging, config.LOG_LEVEL), format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="A20 Video Captioning & Summary API")
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    create_db_and_tables()
+    VideoService.ensure_dirs()
+    with Session(engine) as session:
+        mark_stale_jobs_as_failed(session)
+    logger.info("Backend startup completed.")
+    try:
+        yield
+    finally:
+        shutdown_pipeline_executor()
+        logger.info("Backend shutdown completed.")
+
+
+app = FastAPI(title="A20 Video Captioning & Summary API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,22 +44,6 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(videos_router)
 app.include_router(avatar_router)
-
-
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
-    VideoService.ensure_dirs()
-    with Session(engine) as session:
-        mark_stale_jobs_as_failed(session)
-    logger.info("Backend startup completed.")
-
-
-@app.on_event("shutdown")
-def on_shutdown():
-    shutdown_pipeline_executor()
-    logger.info("Backend shutdown completed.")
-
 
 @app.get("/api/health")
 def health_check():

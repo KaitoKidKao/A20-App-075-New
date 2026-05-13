@@ -3,6 +3,7 @@ from typing import Optional
 import uuid
 
 from sqlmodel import Field, SQLModel
+from src.backend.utils.datetime_utils import utc_now
 
 
 class ProcessingJob(SQLModel, table=True):
@@ -13,5 +14,5 @@ class ProcessingJob(SQLModel, table=True):
     progress: int = Field(default=0)
     error_message: Optional[str] = None
     attempts: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
