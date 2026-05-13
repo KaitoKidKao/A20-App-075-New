@@ -98,6 +98,7 @@ export default function EnrolledCourses() {
                   alt={course.title} 
                   fill 
                   unoptimized={true}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-cover" 
                 />
                 <div className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-rose-500 shadow-sm cursor-pointer">
@@ -108,7 +109,7 @@ export default function EnrolledCourses() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                      <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden relative">
-                        <Image src={`https://i.pravatar.cc/100?img=${course.id + 15}`} alt={course.instructor} fill className="object-cover" />
+                        <Image src={`https://i.pravatar.cc/100?img=${course.id + 15}`} alt={course.instructor} fill sizes="24px" className="object-cover" />
                      </div>
                      <span className="text-xs font-bold text-slate-400">{course.instructor}</span>
                   </div>

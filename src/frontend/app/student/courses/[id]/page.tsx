@@ -323,7 +323,7 @@ export default function CourseDetailPage() {
                   ].map((review, i) => (
                      <div key={i} className="flex gap-4 border-b border-slate-100 pb-8 last:border-0">
                         <div className="w-12 h-12 rounded-full bg-slate-200 shrink-0 overflow-hidden relative">
-                           <Image src={`https://i.pravatar.cc/100?img=${i + 20}`} alt={review.name} fill className="object-cover" />
+                           <Image src={`https://i.pravatar.cc/100?img=${i + 20}`} alt={review.name} fill sizes="48px" className="object-cover" />
                         </div>
                         <div className="space-y-2">
                            <div className="flex items-center justify-between">
@@ -357,7 +357,7 @@ export default function CourseDetailPage() {
           <div className="lg:col-span-4">
              <div className="lg:sticky lg:top-8 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                 <div className="relative aspect-video group cursor-pointer">
-                   <Image src={course.thumb} alt="Preview" fill className="object-cover" unoptimized={true} />
+                   <Image src={course.thumb} alt="Preview" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" unoptimized={true} />
                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center">
                       <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-slate-900 group-hover:scale-110 transition-transform">
                          <Play size={24} fill="currentColor" />

@@ -94,6 +94,8 @@ export default function LandingPage() {
                   src="/assets/images/hero-final-v2.png" 
                   alt="Student Standing with Laptop" 
                   fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, 45vw"
                   className="object-contain p-4"
                 />
              </div>
@@ -152,6 +154,7 @@ export default function LandingPage() {
                         src="/assets/images/mission-final-v2.png" 
                         alt="Visual Meaning" 
                         fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
                         className="object-contain p-4"
                       />
                    </div>
