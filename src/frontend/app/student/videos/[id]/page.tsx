@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
@@ -97,6 +97,9 @@ export default function VideoLessonPage() {
   const [flashcards, setFlashcards] = useState<FlashcardItem[]>([]);
   const [visualData, setVisualData] = useState<VisualData | null>(null);
   const [handsignGlosses, setHandsSignGlosses] = useState<HandsSignGloss[]>([]);
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+  const [avatarVideoUrl, setAvatarVideoUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState('');
   
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
@@ -114,6 +117,7 @@ export default function VideoLessonPage() {
   const [videoBroken, setVideoBroken] = useState(false);
 
   const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `/api/video/${videoId}`;
+  const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
     const fetchTranscript = async () => {
@@ -167,7 +171,7 @@ export default function VideoLessonPage() {
       setVisualData(nextVisualData);
     } catch (err) {
       console.error('Metadata fetch error:', err);
-      setMetadataError('Learning assets are not ready yet. Please refresh after processing completes.');
+      setMetadataError('Tài nguyên học tập chưa sẵn sàng. Vui lòng tải lại sau khi xử lý hoàn tất.');
     } finally {
       setIsLoadingMetadata(false);
     }
@@ -182,7 +186,25 @@ export default function VideoLessonPage() {
       console.error('Handsign fetch error:', err);
       setHandsSignGlosses([]);
     }
-  }, [videoId]);
+
+    try {
+      const avatarRes = await api.videos.getAvatar(videoId);
+      const rawUrl = avatarRes?.avatar_video_url;
+      if (!rawUrl) {
+        setAvatarVideoUrl(null);
+      } else if (typeof rawUrl === 'string' && rawUrl.startsWith('/api/avatar-video/')) {
+        const storage = localStorage.getItem('udl-app-storage');
+        const token = storage ? JSON.parse(storage)?.state?.token : null;
+        const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
+        setAvatarVideoUrl(`${backendBaseUrl}${rawUrl}${tokenQuery}`);
+      } else {
+        setAvatarVideoUrl(rawUrl);
+      }
+    } catch (err) {
+      console.error('Avatar state fetch error:', err);
+      setAvatarVideoUrl(null);
+    }
+  }, [backendBaseUrl, videoId]);
 
   useEffect(() => {
     if (!isLoadingTranscript && segments.length > 0) {
@@ -198,7 +220,35 @@ export default function VideoLessonPage() {
 
   useEffect(() => {
     setHandsSignGlosses([]);
+    setAvatarVideoUrl(null);
+    setAvatarError('');
+    setIsGeneratingAvatar(false);
   }, [videoId]);
+
+  const handleGenerateAvatarVideo = async () => {
+    setIsGeneratingAvatar(true);
+    setAvatarError('');
+    try {
+      const result = await api.videos.generateAvatar(videoId);
+      const rawUrl = result?.avatar_video_url;
+      if (!rawUrl) {
+        throw new Error('Backend chưa trả về URL video avatar.');
+      }
+      if (typeof rawUrl === 'string' && rawUrl.startsWith('/api/avatar-video/')) {
+        const storage = localStorage.getItem('udl-app-storage');
+        const token = storage ? JSON.parse(storage)?.state?.token : null;
+        const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
+        setAvatarVideoUrl(`${backendBaseUrl}${rawUrl}${tokenQuery}`);
+      } else {
+        setAvatarVideoUrl(rawUrl);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể tạo video avatar.';
+      setAvatarError(message);
+    } finally {
+      setIsGeneratingAvatar(false);
+    }
+  };
 
   const seekToSeconds = (seconds: number) => {
     if (videoRef.current) {
@@ -285,7 +335,7 @@ export default function VideoLessonPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
            <div className="space-y-1">
               <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight italic">
-                Advanced <span className="text-[#FF4F6E]">Visual</span> Lessons
+                Bài học <span className="text-[#FF4F6E]">trực quan</span> nâng cao
               </h1>
            </div>
            {/* Sign Language toggle removed per user request */}
@@ -299,7 +349,7 @@ export default function VideoLessonPage() {
             <div className="bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group">
               {videoSourceMode === 'demo' && (
                 <div className="absolute top-4 left-4 z-20 pointer-events-none rounded-full bg-amber-500/95 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 shadow-lg max-w-[90%]">
-                  Demo mode: this video file was not found on the server, so the sample video is playing.
+                  Chế độ demo: không tìm thấy file video trên máy chủ, hệ thống đang phát video mẫu.
                 </div>
               )}
 
@@ -356,7 +406,7 @@ export default function VideoLessonPage() {
                 )}
               >
                  <Film size={64} className="mb-6 opacity-30" />
-                 <p className="font-black tracking-[0.2em] uppercase text-sm">Video Feed Unavailable</p>
+                 <p className="font-black tracking-[0.2em] uppercase text-sm">Không thể phát video</p>
                  <p className="text-[11px] mt-3 max-w-xs text-center opacity-60 font-bold">The video file appears to be corrupted or missing.</p>
               </div>
               
@@ -375,8 +425,8 @@ export default function VideoLessonPage() {
                         <Sparkles size={32} />
                      </div>
                      <div className="space-y-1">
-                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Visual Intelligence</h3>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest text-[10px]">Instant AI summary for visual learners</p>
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Trí tuệ trực quan</h3>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest text-[10px]">Tóm tắt AI tức thì cho người học trực quan</p>
                      </div>
                   </div>
                   
@@ -388,12 +438,12 @@ export default function VideoLessonPage() {
                     {isLoadingSummary ? (
                       <>
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Analyzing...
+                        Đang phân tích...
                       </>
                     ) : (
                       <>
                         <Zap size={20} fill="currentColor" />
-                        AI Generate Summary
+                        Tạo tóm tắt bằng AI
                       </>
                     )}
                   </button>
@@ -426,7 +476,7 @@ export default function VideoLessonPage() {
                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-900 shadow-sm">
                             <Target size={24} />
                          </div>
-                         <h3 className="text-2xl font-black text-slate-900 tracking-tight">Lecture Objective</h3>
+                         <h3 className="text-2xl font-black text-slate-900 tracking-tight">Mục tiêu bài giảng</h3>
                       </div>
                       <p className="text-base md:text-lg font-bold text-slate-600 leading-relaxed italic mb-6 max-w-3xl">
                         &ldquo;{briefing.objective}&rdquo;
@@ -446,12 +496,12 @@ export default function VideoLessonPage() {
                <div className="bg-white/95 backdrop-blur-md rounded-[40px] p-8 md:p-10 border border-white/20 shadow-xl shadow-slate-200/20">
                   <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-b border-slate-100 mb-10 pb-2">
                      {[
-                       { id: 'timeline', label: 'Timeline Structure', icon: Clock },
-                       { id: 'highlights', label: 'Key Highlights', icon: Zap },
-                       { id: 'questions', label: 'Concept Clarification', icon: HelpCircle },
-                       { id: 'flashcards', label: 'Flashcards', icon: BookOpen },
-                       { id: 'visuals', label: 'Infographic', icon: Eye },
-                       { id: 'handsign', label: 'VSL Avatar', icon: Hand },
+                       { id: 'timeline', label: 'Cấu trúc thời gian', icon: Clock },
+                       { id: 'highlights', label: 'Điểm nhấn chính', icon: Zap },
+                       { id: 'questions', label: 'Làm rõ khái niệm', icon: HelpCircle },
+                       { id: 'flashcards', label: 'Thẻ ghi nhớ', icon: BookOpen },
+                       { id: 'visuals', label: 'Trực quan hóa', icon: Eye },
+                       { id: 'handsign', label: 'Avatar VSL', icon: Hand },
                      ].map((tab) => (
                        <button 
                          key={tab.id}
@@ -470,7 +520,7 @@ export default function VideoLessonPage() {
 
                   <div className="min-h-[350px]">
                      {activeTab === 'timeline' && (
-                       isLoadingMetadata ? renderPanelState('Loading timeline...') : metadataError ? renderPanelState(metadataError) : timeline.length === 0 ? renderPanelState('Timeline is not available yet.') : (
+                       isLoadingMetadata ? renderPanelState('Đang tải mốc thời gian...') : metadataError ? renderPanelState(metadataError) : timeline.length === 0 ? renderPanelState('Chưa có dữ liệu mốc thời gian.') : (
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           {timeline.map((item, i) => (
                             <div 
@@ -489,7 +539,7 @@ export default function VideoLessonPage() {
                      )}
 
                      {activeTab === 'highlights' && (
-                       isLoadingMetadata ? renderPanelState('Loading highlights...') : metadataError ? renderPanelState(metadataError) : highlights.length === 0 ? renderPanelState('Highlights are not available yet.') : (
+                       isLoadingMetadata ? renderPanelState('Đang tải điểm nhấn...') : metadataError ? renderPanelState(metadataError) : highlights.length === 0 ? renderPanelState('Chưa có dữ liệu điểm nhấn.') : (
                        <div className="space-y-6">
                           {highlights.map((item, i) => (
                             <div key={i} className="bg-[#FF4F6E]/5 rounded-[32px] p-8 md:p-10 border border-[#FF4F6E]/10 relative group overflow-hidden transition-all hover:bg-[#FF4F6E]/10">
@@ -498,7 +548,7 @@ export default function VideoLessonPage() {
                                </div>
                                <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                                   <div className="w-24 h-24 bg-white rounded-[28px] shadow-xl shadow-[#FF4F6E]/10 flex flex-col items-center justify-center shrink-0 border border-[#FF4F6E]/20">
-                                     <span className="text-[10px] font-black text-[#FF4F6E] uppercase tracking-widest mb-1">Focus</span>
+                                     <span className="text-[10px] font-black text-[#FF4F6E] uppercase tracking-widest mb-1">Trọng tâm</span>
                                      <span className="text-xl font-black text-slate-900">{item.time}</span>
                                   </div>
                                   <div className="space-y-3">
@@ -513,7 +563,7 @@ export default function VideoLessonPage() {
                      )}
 
                      {activeTab === 'questions' && (
-                       isLoadingMetadata ? renderPanelState('Loading concept clarifications...') : metadataError ? renderPanelState(metadataError) : questions.length === 0 ? renderPanelState('Concept clarifications are not available yet.') : (
+                       isLoadingMetadata ? renderPanelState('Đang tải phần làm rõ khái niệm...') : metadataError ? renderPanelState(metadataError) : questions.length === 0 ? renderPanelState('Chưa có dữ liệu làm rõ khái niệm.') : (
                        <div className="space-y-8">
                           {questions.map((item, i) => (
                             <div key={i} className="bg-white border-2 border-slate-50 rounded-[40px] p-10 shadow-lg hover:shadow-2xl transition-all">
@@ -521,18 +571,18 @@ export default function VideoLessonPage() {
                                   <div className="w-14 h-14 bg-amber-50 rounded-3xl flex items-center justify-center text-amber-500">
                                      <HelpCircle size={28} />
                                   </div>
-                                  <span className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Clarification Tool</span>
+                                  <span className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Công cụ làm rõ</span>
                                </div>
                                <div className="grid md:grid-cols-2 gap-10 items-start">
                                   <div className="opacity-50">
-                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Complex Context</p>
+                                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Ngữ cảnh gốc</p>
                                      <p className="text-base font-bold text-slate-500 line-through leading-relaxed">{item.original}</p>
                                   </div>
                                   <div className="p-8 bg-amber-50/50 rounded-[32px] border border-amber-100 relative">
                                      <div className="absolute top-0 right-0 p-4 opacity-10">
                                         <Sparkles size={40} className="text-amber-500" />
                                      </div>
-                                     <p className="text-xs font-black text-amber-600 uppercase tracking-widest mb-3">Simplified Visual Meaning</p>
+                                     <p className="text-xs font-black text-amber-600 uppercase tracking-widest mb-3">Cách hiểu trực quan</p>
                                      <p className="text-xl font-black text-slate-900 leading-tight">{item.rephrased}</p>
                                   </div>
                                </div>
@@ -544,14 +594,14 @@ export default function VideoLessonPage() {
 
                      {activeTab === 'flashcards' && (
                        <div className="space-y-6">
-                          {isLoadingMetadata && renderPanelState('Loading flashcards...')}
+                          {isLoadingMetadata && renderPanelState('Đang tải thẻ ghi nhớ...')}
                           {!isLoadingMetadata && metadataError && renderPanelState(metadataError)}
-                          {!isLoadingMetadata && !metadataError && flashcards.length === 0 && renderPanelState('Flashcards are not available yet.')}
+                          {!isLoadingMetadata && !metadataError && flashcards.length === 0 && renderPanelState('Chưa có thẻ ghi nhớ.')}
                           {!isLoadingMetadata && !metadataError && flashcards.length > 0 && (
                             <>
                               <div className="flex items-center justify-center">
                                 <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-black">
-                                  Card {currentFlashcardIndex + 1} / {flashcards.length}
+                                  Thẻ {currentFlashcardIndex + 1} / {flashcards.length}
                                 </p>
                               </div>
 
@@ -622,13 +672,13 @@ export default function VideoLessonPage() {
                                         <div className="absolute bottom-4 left-4 rounded-full bg-white/50 dark:bg-slate-900/45 p-1.5 border border-white/50 dark:border-slate-400/30">
                                           <Lightbulb size={14} className="text-amber-500 dark:text-amber-300" />
                                         </div>
-                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-black mb-3">Question</p>
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-black mb-3">Câu hỏi</p>
                                         <p className="text-lg md:text-xl font-black text-slate-900 dark:text-slate-50 leading-snug">
                                         {flashcards[currentFlashcardIndex].front}
                                         </p>
                                         {flashcards[currentFlashcardIndex].hint ? (
                                           <p className="absolute bottom-8 left-8 right-8 text-[11px] md:text-xs font-bold text-slate-600 dark:text-slate-200 text-center">
-                                            Hint: {flashcards[currentFlashcardIndex].hint}
+                                            Gợi ý: {flashcards[currentFlashcardIndex].hint}
                                           </p>
                                         ) : null}
                                       </div>
@@ -650,7 +700,7 @@ export default function VideoLessonPage() {
                                         <div className="absolute bottom-4 left-4 rounded-full bg-black/30 dark:bg-white/10 p-1.5 border border-white/25">
                                           <Rocket size={14} className="text-emerald-200 dark:text-emerald-300" />
                                         </div>
-                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-black mb-3">Answer</p>
+                                        <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-black mb-3">Đáp án</p>
                                         <p className="text-base md:text-lg font-black text-white dark:text-slate-50 leading-snug">
                                           {flashcards[currentFlashcardIndex].back}
                                         </p>
@@ -660,7 +710,7 @@ export default function VideoLessonPage() {
                                 </button>
                               </div>
                               <p className="text-center text-[11px] text-slate-400 font-bold">
-                                Drag left or right to browse cards. Tap to flip.
+                                Kéo trái/phải để chuyển thẻ. Chạm để lật thẻ.
                               </p>
                             </>
                           )}
@@ -669,10 +719,10 @@ export default function VideoLessonPage() {
 
                      {activeTab === 'visuals' && (
                        <div className="space-y-6">
-                          {isLoadingMetadata ? renderPanelState('Loading infographic...') : metadataError ? renderPanelState(metadataError) : visualData?.infographic ? (
+                          {isLoadingMetadata ? renderPanelState('Đang tải infographic...') : metadataError ? renderPanelState(metadataError) : visualData?.infographic ? (
                             <InfographicViewer data={visualData.infographic} />
                           ) : (
-                            renderPanelState('Visualization data is not available yet.')
+                            renderPanelState('Chưa có dữ liệu trực quan hóa.')
                           )}
                        </div>
                      )}
@@ -681,14 +731,54 @@ export default function VideoLessonPage() {
                      {activeTab === 'handsign' && (
                        <div className="space-y-8">
                          {isLoadingMetadata ? (
-                           renderPanelState('Loading VSL avatar data...')
+                           renderPanelState('Đang tải dữ liệu avatar VSL...')
                          ) : handsignGlosses.length === 0 ? (
-                           renderPanelState('VSL avatar data is not available yet. It will appear after server processing completes for this video.')
+                           renderPanelState('Chưa có dữ liệu avatar VSL. Dữ liệu sẽ xuất hiện sau khi server xử lý xong video này.')
                          ) : (
                            <>
+                             <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                 <div>
+                                   <p className="text-sm font-black text-slate-900">Generate Video</p>
+                                   <p className="text-xs font-bold text-slate-500">
+                                     Tạo video avatar từ dữ liệu VSL của bài học này.
+                                   </p>
+                                 </div>
+                                 <button
+                                   type="button"
+                                   onClick={handleGenerateAvatarVideo}
+                                   disabled={isGeneratingAvatar}
+                                   className={cn(
+                                     'rounded-2xl px-5 py-3 text-xs font-black uppercase tracking-widest transition-all',
+                                     isGeneratingAvatar
+                                       ? 'cursor-not-allowed bg-slate-200 text-slate-500'
+                                       : 'bg-[#FF4F6E] text-white hover:bg-[#e64663]'
+                                   )}
+                                 >
+                                   {isGeneratingAvatar ? 'Generating...' : 'Generate Video'}
+                                 </button>
+                               </div>
+                               {avatarError && (
+                                 <p className="mt-3 text-sm font-bold text-red-600">{avatarError}</p>
+                               )}
+                             </div>
+
+                             {avatarVideoUrl && (
+                               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                                 <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">
+                                   Avatar Video Preview
+                                 </p>
+                                 <video
+                                   controls
+                                   className="w-full rounded-2xl bg-black"
+                                   src={avatarVideoUrl}
+                                 />
+                               </div>
+                             )}
+
                              <div className="flex flex-col items-center gap-4">
                                <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-black text-center">
-                                 Synced to video playback time
+                                 Đồng bộ theo thời gian phát video
                                </p>
                                <SignAvatar2D vslData={handsignGlosses} currentTime={currentTime} />
                                <button
@@ -701,7 +791,7 @@ export default function VideoLessonPage() {
                                </button>
                              </div>
                              <div>
-                               <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Gloss sequence</p>
+                               <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Chuỗi gloss</p>
                                <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1">
                                  {handsignGlosses.map((g, i) => {
                                    const nextT = handsignGlosses[i + 1]?.time ?? Infinity;
@@ -750,7 +840,7 @@ export default function VideoLessonPage() {
                       <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", rightPanelTab === 'transcript' ? "bg-slate-900 text-white shadow-lg" : "bg-slate-200 text-slate-500")}>
                          <FileText size={20} />
                       </div>
-                      <span className="text-sm font-black uppercase tracking-widest">Transcript</span>
+                      <span className="text-sm font-black uppercase tracking-widest">Phụ đề</span>
                    </button>
                    <button 
                      onClick={() => setRightPanelTab('lessons')}
@@ -762,15 +852,15 @@ export default function VideoLessonPage() {
                       <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", rightPanelTab === 'lessons' ? "bg-slate-900 text-white shadow-lg" : "bg-slate-200 text-slate-500")}>
                          <List size={20} />
                       </div>
-                      <span className="text-sm font-black uppercase tracking-widest">Lessons</span>
+                      <span className="text-sm font-black uppercase tracking-widest">Bài học</span>
                    </button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
                    {rightPanelTab === 'transcript' ? (
                      <>
-                        {isLoadingTranscript && renderPanelState('Loading transcript...')}
-                        {!isLoadingTranscript && segments.length === 0 && renderPanelState('Transcript is not available yet.')}
+                        {isLoadingTranscript && renderPanelState('Đang tải phụ đề...')}
+                        {!isLoadingTranscript && segments.length === 0 && renderPanelState('Chưa có phụ đề.')}
                         {segments.map((s, i) => {
                            const isActive = currentTime >= s.start && currentTime <= s.end;
                            return (
@@ -804,12 +894,12 @@ export default function VideoLessonPage() {
                    ) : (
                      <div className="space-y-4">
                         {[
-                           { id: 'vid-001', title: 'Getting Started with Development', duration: '12:45', thumb: 'https://picsum.photos/seed/v1/200/120' },
-                           { id: 'vid-002', title: 'Deep Learning Basics', duration: '15:20', thumb: 'https://picsum.photos/seed/v2/200/120' },
-                           { id: 'vid-003', title: 'Machine Learning Introduction', duration: '22:10', thumb: 'https://picsum.photos/seed/v3/200/120' },
-                           { id: 'vid-004', title: 'AI for Visual Learners', duration: '08:45', thumb: 'https://picsum.photos/seed/v4/200/120' },
-                           { id: 'vid-005', title: 'Advanced Neural Networks', duration: '30:15', thumb: 'https://picsum.photos/seed/v5/200/120' },
-                           { id: 'vid-006', title: 'Practical Application of AI', duration: '18:30', thumb: 'https://picsum.photos/seed/v6/200/120' },
+                           { id: 'vid-001', title: 'Bắt đầu với lập trình', duration: '12:45', thumb: 'https://picsum.photos/seed/v1/200/120' },
+                           { id: 'vid-002', title: 'Nền tảng Deep Learning', duration: '15:20', thumb: 'https://picsum.photos/seed/v2/200/120' },
+                           { id: 'vid-003', title: 'Giới thiệu Machine Learning', duration: '22:10', thumb: 'https://picsum.photos/seed/v3/200/120' },
+                           { id: 'vid-004', title: 'AI cho người học trực quan', duration: '08:45', thumb: 'https://picsum.photos/seed/v4/200/120' },
+                           { id: 'vid-005', title: 'Mạng nơ-ron nâng cao', duration: '30:15', thumb: 'https://picsum.photos/seed/v5/200/120' },
+                           { id: 'vid-006', title: 'Ứng dụng AI thực tiễn', duration: '18:30', thumb: 'https://picsum.photos/seed/v6/200/120' },
                         ].map((lesson, idx) => (
                            <div 
                              key={lesson.id}
@@ -845,7 +935,7 @@ export default function VideoLessonPage() {
                 <div className="p-8 bg-slate-50 border-t border-slate-100 text-center">
                    <div className="inline-flex items-center gap-3 px-6 py-2 bg-white rounded-full border border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] shadow-sm">
                       <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Live Sync: {language.toUpperCase()}
+                      Đồng bộ trực tiếp: {language.toUpperCase()}
                    </div>
                 </div>
              </div>

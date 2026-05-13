@@ -76,7 +76,7 @@ export default function AuthLayout({
                 <Image 
                   key={pathname}
                   src={illustrationSrc} 
-                  alt="Learning Illustration" 
+                  alt="Minh họa học tập" 
                   width={400}
                   height={400}
                   className="w-full h-full object-contain relative z-10 drop-shadow-2xl transition-all duration-700 animate-in fade-in zoom-in-95"
@@ -85,9 +85,9 @@ export default function AuthLayout({
           </div>
 
           <div className="text-center space-y-4">
-            <h2 className="text-3xl font-black text-slate-900 leading-tight">Welcome to <br /> <span className="text-[#FF4F6E]">Dreams</span> Courses.</h2>
+            <h2 className="text-3xl font-black text-slate-900 leading-tight">Chào mừng đến với <br /> <span className="text-[#FF4F6E]">Dreams</span> Courses.</h2>
             <p className="text-slate-500 font-medium leading-relaxed px-4">
-              Platform designed to help organizations, educators, and learners manage, deliver, and track learning and training activities.
+              Nền tảng giúp tổ chức, giảng viên và người học quản lý, triển khai và theo dõi hoạt động học tập, đào tạo.
             </p>
             
             {/* Pagination Dots Indicator */}
@@ -104,7 +104,7 @@ export default function AuthLayout({
       <div className="flex-1 flex flex-col justify-center items-center p-8 lg:p-20 relative bg-[#FFF9FA]">
         {/* Back to Home Link (Top Right) */}
         <div className="absolute top-10 right-10">
-           <Link href="/" className="text-sm font-bold text-[#FF4F6E] hover:underline">Back to Home</Link>
+           <Link href="/" className="text-sm font-bold text-[#FF4F6E] hover:underline">Về trang chủ</Link>
         </div>
         
         <div className="w-full max-w-[440px]">

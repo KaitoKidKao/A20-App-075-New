@@ -419,3 +419,137 @@ class AIService:
             logger.error(f"❌ Lỗi khi tạo dữ liệu Notebook: {e}")
             return {"error": str(e)}
 
+
+    @classmethod
+    async def translate_transcript_to_vi(cls, transcript_data: dict) -> dict:
+        """
+        Dịch toàn bộ transcript sang tiếng Việt.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return transcript_data
+
+        client = AsyncOpenAI(api_key=api_key)
+        
+        segments = transcript_data.get('segments', [])
+        if not segments:
+            return transcript_data
+
+        logger.info(f'🌐 Đang dịch transcript của {transcript_data.get("video_id", "")} sang tiếng Việt...')
+        
+        # Nhóm các câu lại để dịch cho nhanh và giữ ngữ cảnh
+        full_text = "\n".join([f"[{i}] {s['text']}" for i, s in enumerate(segments)])
+        
+        prompt = f"""
+        Bạn là một biên dịch viên chuyên nghiệp. Hãy dịch các câu hội thoại sau sang tiếng Việt tự nhiên, phù hợp với ngữ cảnh giáo dục.
+        Trả về ĐÚNG định dạng ban đầu, chỉ thay đổi phần văn bản thành tiếng Việt. Giữ nguyên các index.
+        
+        Văn bản gốc:
+        {full_text}
+        """
+
+        try:
+            response = await client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                max_completion_tokens=2000
+            )
+            
+            translated_text = response.choices[0].message.content
+            
+            # Phân tích cú pháp kết quả trả về
+            translated_dict = {}
+            for line in translated_text.split("\n"):
+                line = line.strip()
+                if line.startswith("[") and "]" in line:
+                    idx_str = line[1:line.find("]")]
+                    if idx_str.isdigit():
+                        translated_dict[int(idx_str)] = line[line.find("]")+1:].strip()
+            
+            # Cập nhật lại segments
+            translated_segments = []
+            for i, s in enumerate(segments):
+                new_s = s.copy()
+                if i in translated_dict:
+                    new_s['text'] = translated_dict[i]
+                translated_segments.append(new_s)
+                
+            new_transcript_data = transcript_data.copy()
+            new_transcript_data['segments'] = translated_segments
+            new_transcript_data['language'] = 'vi'
+            
+            # Cập nhật file
+            video_id = transcript_data.get('video_id')
+            if video_id:
+                transcript_path = cls.TRANSCRIPT_DIR / f"{video_id}.json"
+                import json
+                with open(transcript_path, 'w', encoding='utf-8') as f:
+                    json.dump(new_transcript_data, f, ensure_ascii=False, indent=2)
+            
+            logger.info('✅ Dịch xong transcript sang tiếng Việt.')
+            return new_transcript_data
+            
+        except Exception as e:
+            logger.error(f'❌ Lỗi khi dịch transcript: {e}')
+            return transcript_data
+
+
+    @classmethod
+    async def generate_handsign_from_text(cls, text: str) -> list:
+        """
+        Dịch đoạn văn bản ngắn thành chuỗi Glosses (VSL) cho sinh video tóm tắt.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return []
+
+        client = AsyncOpenAI(api_key=api_key)
+        vsl_data = cls.get_vsl_data()
+        vsl_dict = vsl_data.get('dictionary', {})
+        
+        # Lấy danh sách từ vựng phổ biến nhất từ từ điển để gợi ý cho AI
+        available_keywords = list(vsl_dict.keys())[:1000]
+        keywords_str = ', '.join(available_keywords[:50])
+
+        prompt = f"""
+        Bạn là chuyên gia Ngôn ngữ ký hiệu Việt Nam (VSL). Hãy chuyển đổi nội dung tóm tắt dưới đây sang danh sách các từ khóa VSL (Glosses).
+        
+        Yêu cầu:
+        1. Trả về định dạng JSON: {{"glosses": [{{"time": float, "word": str}}]}}
+        2. "word" PHẢI là từ gốc tiếng Việt, viết thường, các từ ghép nối bằng dấu gạch dưới (ví dụ: "công_nghệ", "học_tập").
+        3. Chọn lọc những từ CHÍNH, mang ý nghĩa cốt lõi nhất (động từ, danh từ). Bỏ qua các từ nối, mạo từ.
+        4. Gợi ý một vài từ trong từ điển VSL: {keywords_str}...
+        5. Gán thời gian mô phỏng (time) bắt đầu từ 0.0, tăng dần 0.5s đến 1s cho mỗi từ.
+
+        Nội dung:
+        {text}
+        """
+
+        try:
+            logger.info('🧠 Đang tạo VSL Glosses từ Tóm tắt...')
+            response = await client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={ "type": "json_object" }
+            )
+            
+            result_json = json.loads(response.choices[0].message.content)
+            raw_glosses = result_json.get('glosses', [])
+            
+            processed = []
+            synonyms_map = vsl_data.get('synonyms', {})
+            for g in raw_glosses:
+                word = g.get('word')
+                if not word: continue
+                # Match vào từ điển nội bộ
+                matched_word, vsl_info = cls._resolve_vsl_entry(word, vsl_dict, synonyms_map)
+                processed.append({
+                    'time': g.get('time', 0),
+                    'word': matched_word or word,
+                    'vsl_info': vsl_info
+                })
+            
+            return processed
+        except Exception as e:
+            logger.error(f'❌ Lỗi khi sinh VSL Glosses từ text: {e}')
+            return []

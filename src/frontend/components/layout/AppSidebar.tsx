@@ -36,19 +36,19 @@ export function AppSidebar() {
   );
 
   const learningItems = [
-    { icon: Grid, label: 'Dashboard', href: '/student/library' },
-    { icon: BookOpen, label: 'Enrolled Courses', href: '/student/documents' },
-    { icon: MessageSquare, label: 'Reviews', href: '#' },
-    { icon: FileText, label: 'My Quiz Attempts', href: '#' },
+    { icon: Grid, label: 'Tổng quan', href: '/student/library' },
+    { icon: BookOpen, label: 'Khóa học đã đăng ký', href: '/student/documents' },
+    { icon: MessageSquare, label: 'Đánh giá', href: '#' },
+    { icon: FileText, label: 'Lượt làm bài quiz', href: '#' },
   ];
 
   const toolItems = [
-    { icon: Upload, label: 'Upload Video', href: '/student/upload' },
+    { icon: Upload, label: 'Tải video lên', href: '/student/upload' },
   ];
 
   const accountItems = [
-    { icon: Settings, label: 'Settings & Profile', href: '/student/settings' },
-    { icon: LogOut, label: 'Logout', href: '/auth/login' },
+    { icon: Settings, label: 'Cài đặt & hồ sơ', href: '/student/settings' },
+    { icon: LogOut, label: 'Đăng xuất', href: '/auth/login' },
   ];
 
   const isItemActive = (href: string) => href !== '#' && (pathname === href || pathname.startsWith(`${href}/`));
@@ -62,7 +62,7 @@ export function AppSidebar() {
       <div className="flex-1 overflow-y-auto px-3 py-6 scrollbar-hide">
         <div className="mb-6">
           <p className={sectionLabelClass}>
-            Main Menu
+            Menu chính
           </p>
           <nav className="space-y-1">
             {learningItems.map((item) => {
@@ -83,7 +83,7 @@ export function AppSidebar() {
 
         <div className="mt-8">
           <p className={sectionLabelClass}>
-            Tools
+            Công cụ
           </p>
           <nav className="space-y-1">
             {toolItems.map((item) => {
@@ -104,7 +104,7 @@ export function AppSidebar() {
 
         <div className="mt-8">
           <p className={sectionLabelClass}>
-            Account Settings
+            Cài đặt tài khoản
           </p>
           <nav className="space-y-1">
             {accountItems.map((item) => {

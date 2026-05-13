@@ -32,7 +32,7 @@ export function TopBar() {
            <div className="relative w-full max-w-md">
               <input 
                 type="text" 
-                placeholder="Search your courses..." 
+                placeholder="Tìm kiếm khóa học..." 
                 className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
               />
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -47,8 +47,8 @@ export function TopBar() {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              aria-label={theme === 'light' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng'}
+              title={theme === 'light' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng'}
               className="p-2.5 text-slate-500 hover:bg-slate-50 hover:text-primary rounded-full transition-all"
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
@@ -66,10 +66,10 @@ export function TopBar() {
           <div className="flex items-center gap-3 pl-2 cursor-pointer group relative">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">
-                {user?.name || 'Guest User'}
+                {user?.name || 'Khách'}
               </p>
               <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                {user?.role || 'Guest'}
+                {user?.role || 'Khách'}
               </p>
             </div>
             
@@ -86,7 +86,7 @@ export function TopBar() {
                    className="w-full px-4 py-2 text-left text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 flex items-center gap-2"
                  >
                     <LogOut size={16} />
-                    Log Out
+                    Đăng xuất
                  </button>
               </div>
             </div>

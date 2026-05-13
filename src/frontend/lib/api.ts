@@ -235,6 +235,7 @@ export const api = {
       return res.json();
     },
 
+<<<<<<< HEAD
     async getHandsSignSegments(videoId: string): Promise<HandsSignSegmentsResponse> {
       const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/handsign-segments`, {
         headers: getHeaders(),
@@ -248,6 +249,25 @@ export const api = {
         headers: getHeaders(),
       });
       if (!res.ok) throw new Error('Failed to fetch handsign export manifest.');
+=======
+    async generateAvatar(videoId: string) {
+      const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/generate-avatar`, {
+        method: 'POST',
+        headers: getHeaders(),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || 'Failed to generate avatar video.');
+      }
+      return res.json();
+    },
+
+    async getAvatar(videoId: string) {
+      const res = await fetch(`${API_BASE_URL}/api/videos/${videoId}/avatar`, {
+        headers: getHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to fetch avatar video state.');
+>>>>>>> ec52e94 (feat(app): implement Vietnamese localization and handsign updates)
       return res.json();
     },
   },

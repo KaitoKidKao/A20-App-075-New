@@ -20,3 +20,6 @@ sqlmodel>=0.0.16
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 email-validator>=2.0.0
+
+# Avatar
+replicate>=0.53.0

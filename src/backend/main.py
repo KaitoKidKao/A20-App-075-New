@@ -10,6 +10,7 @@ import uuid
 import logging
 import asyncio
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Depends
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
@@ -17,10 +18,14 @@ from concurrent.futures import ThreadPoolExecutor
 
 from src.backend.services.video_service import VideoService
 from src.backend.services.ai_service import AIService
+<<<<<<< HEAD
 from src.backend.services.handsign_animation_service import (
     expand_handsign_segments,
     build_render_manifest,
 )
+=======
+from src.backend.services.avatar_video_service import AvatarVideoService
+>>>>>>> ec52e94 (feat(app): implement Vietnamese localization and handsign updates)
 from src.backend import config
 from src.backend.database import create_db_and_tables, get_session
 from src.backend.models import User, Video, LectureData, Flashcard
@@ -142,6 +147,11 @@ async def run_video_pipeline(video_id: str, video_path: Path):
             loop = asyncio.get_event_loop()
             transcript_data = await loop.run_in_executor(executor, run_transcription_sync, audio_path, video_id)
             
+            # Nếu ngôn ngữ không phải tiếng Việt, dịch sang tiếng Việt
+            if transcript_data.get("language") != "vi":
+                logger.info(f"🌐 [{video_id}] Ngôn ngữ là {transcript_data.get('language')}, đang dịch sang tiếng Việt...")
+                transcript_data = await AIService.translate_transcript_to_vi(transcript_data)
+                
             # Bước 3: Phân tích AI (Summary, Timeline, Highlights, etc.)
             update_status("ai_processing")
             logger.info(f"🧠 [{video_id}] Đang phân tích AI (Batching)...")
@@ -523,6 +533,84 @@ async def get_handsign_data(
         "handsign_data": lecture.handsign_data
     }
 
+@app.post("/api/videos/{video_id}/generate-avatar")
+async def generate_avatar_endpoint(
+    video_id: str,
+    current_user: User = Depends(get_current_user), 
+    session: Session = Depends(get_session)
+):
+    """
+    Sinh video Avatar thực tế qua Replicate API dựa trên Glosses.
+    """
+    check_video_access(video_id, current_user, session)
+    lecture = session.get(LectureData, video_id)
+    if not lecture or not lecture.handsign_data:
+        raise HTTPException(status_code=400, detail="Không có dữ liệu handsign để sinh video.")
+
+    # Kiểm tra cache
+    cached = AvatarVideoService.get_cached_avatar_video(video_id)
+    if cached:
+        return cached
+
+    # Sử dụng tóm tắt (summary) để làm dữ liệu sinh Video Avatar
+    if not lecture.summary:
+        raise HTTPException(status_code=400, detail="Video chưa có tóm tắt tiếng Việt.")
+    
+    summary_text = "\n".join(lecture.summary)
+    
+    # Sinh các từ khóa VSL từ văn bản tóm tắt
+    summary_glosses = await AIService.generate_handsign_from_text(summary_text)
+
+    # Sinh video (chỉ tập trung vào phần tóm tắt để AI kiểm soát tay tốt hơn)
+    result = await AvatarVideoService.generate_avatar_video(video_id, summary_text, summary_glosses)
+    
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+        
+    return result
+
+@app.get("/api/videos/{video_id}/avatar")
+async def get_avatar_video(
+    video_id: str,
+    current_user: User = Depends(get_current_user), 
+    session: Session = Depends(get_session)
+):
+    """Lấy thông tin video Avatar đã tạo"""
+    check_video_access(video_id, current_user, session)
+    cached = AvatarVideoService.get_cached_avatar_video(video_id)
+    if not cached:
+        return {"video_id": video_id, "avatar_video_url": None}
+    return cached
+
+@app.get("/api/avatar-video/{video_id}")
+async def serve_avatar_video(
+    video_id: str,
+    token: str = "",
+    session: Session = Depends(get_session)
+):
+    """Serve file video avatar đã concat từ local disk.
+    Thẻ <video> không gửi được header Authorization, nên accept token qua query param.
+    """
+    # Xác thực bằng query parameter token
+    if not token:
+        raise HTTPException(status_code=401, detail="Token required")
+    try:
+        from jose import jwt as jose_jwt
+        payload = jose_jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    video_path = AvatarVideoService.get_avatar_video_path(video_id)
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="Avatar video file not found.")
+    return FileResponse(
+        path=str(video_path),
+        media_type="video/mp4",
+        filename=f"{video_id}_avatar.mp4"
+    )
 
 @app.get("/api/videos/{video_id}/handsign-segments")
 async def get_handsign_segments(
