@@ -1,69 +1,103 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Timer, RefreshCcw } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 export default function OTPPage() {
-  const [timeLeft, setTimeLeft] = useState(59);
+  const router = useRouter();
+  const [otp, setOtp] = useState(['', '', '', '']);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timer, setTimer] = useState(59);
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft]);
+    const interval = setInterval(() => {
+      setTimer((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleChange = (element: HTMLInputElement, index: number) => {
+    if (isNaN(Number(element.value))) return false;
+    
+    const newOtp = [...otp];
+    newOtp[index] = element.value;
+    setOtp(newOtp);
+
+    if (element.value !== '' && index < 3) {
+      inputs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === 'Backspace' && index > 0 && otp[index] === '') {
+      inputs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setTimeout(() => {
+      router.push('/auth/reset-password');
+    }, 1500);
+  };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="space-y-3 text-center lg:text-left">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Email OTP</h1>
-        <p className="text-slate-500 font-medium leading-relaxed">
-          OTP sent to your Email Address ending <span className="text-slate-900 font-bold">*******doe@example.com</span>
-        </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-2 text-center lg:text-left">
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Email OTP</h1>
+        <p className="text-slate-500 font-medium leading-relaxed">OTP sent to your Email Address ending ******doe@example.com</p>
       </div>
 
-      <div className="space-y-8">
-        {/* OTP Input Group */}
-        <div className="flex gap-4 justify-between">
-          {[1, 2, 3, 4].map((i) => (
-            <input 
-              key={i}
-              type="text" 
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="flex justify-between gap-4">
+          {otp.map((data, index) => (
+            <input
+              key={index}
+              ref={(el) => {
+                inputs.current[index] = el;
+              }}
+              type="text"
               maxLength={1}
-              className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl text-center text-2xl font-black text-slate-900 focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all shadow-sm"
-              autoFocus={i === 1}
+              value={data}
+              onChange={(e) => handleChange(e.target, index)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              className="w-16 h-20 text-center text-3xl font-black text-slate-900 bg-white border-2 border-slate-100 rounded-2xl focus:border-[#FF4F6E] focus:ring-4 focus:ring-[#FF4F6E]/5 outline-none transition-all"
             />
           ))}
         </div>
 
-        {/* Timer */}
-        <div className="flex justify-center lg:justify-start">
-           <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#FF4F6E]/5 rounded-xl text-[#FF4F6E] font-black text-sm">
-              <Timer size={16} />
-              00:{timeLeft.toString().padStart(2, '0')}
+        <div className="flex justify-center">
+           <div className="bg-red-50 text-[#FF4F6E] px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                 <circle cx="12" cy="12" r="10" />
+                 <polyline points="12 6 12 12 16 14" />
+              </svg>
+              00:{timer < 10 ? `0${timer}` : timer} s
            </div>
         </div>
 
-        <Link 
-          href="/auth/reset-password"
-          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+        <button
+          disabled={isSubmitting || otp.some(v => v === '')}
+          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
         >
-          Verify & Proceed
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14" />
-            <path d="m12 5 7 7-7 7" />
-          </svg>
-        </Link>
-
+          {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Verify & Proceed'}
+          {!isSubmitting && (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          )}
+        </button>
+        
         <div className="text-center">
-           <p className="text-sm font-bold text-slate-400">
-              Didn&apos;t get the OTP? 
-              <button className="text-[#FF4F6E] hover:underline ml-2 flex inline-flex items-center gap-1.5 transition-colors">
-                 <RefreshCcw size={14} /> Resend OTP
-              </button>
+           <p className="text-sm font-medium text-slate-500">
+              Didn&apos;t get the OTP? <button type="button" className="text-[#FF4F6E] font-bold hover:underline ml-1">Resend OTP</button>
            </p>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

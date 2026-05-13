@@ -2,23 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Radio, 
   Users, 
-  Mic, 
-  MicOff, 
-  Square,
   Pause,
   Play,
   Bookmark,
-  ChevronUp,
   Settings,
-  MoreVertical,
   Activity,
   Clock
 } from 'lucide-react';
 import { CaptionDisplay } from '@/components/ui/CaptionDisplay';
 import { MicLevelVisualizer } from '@/components/ui/MicLevelVisualizer';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -29,7 +22,7 @@ function cn(...inputs: ClassValue[]) {
 export default function TeacherLiveSessionPage() {
   const [timer, setTimer] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [studentCount, setStudentCount] = useState(24);
+  const [studentCount] = useState(24);
   const [partialText, setPartialText] = useState('Hôm nay chúng ta sẽ ôn lại phần đạo hàm');
   const [finalLines, setFinalLines] = useState([
     'Chào các em, cảm ơn các em đã tham gia đầy đủ.',
@@ -39,7 +32,7 @@ export default function TeacherLiveSessionPage() {
 
   // Timer logic
   useEffect(() => {
-    let interval: any;
+    let interval: NodeJS.Timeout;
     if (!isPaused) {
       interval = setInterval(() => {
         setTimer(prev => prev + 1);

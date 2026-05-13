@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { FileText, Download, Edit3, Trash2, Search, Filter } from 'lucide-react';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatusBadge, type Status } from '@/components/ui/StatusBadge';
 
 // Giả lập dữ liệu cho bản ghi (transcripts)
 const mockTranscripts = [
@@ -71,7 +71,7 @@ export default function TranscriptsPage() {
                     <span className="text-sm font-mono">{tr.words}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <StatusBadge status={tr.status as any} />
+                    <StatusBadge status={tr.status as Status} />
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">

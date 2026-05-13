@@ -17,8 +17,9 @@ interface User {
 interface AppState {
   // Auth State
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
-  login: (user: User) => void;
+  login: (user: User, token: string) => void;
   logout: () => void;
 
   currentRole: Role;
@@ -42,9 +43,25 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       // Auth
       user: null,
+      token: null,
       isAuthenticated: false,
-      login: (user) => set({ user, isAuthenticated: true, currentRole: user.role }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      login: (user, token) => {
+        if (typeof document !== 'undefined') {
+          document.cookie = `udl_token=${encodeURIComponent(token)}; path=/; max-age=86400; samesite=lax`;
+        }
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+          currentRole: user.role
+        });
+      },
+      logout: () => {
+        if (typeof document !== 'undefined') {
+          document.cookie = 'udl_token=; path=/; max-age=0; samesite=lax';
+        }
+        set({ user: null, token: null, isAuthenticated: false });
+      },
 
       currentRole: 'student',
       setRole: (role) => set({ currentRole: role }),

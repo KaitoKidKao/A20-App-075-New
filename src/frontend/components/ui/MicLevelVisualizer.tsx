@@ -14,20 +14,19 @@ interface MicLevelVisualizerProps {
 }
 
 export function MicLevelVisualizer({ isActive = false, className }: MicLevelVisualizerProps) {
-  const [levels, setLevels] = useState<number[]>(new Array(12).fill(10));
-
+  const [randomLevels, setRandomLevels] = useState<number[]>(() => new Array(12).fill(10));
+  
   useEffect(() => {
-    if (!isActive) {
-      setLevels(new Array(12).fill(5));
-      return;
-    }
+    if (!isActive) return;
 
     const interval = setInterval(() => {
-      setLevels(prev => prev.map(() => Math.floor(Math.random() * 80) + 10));
+      setRandomLevels(prev => prev.map(() => Math.floor(Math.random() * 80) + 10));
     }, 100);
 
     return () => clearInterval(interval);
   }, [isActive]);
+
+  const levels = isActive ? randomLevels : new Array(12).fill(5);
 
   return (
     <div className={cn("flex items-end gap-1 h-12 px-4 bg-slate-50 border rounded-lg", className)}>

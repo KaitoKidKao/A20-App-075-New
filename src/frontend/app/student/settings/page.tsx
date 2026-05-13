@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   User, 
   Settings as SettingsIcon, 
@@ -16,11 +16,17 @@ import {
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
 
-export default function SettingsPage() {
+function SettingsPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as 'profile' | 'accessibility') || 'profile';
-  const [activeTab, setActiveTab] = useState<'profile' | 'accessibility'>(initialTab);
+  const activeTab = (searchParams.get('tab') as 'profile' | 'accessibility') || 'profile';
   
+  const setActiveTab = (tab: 'profile' | 'accessibility') => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`/student/settings?${params.toString()}`);
+  };
+
   const { 
     fontSize, setFontSize, 
     theme, setTheme, 
@@ -28,13 +34,6 @@ export default function SettingsPage() {
     autoScroll, setAutoScroll,
     user 
   } = useAppStore();
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'profile' || tab === 'accessibility') {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
 
   const profileData = {
     firstName: user?.name.split(' ')[0] || 'Ronald',
@@ -49,7 +48,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-main">
+    <div className="min-h-screen bg-transparent">
       <div className="px-8 md:px-12 py-8 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row gap-8">
           
@@ -238,5 +237,13 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-transparent px-8 py-8 text-sm font-bold text-slate-500">Loading settings...</div>}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

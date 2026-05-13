@@ -1,81 +1,153 @@
 'use client';
 
 import React from 'react';
-import { Heart, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function EnrolledCourses() {
-  const courses = [
-    { id: 1, title: 'Information About UI/UX Design Degree', instructor: 'David Benitez', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=UI/UX' },
-    { id: 2, title: 'Wordpress for Beginners - Master', instructor: 'Ana Reyes', cat: 'Wordpress', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Wordpress' },
-    { id: 3, title: 'Sketch from A to Z (2024):', instructor: 'Andrew Pirtle', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Sketch' },
-    { id: 4, title: 'Build Responsive Real World Websites', instructor: 'Christy Gamer', cat: 'Programming', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Programming' },
-    { id: 5, title: 'Learn JavaScript and Express to become', instructor: 'Justin Gregory', cat: 'Programming', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=JS' },
-    { id: 6, title: 'Introduction to Python Programming', instructor: 'Carolyn Hines', cat: 'Programming', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Python' },
-    { id: 7, title: 'Information About Photoshop Design', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Photoshop' },
-    { id: 8, title: 'Information About Photoshop Design', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Photoshop' },
-    { id: 9, title: 'Information About Photoshop Design', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://placehold.co/400x250/F1F5F9/64748B?text=Photoshop' },
-  ];
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [activeTab, setActiveTab] = React.useState('enrolled');
+  
+  interface Course {
+    id: number;
+    title: string;
+    instructor: string;
+    cat: string;
+    thumb: string;
+  }
+
+  const allCourses: Record<number, Course[]> = {
+    1: [
+      { id: 1, title: 'Information About UI/UX Design Degree', instructor: 'David Benitez', cat: 'Design', thumb: 'https://picsum.photos/seed/uiux1/800/450' },
+      { id: 2, title: 'Wordpress for Beginners - Master Wordpress Quickly', instructor: 'Ana Reyes', cat: 'Wordpress', thumb: 'https://picsum.photos/seed/wp1/800/450' },
+      { id: 3, title: 'Sketch from A to Z (2024): Become an app designer', instructor: 'Andrew Pirtle', cat: 'Design', thumb: 'https://picsum.photos/seed/sketch1/800/450' },
+      { id: 4, title: 'Build Responsive Real World Websites with Crash Course', instructor: 'Christy Gamer', cat: 'Programming', thumb: 'https://picsum.photos/seed/web1/800/450' },
+      { id: 5, title: 'Learn JavaScript and Express to become a Expert', instructor: 'Justin Gregory', cat: 'Programming', thumb: 'https://picsum.photos/seed/js1/800/450' },
+      { id: 6, title: 'Introduction to Python Programming Basic to Master', instructor: 'Carolyn Hines', cat: 'Programming', thumb: 'https://picsum.photos/seed/py1/800/450' },
+    ],
+    // ... Page 2 and 3 omitted for brevity in this specific replacement block but I'll ensure they are maintained
+    2: [
+      { id: 7, title: 'Advanced Photoshop Techniques for Retouching', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://picsum.photos/seed/ps1/800/450' },
+      { id: 8, title: 'Digital Painting Masterclass: From Sketch to Final', instructor: 'Marco Rossi', cat: 'Art', thumb: 'https://picsum.photos/seed/art1/800/450' },
+      { id: 9, title: 'Logo Design Mastery: Brand Identity from Scratch', instructor: 'Sarah Jenkins', cat: 'Design', thumb: 'https://picsum.photos/seed/logo1/800/450' },
+      { id: 10, title: 'Node.js Mastery: Building Scalable APIs', instructor: 'Liam Wilson', cat: 'Programming', thumb: 'https://picsum.photos/seed/node1/800/450' },
+      { id: 11, title: 'React Native for Mobile App Development', instructor: 'Elena Rodriguez', cat: 'Mobile', thumb: 'https://picsum.photos/seed/mobile1/800/450' },
+      { id: 12, title: 'Cybersecurity Fundamentals: Protecting Data', instructor: 'Kevin Smith', cat: 'IT', thumb: 'https://picsum.photos/seed/cyber1/800/450' },
+    ],
+    3: [
+      { id: 13, title: 'Mastering Excel for Data Analysis', instructor: 'Robert Chen', cat: 'Business', thumb: 'https://picsum.photos/seed/excel1/800/450' },
+      { id: 14, title: 'Public Speaking: Command the Room with Ease', instructor: 'Amanda Lee', cat: 'Soft Skills', thumb: 'https://picsum.photos/seed/speech1/800/450' },
+      { id: 15, title: 'Photography 101: Mastering Your DSLR', instructor: 'Jack Thompson', cat: 'Photography', thumb: 'https://picsum.photos/seed/photo1/800/450' },
+      { id: 16, title: 'Introduction to Artificial Intelligence', instructor: 'Dr. Emily Watson', cat: 'Tech', thumb: 'https://picsum.photos/seed/ai1/800/450' },
+      { id: 17, title: 'Video Editing with Adobe Premiere Pro', instructor: 'Chris Miller', cat: 'Media', thumb: 'https://picsum.photos/seed/video1/800/450' },
+      { id: 18, title: 'Blogging for Profit: Building a Sustainable Business', instructor: 'Jessica Brown', cat: 'Marketing', thumb: 'https://picsum.photos/seed/blog1/800/450' },
+    ]
+  };
+
+  // Simulate filtering: For 'active' show only first 4, for 'completed' show only last 2
+  const getFilteredCourses = () => {
+    const pageCourses = allCourses[currentPage] || [];
+    if (activeTab === 'active') return pageCourses.slice(0, 4);
+    if (activeTab === 'completed') return pageCourses.slice(4, 6);
+    return pageCourses;
+  };
+
+  const courses = getFilteredCourses();
 
   return (
-    <div className="min-h-screen">
-      <div className="px-8 md:px-12 py-8 max-w-6xl mx-auto">
-
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-extrabold tracking-tight">Enrolled</h2>
-          <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-            <button className="bg-[#FF5A1F] text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm">Enrolled (09)</button>
-            <button className="text-slate-500 px-5 py-2 rounded-lg text-xs font-bold hover:bg-white transition-all">Active (06)</button>
-            <button className="text-slate-500 px-5 py-2 rounded-lg text-xs font-bold hover:bg-white transition-all">Completed (03)</button>
-          </div>
+    <div className="min-h-screen bg-transparent">
+      <div className="px-6 md:px-10 py-10 max-w-7xl mx-auto space-y-8">
+        
+        {/* Simple Tabs Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6">
+           <h2 className="text-xl font-black text-slate-900 capitalize">{activeTab}</h2>
+           <div className="flex items-center gap-2">
+              {[
+                { id: 'enrolled', label: 'Enrolled (09)' },
+                { id: 'active', label: 'Active (05)' },
+                { id: 'completed', label: 'Completed (03)' }
+              ].map((tab) => (
+                <button 
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setCurrentPage(1); // Reset to page 1 on filter change
+                  }}
+                  className={cn(
+                    "px-4 py-1.5 text-[11px] font-black uppercase tracking-widest rounded-full transition-all",
+                    activeTab === tab.id 
+                      ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                      : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+           </div>
         </div>
 
+        {/* Course Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {courses.map((course) => (
-            <div key={course.id} className="card-premium group hover:shadow-xl transition-all duration-300">
-              <div className="relative aspect-video bg-slate-100 overflow-hidden">
-                <Image src={course.thumb} alt={course.title} fill unoptimized={true} className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-90" />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-slate-400 hover:text-rose-500 transition-colors">
-                  <Heart size={16} />
+            <div key={course.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group">
+              <div className="relative aspect-video">
+                <Image 
+                  src={course.thumb} 
+                  alt={course.title} 
+                  fill 
+                  unoptimized={true}
+                  className="object-cover" 
+                />
+                <div className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-rose-500 shadow-sm cursor-pointer">
+                   <Heart size={14} />
                 </div>
               </div>
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
-                      <User size={12} className="text-slate-400" />
-                    </div>
-                    <span className="text-[13px] font-bold text-slate-400">{course.instructor}</span>
+                     <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden relative">
+                        <Image src={`https://i.pravatar.cc/100?img=${course.id + 15}`} alt={course.instructor} fill className="object-cover" />
+                     </div>
+                     <span className="text-xs font-bold text-slate-400">{course.instructor}</span>
                   </div>
-                  <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border rounded">
+                  <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border border-slate-100 rounded">
                     {course.cat}
                   </span>
                 </div>
-                <h4 className="font-extrabold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                <h4 className="font-black text-sm text-slate-900 leading-snug line-clamp-2 min-h-[40px]">
                   {course.title}
                 </h4>
-                <button className="bg-slate-900 text-white text-[12px] font-bold px-4 py-2 rounded-lg group-hover:bg-primary transition-colors">
+                <Link 
+                  href={`/student/courses/${course.id}`}
+                  className="block w-full bg-slate-900 text-white text-[11px] font-black py-2.5 rounded-lg text-center uppercase tracking-widest hover:bg-primary transition-colors"
+                >
                   View Course
-                </button>
+                </Link>
               </div>
             </div>
           ))}
         </div>
-
-        {/* Pagination */}
-        <div className="mt-12 flex items-center justify-between">
-          <p className="text-sm font-bold text-slate-400">Page 1 of 2</p>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-primary transition-colors border border-slate-100">
-              <ChevronLeft size={20} />
-            </button>
-            <button className="w-10 h-10 rounded-lg bg-[#FF5A1F] text-white font-bold text-sm shadow-md">1</button>
-            <button className="w-10 h-10 rounded-lg bg-white text-slate-500 font-bold text-sm hover:bg-slate-50 border border-slate-100">2</button>
-            <button className="w-10 h-10 rounded-lg bg-white text-slate-500 font-bold text-sm hover:bg-slate-50 border border-slate-100">3</button>
-            <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-primary transition-colors border border-slate-100">
-              <ChevronRight size={20} />
-            </button>
-          </div>
+        {/* Pagination placeholder */}
+        <div className="flex items-center justify-between pt-10 border-t border-slate-50">
+           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Page {currentPage} of 3</p>
+           <div className="flex items-center gap-2">
+              {[1, 2, 3].map((num) => (
+                <button 
+                  key={num}
+                  onClick={() => setCurrentPage(num)}
+                  className={cn(
+                    "w-8 h-8 flex items-center justify-center rounded-full text-xs font-black transition-all",
+                    currentPage === num 
+                      ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                      : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                  )}
+                >
+                  {num}
+                </button>
+              ))}
+           </div>
         </div>
       </div>
     </div>

@@ -1,165 +1,240 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Sparkles, 
-  Clock, 
   Zap, 
-  ArrowRight,
-  Play,
-  Heart
+  Eye,
+  MessageSquare,
+  CheckCircle2,
+  Play
 } from 'lucide-react';
 import Image from 'next/image';
 
 export default function LandingPage() {
   const router = useRouter();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleStart = () => {
     router.push('/auth/login');
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-bg-main text-text-main font-sans selection:bg-primary/20">
-      {/* Editorial Header */}
-      <header className="px-8 py-12 md:px-20 flex items-center justify-between max-w-[1440px] mx-auto w-full">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
-             <Heart size={18} fill="currentColor" />
+    <div className="flex flex-col min-h-screen bg-[#FFFDFE] text-slate-900 font-sans selection:bg-[#FF4F6E]/20 overflow-x-hidden">
+      
+      {/* Dynamic Navbar */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 px-8 md:px-20 py-6 ${scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm py-4' : 'bg-transparent'}`}>
+        <div className="max-w-[1440px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#FF4F6E] rounded-xl flex items-center justify-center text-white shadow-lg shadow-[#FF4F6E]/20">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                  <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+               </svg>
+            </div>
+            <span className="text-2xl font-black tracking-tight text-slate-900">Dreams</span>
           </div>
-          <span className="text-xl font-bold tracking-tight text-text-main font-heading">UDL Hearing</span>
+          <div className="hidden md:flex items-center gap-12 text-[13px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <a href="#features" className="hover:text-[#FF4F6E] transition-colors">Features</a>
+            <a href="#mission" className="hover:text-[#FF4F6E] transition-colors">Mission</a>
+            <button 
+              onClick={handleStart}
+              className="px-8 py-3 bg-[#FF4F6E] text-white rounded-xl hover:bg-[#e64663] transition-all shadow-lg shadow-[#FF4F6E]/20 font-black uppercase tracking-widest text-[12px]"
+            >
+              Sign In
+            </button>
+          </div>
         </div>
-        <nav className="hidden md:flex items-center gap-12 text-[14px] font-medium text-text-muted">
-          <a href="#" className="hover:text-text-main transition-colors">Phương pháp</a>
-          <a href="#" className="hover:text-text-main transition-colors">Tính năng</a>
-          <a href="#" className="hover:text-text-main transition-colors">Về chúng tôi</a>
-        </nav>
-      </header>
+      </nav>
 
       <main className="flex-1">
-        {/* Hero Section - Warm Editorial Split */}
-        <section className="w-full max-w-[1440px] mx-auto px-8 md:px-20 py-16 md:py-24 flex flex-col lg:flex-row items-center gap-20">
-          
-          {/* Left Content (60%) */}
-          <div className="lg:w-[60%] space-y-12">
+        {/* HERO SECTION */}
+        <section className="relative w-full max-w-[1440px] mx-auto px-8 md:px-20 pt-40 pb-24 flex flex-col lg:flex-row items-center gap-16 md:gap-24">
+          <div className="absolute top-20 right-0 w-[600px] h-[600px] bg-[#FF4F6E]/5 rounded-full blur-[120px] -z-10" />
+
+          {/* Left Content */}
+          <div className="lg:w-[55%] space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
+
             <div className="space-y-8">
-              <h1 className="text-5xl md:text-[80px] font-black text-text-main leading-[1.05] tracking-tight font-heading">
-                Không gian học tập <br />
-                <span className="text-primary italic">nhân văn</span> cho bạn.
+              <h1 className="text-6xl md:text-[88px] font-black text-slate-900 leading-[0.95] tracking-tight">
+                Hear with your <span className="text-[#FF4F6E] italic">eyes</span>, <br />
+                Learn with heart.
               </h1>
-              <p className="text-lg md:text-2xl text-text-muted font-medium leading-relaxed max-w-2xl">
-                Chúng tôi thấu hiểu khó khăn của bạn. Bằng sự kết hợp giữa công nghệ AI và thiết kế bao trùm, UDL Hearing mang đến trải nghiệm học tập yên tĩnh, tập trung và trọn vẹn nhất.
+              <p className="text-xl md:text-2xl text-slate-500 font-medium leading-relaxed max-w-2xl">
+                Breaking barriers for deaf and hard-of-hearing students. Dreams transforms every lecture into a visual, interactive, and accessible journey.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-8 pt-4">
+            <div className="flex flex-col sm:flex-row items-center gap-8">
               <button 
                 onClick={handleStart}
-                className="px-12 py-6 bg-primary text-white font-semibold rounded-2xl shadow-xl shadow-primary/10 hover:bg-primary-hover transition-all active:scale-[0.98] text-lg"
+                className="w-full sm:w-auto px-12 py-6 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-2xl shadow-[#FF4F6E]/30 hover:bg-[#e64663] transition-all hover:scale-105 active:scale-[0.98] text-lg"
               >
-                Bắt đầu hành trình
+                Join Dreams Now
               </button>
-              <button className="px-2 py-4 text-text-main font-bold flex items-center gap-3 hover:gap-5 transition-all group border-b-2 border-transparent hover:border-primary/20">
-                Tìm hiểu thêm 
-                <ArrowRight size={20} className="text-primary" />
+              <button className="flex items-center gap-4 text-slate-900 font-black hover:text-[#FF4F6E] transition-colors group">
+                 <div className="w-14 h-14 rounded-full border-2 border-slate-100 flex items-center justify-center group-hover:border-[#FF4F6E] transition-all">
+                    <Play size={20} fill="currentColor" />
+                 </div>
+                 Watch Story
               </button>
-            </div>
-
-            <div className="flex items-center gap-6 text-[13px] font-bold uppercase tracking-widest text-text-muted/50 pt-8">
-               <div className="flex -space-x-3">
-                  {[1,2,3].map(i => (
-                    <div key={i} className="w-10 h-10 rounded-full border-4 border-bg-main bg-slate-200 overflow-hidden">
-                       <Image src={`https://i.pravatar.cc/100?img=${i+10}`} alt="User" width={40} height={40} />
-                    </div>
-                  ))}
-               </div>
-               <span>Đã có +500 sinh viên tin dùng</span>
             </div>
           </div>
 
-          {/* Right Content (40%) - Warm Photo + Subtle UI */}
-          <div className="lg:w-[40%] relative">
-             {/* Realistic Hero Image */}
-             <div className="relative rounded-[40px] overflow-hidden shadow-premium aspect-[4/5] w-full border-[12px] border-white bg-white">
+          {/* Right Hero Image - NEW PATH TO AVOID CACHE */}
+          <div className="lg:w-[45%] relative animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
+             <div className="relative z-10 rounded-[60px] overflow-hidden shadow-2xl border-[16px] border-white bg-white aspect-square">
                 <Image 
-                  src="/student_learning_quiet_classroom_1777566655650.png" 
-                  alt="Inclusive learning environment" 
+                  src="/assets/images/hero-final-v2.png" 
+                  alt="Student Standing with Laptop" 
                   fill
-                  className="object-cover"
+                  className="object-contain p-4"
                 />
-                <div className="absolute inset-0 bg-primary/5 mix-blend-multiply" />
+             </div>
+          </div>
+        </section>
+
+        {/* FEATURES GRID SECTION */}
+        <section id="features" className="py-32 bg-slate-50/50">
+          <div className="max-w-[1440px] mx-auto px-8 md:px-20">
+             <div className="text-center max-w-3xl mx-auto mb-24 space-y-4">
+                <h2 className="text-4xl md:text-6xl font-black tracking-tight">Superpowers for your <span className="text-[#FF4F6E]">Education</span></h2>
+                <p className="text-lg text-slate-500 font-medium">Designed specifically for the unique needs of deaf and hard-of-hearing learners.</p>
              </div>
 
-             {/* Minimalist UI Card 1 */}
-             <div className="absolute -bottom-8 -left-16 bg-white p-6 rounded-[32px] shadow-premium border border-slate-50 max-w-[260px] animate-in slide-in-from-bottom-12 duration-1000">
-                <div className="flex items-center gap-4 mb-5">
-                   <div className="w-12 h-12 bg-bg-main text-primary rounded-2xl flex items-center justify-center">
-                      <Zap size={24} fill="currentColor" />
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div className="bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
+                   <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                      <Eye size={32} />
                    </div>
-                   <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Real-time</p>
-                      <p className="text-sm font-bold text-text-main">Phụ đề nhịp nhàng</p>
-                   </div>
+                   <h3 className="text-2xl font-black mb-4">Visual Learning</h3>
+                   <p className="text-slate-500 font-medium leading-relaxed">
+                      Transform every audio lecture into crystal clear, real-time captions with emotional context.
+                   </p>
                 </div>
-                <div className="space-y-2">
-                   <div className="h-1.5 w-full bg-slate-100 rounded-full" />
-                   <div className="h-1.5 w-2/3 bg-primary/30 rounded-full" />
-                </div>
-             </div>
 
-             {/* Minimalist UI Card 2 */}
-             <div className="absolute top-16 -right-12 bg-white p-5 rounded-[28px] shadow-premium border border-slate-50 max-w-[180px] animate-in fade-in zoom-in duration-1000 delay-500">
-                <div className="flex items-center gap-3 mb-4">
-                   <Sparkles size={18} className="text-primary" />
-                   <span className="text-[11px] font-bold uppercase tracking-widest">Tóm lược AI</span>
+                <div className="bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
+                   <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                      <Zap size={32} fill="currentColor" />
+                   </div>
+                   <h3 className="text-2xl font-black mb-4">AI Summaries</h3>
+                   <p className="text-slate-500 font-medium leading-relaxed">
+                      Get high-level summaries of complex topics instantly, so you can focus on understanding.
+                   </p>
                 </div>
-                <div className="space-y-3">
-                   <div className="h-2 w-full bg-slate-50 rounded-full" />
-                   <div className="h-2 w-full bg-slate-50 rounded-full" />
+
+                <div className="bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
+                   <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                      <MessageSquare size={32} />
+                   </div>
+                   <h3 className="text-2xl font-black mb-4">Interaction</h3>
+                   <p className="text-slate-500 font-medium leading-relaxed">
+                      Communicate with teachers and peers seamlessly through integrated visual feedback tools.
+                   </p>
                 </div>
              </div>
           </div>
         </section>
 
-        {/* Philosophy Section */}
-        <section className="w-full max-w-[1440px] mx-auto px-8 md:px-20 py-32">
-          <div className="flex flex-col md:flex-row gap-24 items-center">
-             <div className="md:w-1/2 relative h-[500px] w-full rounded-[48px] overflow-hidden shadow-premium">
-                <Image src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop" alt="Technology for good" fill className="object-cover" />
-                <div className="absolute inset-0 bg-accent/10 mix-blend-overlay" />
-             </div>
-             <div className="md:w-1/2 space-y-10">
-                <span className="text-primary font-black uppercase tracking-[0.2em] text-xs">Triết lý của chúng tôi</span>
-                <h2 className="text-4xl md:text-6xl font-bold font-heading leading-tight">Thiết kế cho tất cả mọi người.</h2>
-                <p className="text-lg text-text-muted leading-relaxed font-medium">
-                   Chúng tôi tin rằng rào cản ngôn ngữ và âm thanh không nên là vật cản trên con đường học tập. UDL Hearing được xây dựng để mang lại sự công bằng và cảm hứng cho mọi học sinh, bất kể điểm xuất phát.
-                </p>
-                <div className="grid grid-cols-2 gap-8">
-                   <div>
-                      <h4 className="text-2xl font-bold font-heading mb-2">98%</h4>
-                      <p className="text-sm text-text-muted font-medium">Độ chính xác của phụ đề AI</p>
+        {/* MISSION SECTION - NEW PATH TO AVOID CACHE */}
+        <section id="mission" className="py-32">
+          <div className="max-w-[1440px] mx-auto px-8 md:px-20">
+             <div className="flex flex-col lg:flex-row items-center gap-24">
+                <div className="lg:w-1/2 relative">
+                   <div className="rounded-[60px] overflow-hidden shadow-2xl aspect-square relative">
+                      <Image 
+                        src="/assets/images/mission-final-v2.png" 
+                        alt="Visual Meaning" 
+                        fill
+                        className="object-contain p-4"
+                      />
                    </div>
-                   <div>
-                      <h4 className="text-2xl font-bold font-heading mb-2">120+</h4>
-                      <p className="text-sm text-text-muted font-medium">Trường học đang tích hợp</p>
-                   </div>
+                </div>
+                <div className="lg:w-1/2 space-y-10">
+                   <span className="text-[#FF4F6E] font-black uppercase tracking-[0.3em] text-xs">Our Core Values</span>
+                   <h2 className="text-4xl md:text-6xl font-black leading-tight">Equality isn&apos;t a feature. <br /> It&apos;s the <span className="text-[#FF4F6E]">Foundation</span>.</h2>
+                   <p className="text-xl text-slate-500 font-medium leading-relaxed">
+                      We believe every student deserves to be heard and to hear. Dreams is built to erase the invisible walls in classrooms.
+                   </p>
+                   <ul className="space-y-6">
+                      {[
+                        "Real-time transcription with tone detection",
+                        "Smart summarization of complex lecture videos",
+                        "Interactive visual classroom environment",
+                        "Personalized learning path for every student"
+                      ].map((item, i) => (
+                        <li key={i} className="flex items-center gap-4 font-bold text-slate-700">
+                           <div className="w-6 h-6 bg-[#FF4F6E]/10 text-[#FF4F6E] rounded-full flex items-center justify-center">
+                              <CheckCircle2 size={14} strokeWidth={3} />
+                           </div>
+                           {item}
+                        </li>
+                      ))}
+                   </ul>
                 </div>
              </div>
           </div>
+        </section>
+
+        {/* FINAL CTA */}
+        <section className="py-32 bg-[#1A1A1A] text-white relative overflow-hidden">
+           <div className="max-w-[1440px] mx-auto px-8 md:px-20 relative z-10 flex flex-col lg:flex-row items-center gap-20">
+              <div className="lg:w-1/2 space-y-10">
+                 <h2 className="text-5xl md:text-7xl font-black leading-tight">Ready to start your <span className="text-[#FF4F6E]">Dreams</span> journey?</h2>
+                 <p className="text-xl text-slate-400 font-medium">Join a global community of students who are redefining what it means to &quot;listen&quot; and &quot;learn&quot;.</p>
+                 <div className="flex flex-col sm:flex-row gap-6">
+                    <button 
+                      onClick={handleStart}
+                      className="px-12 py-6 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-2xl hover:bg-[#e64663] transition-all hover:scale-105 active:scale-[0.98] text-lg"
+                    >
+                      Get Started for Free
+                    </button>
+                    <button className="px-10 py-6 border-2 border-white/10 text-white font-black rounded-2xl hover:bg-white/10 transition-all">
+                       Contact School
+                    </button>
+                 </div>
+              </div>
+              <div className="lg:w-1/2">
+                 <div className="relative group">
+                    <div className="absolute inset-0 bg-[#FF4F6E] rounded-[60px] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
+                    <Image 
+                      src="/assets/images/community-img.png" 
+                      alt="Student Community" 
+                      width={600} 
+                      height={600} 
+                      className="relative z-10 object-contain drop-shadow-2xl"
+                    />
+                 </div>
+              </div>
+           </div>
         </section>
       </main>
 
-      <footer className="px-8 py-16 md:px-20 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-8">
-        <div className="flex items-center gap-3 opacity-50">
-           <Heart size={16} fill="currentColor" />
-           <span className="text-sm font-bold font-heading uppercase tracking-widest">UDL Hearing</span>
-        </div>
-        <div className="flex gap-12 text-[12px] font-bold uppercase tracking-widest text-text-muted">
-           <a href="#" className="hover:text-primary transition-colors">Hướng dẫn</a>
-           <a href="#" className="hover:text-primary transition-colors">Bảo mật</a>
-           <a href="#" className="hover:text-primary transition-colors">Liên hệ</a>
-        </div>
-        <p className="text-[11px] font-medium text-text-muted/60 tracking-wider">© 2025 UDL Hearing. Chân thành từ tâm.</p>
+      {/* FOOTER */}
+      <footer className="px-8 py-20 md:px-20 bg-white border-t border-slate-50">
+         <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+            <div className="flex items-center gap-3">
+               <div className="w-8 h-8 bg-[#FF4F6E] rounded-lg flex items-center justify-center text-white">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+                     <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                     <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+                  </svg>
+               </div>
+               <span className="text-xl font-black text-slate-900">Dreams</span>
+            </div>
+            <div className="flex gap-12 text-[11px] font-black uppercase tracking-widest text-slate-400">
+               <a href="#" className="hover:text-[#FF4F6E] transition-colors">How it works</a>
+               <a href="#" className="hover:text-[#FF4F6E] transition-colors">Privacy</a>
+               <a href="#" className="hover:text-[#FF4F6E] transition-colors">Contact</a>
+            </div>
+            <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">© 2026 Dreams. Built for inclusion.</p>
+         </div>
       </footer>
     </div>
   );

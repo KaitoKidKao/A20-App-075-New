@@ -1,0 +1,5 @@
+﻿Word	Mouth	Body	Head	Shoulder	Eyegaze	Eyebrow	Eyelids	Hand
+5	5				AD	RB	BB	hamfinger2345,hamthumboutmod,hamextfingeru,hampalmd,hamshoulders,hamlrat
+11					AD	RB	BB	hamfinger2,hamthumbacrossmod,hamextfingeru,hampalml,hamshoulders,hamlrat,hamparbegin,hamreplace,hamfinger2,hamthumbacrossmod,hampalmd,hambetween,hampalml,hammover,hamsmallmod,hamarcd,hamsmallmod,hamparend
+12					AD	RB	BB	hamfinger2,hamthumbacrossmod,hamextfingeru,hampalml,hamshoulders,hamlrat,hamparbegin,hamreplace,hamfinger23spread,hamthumbacrossmod,hampalmd,hambetween,hampalml,hammover,hamsmallmod,hamarcd,hamsmallmod,hamparend
+13					AD	RB	BB	hamfinger2,hamthumbacrossmod,hamextfingeru,hampalml,hamshoulders,hamlrat,hamparbegin,hamreplace,hamfinger2345,hamthumbacrossmod,hampinky,hamdoublebent,hampalmd,hambetween,hampalml,hammover,hamsmallmod,hamarcd,hamsmallmod,hamparend

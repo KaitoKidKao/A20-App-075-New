@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   FileText, 
   ListChecks, 
@@ -14,7 +14,7 @@ import {
 import { VideoPlayer } from '@/components/ui/VideoPlayer';
 import { TranscriptViewer } from '@/components/ui/TranscriptViewer';
 import { mockLectures, mockTranscript, mockSummary } from '@/lib/mockData';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -24,20 +24,19 @@ function cn(...inputs: ClassValue[]) {
 
 export default function VideoLearningPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'summary' | 'transcript' | 'info'>('summary');
-  const [currentTime, setCurrentTime] = useState(0);
-  const [currentCaption, setCurrentCaption] = useState('');
-
+  
   const lecture = mockLectures.find(l => l.id === params.id) || mockLectures[0];
-
-  // Logic to find current caption based on video time
-  useEffect(() => {
-    const segment = mockTranscript.find(
-      s => currentTime >= s.startTime && currentTime <= s.endTime
-    );
-    setCurrentCaption(segment ? segment.text : '');
-  }, [currentTime]);
+  
+  const activeTabFromUrl = (searchParams.get('tab') as 'summary' | 'transcript' | 'info') || 'summary';
+  const [activeTab, setActiveTab] = useState<'summary' | 'transcript' | 'info'>(activeTabFromUrl);
+  const [currentTime, setCurrentTime] = useState(0);
+  
+  const segment = mockTranscript.find(
+    s => currentTime >= s.startTime && currentTime <= s.endTime
+  );
+  const currentCaption = segment ? segment.text : '';
 
   const handleSeek = (time: number) => {
     // In a real app we'd trigger a seek on the video element
@@ -101,7 +100,7 @@ export default function VideoLearningPage() {
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id as 'summary' | 'transcript' | 'info')}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-4 text-sm font-bold border-b-2 transition-all",
                   activeTab === tab.id 
