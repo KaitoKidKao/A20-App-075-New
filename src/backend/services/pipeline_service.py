@@ -5,11 +5,11 @@ from pathlib import Path
 
 from sqlmodel import Session
 
-from src.backend.database import engine
-from src.backend.models import Flashcard, Lesson, ContentMetadata
-from src.backend.services.ai_service import AIService
-from src.backend.services.job_service import upsert_job_status
-from src.backend.services.video_service import VideoService
+from ..database import engine
+from ..models import Flashcard, Lesson, ContentMetadata, Category, Course, Module, Quiz, Question, QuestionOption
+from .ai_service import AIService
+from .job_service import upsert_job_status
+from .video_service import VideoService
 
 logger = logging.getLogger(__name__)
 
@@ -85,13 +85,43 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
                 stored_transcript["source_language"] = source_language or stored_transcript.get("source_language")
 
             update_status("ai_processing")
-            summary, metadata, briefing, notebook_data, handsign_data = await asyncio.gather(
+            summary, metadata, briefing, notebook_data, handsign_data, persistent_quizzes = await asyncio.gather(
                 AIService.summarize(vi_transcript),
                 AIService.process_all_lecture_metadata(vi_transcript),
                 AIService.generate_pre_lecture_briefing(vi_transcript),
                 AIService.generate_notebook_data(vi_transcript),
                 AIService.generate_handsign_data(vi_transcript),
+                AIService.generate_persistent_quizzes(vi_transcript),
             )
+
+            # Auto-Categorization logic
+            from sqlmodel import select
+            categories = session.exec(select(Category)).all()
+            cat_names = [c.name for c in categories]
+            best_cat_name = await AIService.identify_category(summary, cat_names)
+            
+            # Find or Create Course/Module if lesson is loose
+            lesson = session.get(Lesson, lesson_id)
+            if lesson and not lesson.module_id:
+                # Assign to a default "AI Auto-Generated" course in that category
+                target_cat = next((c for c in categories if c.name == best_cat_name), categories[0] if categories else None)
+                if target_cat:
+                    course = session.exec(select(Course).where(Course.category_id == target_cat.id)).first()
+                    if not course:
+                        course = Course(title=f"Khóa học {target_cat.name}", category_id=target_cat.id, instructor_id="system")
+                        session.add(course)
+                        session.commit()
+                        session.refresh(course)
+                    
+                    module = session.exec(select(Module).where(Module.course_id == course.id)).first()
+                    if not module:
+                        module = Module(title="Chương 1: Khởi đầu", course_id=course.id)
+                        session.add(module)
+                        session.commit()
+                        session.refresh(module)
+                    
+                    lesson.module_id = module.id
+                    session.add(lesson)
 
             # Build comprehensive AI analysis object
             ai_analysis = {
@@ -121,6 +151,32 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
                         back=fc.get("back"),
                     )
                 )
+
+            # Save persistent Quizzes
+            if persistent_quizzes:
+                quiz = Quiz(title=f"Quiz: {lesson.title}", lesson_id=lesson_id)
+                session.add(quiz)
+                session.commit()
+                session.refresh(quiz)
+                
+                for q_data in persistent_quizzes:
+                    question = Question(
+                        quiz_id=quiz.id,
+                        question_text=q_data["question_text"],
+                        explanation=q_data["explanation"],
+                        difficulty=q_data["difficulty"]
+                    )
+                    session.add(question)
+                    session.commit()
+                    session.refresh(question)
+                    
+                    for key, val in q_data["options"].items():
+                        option = QuestionOption(
+                            question_id=question.id,
+                            option_text=val,
+                            is_correct=(key == q_data["correct_answer"])
+                        )
+                        session.add(option)
             session.commit()
             update_status("completed")
     except Exception as e:

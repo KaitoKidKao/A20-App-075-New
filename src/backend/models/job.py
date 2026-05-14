@@ -1,8 +1,10 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .course import Lesson
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 import uuid
-from src.backend.utils.datetime_utils import utc_now
+from ..utils.datetime_utils import utc_now
 
 class ProcessingJob(SQLModel, table=True):
     __tablename__ = "processing_jobs"

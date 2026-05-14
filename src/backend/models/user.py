@@ -1,8 +1,10 @@
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .progress import Enrollment
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 import uuid
-from src.backend.utils.datetime_utils import utc_now
+from ..utils.datetime_utils import utc_now
 
 class Role(SQLModel, table=True):
     __tablename__ = "roles"

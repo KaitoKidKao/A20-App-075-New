@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from src.backend.database import get_session
 from src.backend.auth import get_current_user
-from src.backend.models import User, Enrollment, UserProgress, UserFlashcardProgress, Lesson, Flashcard
+from src.backend.models import User, Enrollment, UserProgress, UserFlashcardProgress, Lesson, Flashcard, Profile, Course, Module
 from src.backend.utils.datetime_utils import utc_now
 
 router = APIRouter(prefix="/api/student", tags=["student"])
@@ -99,3 +99,94 @@ async def review_flashcard(
     session.add(progress)
     session.commit()
     return {"next_review_at": progress.next_review_at}
+# --- Profile & Certificates ---
+@router.get("/profile")
+async def get_student_profile(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    profile = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
+    if not profile:
+        profile = Profile(user_id=current_user.id)
+        session.add(profile)
+        session.commit()
+        session.refresh(profile)
+    
+    # Calculate stats
+    enrollments = session.exec(select(Enrollment).where(Enrollment.user_id == current_user.id)).all()
+    completed_lessons = session.exec(select(UserProgress).where(
+        UserProgress.user_id == current_user.id, 
+        UserProgress.completion_status == "completed"
+    )).all()
+    
+    return {
+        "profile": profile,
+        "stats": {
+            "total_enrollments": len(enrollments),
+            "completed_lessons": len(completed_lessons),
+            "total_hours": round(len(completed_lessons) * 0.5, 1), # Mocked
+            "certificates_count": len(profile.certifications) if profile.certifications else 0
+        }
+    }
+
+@router.put("/profile")
+async def update_profile(
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    profile = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
+    if not profile:
+        profile = Profile(user_id=current_user.id)
+    
+    for key, val in data.items():
+        if hasattr(profile, key) and key != "id":
+            setattr(profile, key, val)
+    
+    session.add(profile)
+    session.commit()
+    session.refresh(profile)
+    return profile
+
+@router.get("/courses/{course_id}/certificate")
+async def get_course_certificate(
+    course_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    # Check if all lessons in course are completed
+    modules = session.exec(select(Module).where(Module.course_id == course_id)).all()
+    module_ids = [m.id for m in modules]
+    lessons = session.exec(select(Lesson).where(Lesson.module_id.in_(module_ids))).all()
+    lesson_ids = [l.id for l in lessons]
+    
+    if not lesson_ids:
+        raise HTTPException(status_code=400, detail="Khóa học chưa có bài học nào.")
+
+    completed = session.exec(select(UserProgress).where(
+        UserProgress.user_id == current_user.id,
+        UserProgress.lesson_id.in_(lesson_ids),
+        UserProgress.completion_status == "completed"
+    )).all()
+    
+    if len(completed) < len(lessons):
+        raise HTTPException(status_code=400, detail=f"Chưa hoàn thành tất cả bài học ({len(completed)}/{len(lessons)}).")
+    
+    profile = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
+    certs = list(profile.certifications) if profile.certifications else []
+    
+    course = session.get(Course, course_id)
+    cert_id = f"CERT-{str(course_id)[:8]}-{str(current_user.id)[:8]}".upper()
+    
+    if not any(c.get("course_id") == str(course_id) for c in certs):
+        certs.append({
+            "cert_id": cert_id,
+            "course_id": str(course_id),
+            "course_title": course.title,
+            "issue_date": datetime.utcnow().isoformat()
+        })
+        profile.certifications = certs
+        session.add(profile)
+        session.commit()
+    
+    return next(c for c in certs if c["course_id"] == str(course_id))

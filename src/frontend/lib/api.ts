@@ -35,6 +35,29 @@ export interface HandsSignResponse {
   handsign_data: HandsSignGloss[];
 }
 
+export interface Profile {
+  bio?: string;
+  learning_goals?: string;
+  certifications?: any[];
+}
+
+export interface StudentProfileData {
+  profile: Profile;
+  stats: {
+    total_enrollments: number;
+    completed_lessons: number;
+    total_hours: number;
+    certificates_count: number;
+  };
+}
+
+export interface Certificate {
+  cert_id: string;
+  course_id: string;
+  course_title: string;
+  issue_date: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -313,6 +336,28 @@ export const api = {
     async getProgress(lessonId: string): Promise<UserProgress | null> {
       const res = await apiFetch(`/api/student/lessons/${lessonId}/progress`, { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch progress.");
+      return res.json();
+    },
+    async getProfile(): Promise<StudentProfileData> {
+      const res = await apiFetch("/api/student/profile", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch profile.");
+      return res.json();
+    },
+    async updateProfile(data: Partial<Profile>): Promise<Profile> {
+      const res = await apiFetch("/api/student/profile", {
+        method: "PUT",
+        headers: buildHeaders(),
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Failed to update profile.");
+      return res.json();
+    },
+    async getCertificate(courseId: string): Promise<Certificate> {
+      const res = await apiFetch(`/api/student/courses/${courseId}/certificate`, { headers: buildHeaders() });
+      if (!res.ok) {
+         const error = await res.text();
+         throw new Error(error || "Failed to fetch certificate.");
+      }
       return res.json();
     }
   }

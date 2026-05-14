@@ -1,9 +1,12 @@
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .course import Lesson
+    from .user import User
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 import uuid
 from decimal import Decimal
-from src.backend.utils.datetime_utils import utc_now
+from ..utils.datetime_utils import utc_now
 
 class Quiz(SQLModel, table=True):
     __tablename__ = "quizzes"
@@ -25,12 +28,25 @@ class Question(SQLModel, table=True):
     __tablename__ = "questions"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     quiz_id: uuid.UUID = Field(foreign_key="quizzes.id")
+    question_text: str = Field(nullable=False)
+    explanation: Optional[str] = None
+    difficulty: str = Field(default="Trung bình")
     question_type: str = Field(default="multiple_choice")
     question_data: dict = Field(default_factory=dict, sa_column=Column(JSONB))
     score: int = Field(default=1)
     sort_order: int = Field(default=0)
     
     quiz: Quiz = Relationship(back_populates="questions")
+    options: List["QuestionOption"] = Relationship(back_populates="question")
+
+class QuestionOption(SQLModel, table=True):
+    __tablename__ = "question_options"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    question_id: uuid.UUID = Field(foreign_key="questions.id")
+    option_text: str = Field(nullable=False)
+    is_correct: bool = Field(default=False)
+    
+    question: Question = Relationship(back_populates="options")
 
 class QuizAttempt(SQLModel, table=True):
     __tablename__ = "quiz_attempts"

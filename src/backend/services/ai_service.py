@@ -5,7 +5,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 from openai import AsyncOpenAI
-from src.backend import config
+from .. import config
 
 logger = logging.getLogger(__name__)
 
@@ -721,4 +721,88 @@ class AIService:
             return processed
         except Exception as e:
             logger.error(f'❌ Lỗi khi sinh VSL Glosses từ text: {e}')
+            return []
+    @classmethod
+    async def identify_category(cls, transcript_summary: list, available_categories: list[str]) -> str:
+        """
+        Dự đoán danh mục phù hợp nhất dựa trên tóm tắt nội dung.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key or not available_categories:
+            return "Chung"
+
+        client = AsyncOpenAI(api_key=api_key)
+        summary_text = " ".join(transcript_summary)
+        
+        prompt = f"""
+        Dựa trên tóm tắt bài giảng sau, hãy chọn danh mục phù hợp nhất từ danh sách cho sẵn.
+        Danh sách danh mục: {", ".join(available_categories)}
+        
+        Tóm tắt:
+        {summary_text}
+        
+        Chỉ trả về tên danh mục duy nhất, không giải thích gì thêm. Nếu không khớp, trả về "Chung".
+        """
+
+        try:
+            response = await client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                max_completion_tokens=50
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"❌ Lỗi khi phân loại danh mục: {e}")
+            return "Chung"
+
+    @classmethod
+    async def generate_persistent_quizzes(cls, transcript_data: dict) -> list[dict]:
+        """
+        Tạo danh sách câu hỏi trắc nghiệm có cấu trúc để lưu vào database.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return []
+
+        client = AsyncOpenAI(api_key=api_key)
+        full_text = " ".join([s["text"] for s in transcript_data["segments"]])
+        truncated_text = full_text[:6000]
+
+        prompt = f"""
+        Bạn là chuyên gia soạn thảo đề thi. Hãy tạo 5 câu hỏi trắc nghiệm khách quan từ nội dung sau.
+        Yêu cầu:
+        1. Mỗi câu hỏi có 4 lựa chọn (A, B, C, D).
+        2. Xác định đáp án đúng và giải thích ngắn gọn.
+        3. Phân loại độ khó (Dễ, Trung bình, Khó).
+        
+        Định dạng trả về JSON:
+        {{
+          "quizzes": [
+            {{
+              "question_text": "Nội dung câu hỏi?",
+              "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
+              "correct_answer": "A",
+              "explanation": "Tại sao A đúng?",
+              "difficulty": "Trung bình"
+            }}
+          ]
+        }}
+        
+        Nội dung:
+        {truncated_text}
+        """
+
+        try:
+            response = await client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": "Bạn CHỈ ĐƯỢC PHÉP trả lời bằng TIẾNG VIỆT."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={ "type": "json_object" }
+            )
+            result = json.loads(response.choices[0].message.content)
+            return result.get("quizzes", [])
+        except Exception as e:
+            logger.error(f"❌ Lỗi khi tạo quiz: {e}")
             return []
