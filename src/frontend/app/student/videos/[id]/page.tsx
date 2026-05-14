@@ -7,9 +7,6 @@ import {
   Volume2,
   VolumeX,
   Maximize,
-  RotateCcw,
-  SkipForward,
-  SkipBack,
   FileText, 
   Sparkles,
   Clock,
@@ -42,45 +39,6 @@ interface TranscriptSegment {
 }
 
 type TranscriptByLanguage = Record<string, TranscriptSegment[]>;
-
-function isMostlyEnglish(text: string): boolean {
-  const t = (text || "").trim();
-  if (!t) return false;
-  const asciiLetters = (t.match(/[A-Za-z]/g) || []).length;
-  const viChars = (t.match(/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/gi) || []).length;
-  return asciiLetters > 25 && viChars < 5;
-}
-
-function splitSentences(text: string): string[] {
-  return (text || "")
-    .split(/(?<=[.!?。！？])\s+|\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function alignTextToTimeline(sourceText: string, timelineSegments: TranscriptSegment[]): TranscriptSegment[] {
-  const parts = splitSentences(sourceText);
-  if (parts.length === 0) return timelineSegments;
-  const result: TranscriptSegment[] = [];
-  const totalChars = parts.reduce((acc, p) => acc + p.length, 0);
-  let cursor = 0;
-  for (const seg of timelineSegments) {
-    const segDuration = Math.max(0.2, seg.end - seg.start);
-    const ratio = segDuration / Math.max(0.2, timelineSegments[timelineSegments.length - 1].end - timelineSegments[0].start);
-    const charsForSeg = Math.max(8, Math.round(totalChars * ratio));
-    let text = "";
-    while (cursor < parts.length && text.length < charsForSeg) {
-      text += (text ? " " : "") + parts[cursor];
-      cursor += 1;
-    }
-    if (!text && cursor < parts.length) {
-      text = parts[cursor];
-      cursor += 1;
-    }
-    result.push({ ...seg, text: text || seg.text });
-  }
-  return result;
-}
 
 interface TimelineItem {
   time: string;
@@ -183,28 +141,18 @@ export default function VideoLessonPage() {
       try {
         const data = await api.videos.getTranscript(videoId);
         const fromApi = (data.segments_by_language || {}) as TranscriptByLanguage;
-        const normalized: TranscriptByLanguage = { ...fromApi };
+        const normalized: TranscriptByLanguage = {};
 
-        if (!normalized.vi && Array.isArray(data.segments)) normalized.vi = data.segments;
-
-        // Legacy transcript compatibility:
-        // Some old files store mixed EN/VI in one segments array.
-        if (Array.isArray(data.segments) && !fromApi.en) {
-          const enSegments = data.segments.filter((s: TranscriptSegment) => isMostlyEnglish(s.text));
-          if (enSegments.length >= 3) {
-            normalized.en = enSegments;
-            if (!fromApi.vi) {
-              const viSegments = data.segments.filter((s: TranscriptSegment) => !isMostlyEnglish(s.text));
-              normalized.vi = viSegments.length > 0 ? viSegments : data.segments;
-            }
-            // Fallback for corrupted legacy transcript.
-            if ((normalized.vi?.length || 0) <= 1 && enSegments.length > 3) {
-              const longViText = normalized.vi?.[0]?.text || "";
-              normalized.vi = longViText
-                ? alignTextToTimeline(longViText, enSegments)
-                : enSegments;
-            }
+        for (const lang of ['vi', 'en']) {
+          const langSegments = fromApi[lang];
+          if (Array.isArray(langSegments) && langSegments.length > 0) {
+            normalized[lang] = langSegments;
           }
+        }
+
+        if (Object.keys(normalized).length === 0 && Array.isArray(data.segments)) {
+          const legacyLang = String(data.language || data.source_language || 'vi').toLowerCase().startsWith('en') ? 'en' : 'vi';
+          normalized[legacyLang] = data.segments;
         }
 
         const availableLangs = Object.keys(normalized).filter(
@@ -550,19 +498,6 @@ export default function VideoLessonPage() {
     [segments, currentTime]
   );
 
-  const visibleCaptionWords = useMemo(() => {
-    if (!activeSegment) return [] as string[];
-
-    const words = activeSegment.text.split(/\s+/).filter(Boolean);
-    if (words.length === 0) return [] as string[];
-
-    const elapsed = Math.max(0, currentTime - activeSegment.start);
-    const duration = Math.max(0.2, activeSegment.end - activeSegment.start);
-    const progress = Math.min(1, elapsed / duration);
-    const visibleCount = Math.max(1, Math.ceil(progress * words.length));
-    return words.slice(0, visibleCount);
-  }, [activeSegment, currentTime]);
-
   const renderPanelState = (message: string) => (
     <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold text-center leading-relaxed">
       {message}
@@ -602,6 +537,31 @@ export default function VideoLessonPage() {
                   Chế độ demo: không tìm thấy file video trên máy chủ, hệ thống đang phát video mẫu.
                 </div>
               )}
+
+              <div className="absolute top-4 right-4 z-30 flex rounded-xl border border-white/20 bg-black/55 p-1">
+                {['vi', 'en'].map((lang) => {
+                  const enabled = Array.isArray(segmentsByLanguage[lang]) && segmentsByLanguage[lang].length > 0;
+                  return (
+                    <button
+                      key={lang}
+                      type="button"
+                      disabled={!enabled}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (enabled) setLanguage(lang);
+                      }}
+                      className={cn(
+                        'rounded-lg px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-widest transition-colors',
+                        language === lang ? 'bg-white text-slate-950' : 'text-white/75 hover:text-white',
+                        !enabled && 'cursor-not-allowed opacity-35 hover:text-white/75'
+                      )}
+                      aria-label={`Chọn phụ đề ${lang.toUpperCase()}`}
+                    >
+                      {lang.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
 
               <video
                 key={`${videoId}-${videoSourceMode}`}
@@ -741,16 +701,8 @@ export default function VideoLessonPage() {
                 >
                   <div className="px-1 md:px-2 py-1">
                     <div className="flex items-center gap-2 justify-center">
-                      <p className="text-center text-xs md:text-sm font-extrabold leading-relaxed tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                      {visibleCaptionWords.map((word, idx) => (
-                        <span
-                          key={`${word}-${idx}`}
-                          className="inline-block mr-2 caption-word-pop"
-                          style={{ animationDelay: `${idx * 24}ms` }}
-                        >
-                          {word}
-                        </span>
-                      ))}
+                      <p className="text-center text-sm md:text-base font-extrabold leading-relaxed tracking-tight text-white">
+                        {activeSegment.text}
                       </p>
                     </div>
                   </div>
@@ -1325,26 +1277,6 @@ export default function VideoLessonPage() {
 
         </div>
       </div>
-      <style jsx global>{`
-        @keyframes captionWordPop {
-          0% {
-            opacity: 0;
-            transform: translateY(8px) scale(0.86);
-          }
-          70% {
-            opacity: 1;
-            transform: translateY(-2px) scale(1.04);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        .caption-word-pop {
-          animation: captionWordPop 260ms ease-out both;
-        }
-      `}</style>
     </div>
   );
 }

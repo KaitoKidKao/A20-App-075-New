@@ -16,8 +16,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: videoId } = await params;
-  const token = request.cookies.get('udl_token')?.value;
-  const requestedLang = request.nextUrl.searchParams.get('lang') || 'vi';
+  const token = request.cookies.get('access_token')?.value || request.cookies.get('udl_token')?.value;
+  const requestedLang = (request.nextUrl.searchParams.get('lang') || 'vi').toLowerCase();
 
   try {
     // Fetch transcript from BE
@@ -27,7 +27,7 @@ export async function GET(
     });
     const data = await res.json();
 
-    const segments = data?.segments_by_language?.[requestedLang] || data?.segments || [];
+    const segments = data?.segments_by_language?.[requestedLang] || [];
     if (!segments || segments.length === 0) {
       // Return empty VTT if no transcript
       const emptyVTT = 'WEBVTT\n\n';
