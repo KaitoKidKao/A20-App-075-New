@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from src.backend import config
 from src.backend.api.auth_router import router as auth_router
+from src.backend.api.admin_router import router as admin_router
 from src.backend.api.avatar_router import router as avatar_router
 from src.backend.api.videos_router import router as videos_router
 from src.backend.api.course_router import router as course_router
@@ -44,6 +45,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(admin_router)
 app.include_router(videos_router)
 app.include_router(avatar_router)
 app.include_router(course_router)

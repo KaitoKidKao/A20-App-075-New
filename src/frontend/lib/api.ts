@@ -89,6 +89,7 @@ export interface Course {
   title: string;
   description?: string;
   cover_image_url?: string;
+  thumbnail_url?: string;
 }
 
 export interface Module {
@@ -120,6 +121,78 @@ export interface UserProgress {
   lesson_id: string;
   progress_percent: number;
   completion_status: string;
+  watched_seconds?: number;
+  last_position_seconds?: number;
+  duration_seconds?: number;
+  last_accessed_at?: string;
+}
+
+export interface StudentDashboard {
+  stats: {
+    active_courses: number;
+    completed_lessons: number;
+    total_watch_seconds: number;
+    learned_flashcards: number;
+    average_quiz_score: number;
+  };
+  courses: {
+    course_id: string;
+    title: string;
+    thumbnail_url?: string | null;
+    enrollment_status: string;
+    total_lessons: number;
+    completed_lessons: number;
+    progress_percent: number;
+  }[];
+  incomplete_lessons: {
+    lesson_id: string;
+    title: string;
+    progress_percent: number;
+    last_position_seconds: number;
+    last_accessed_at: string;
+  }[];
+  quiz_scores: {
+    quiz_id: string;
+    title: string;
+    score: number;
+    status: string;
+    created_at: string;
+  }[];
+  recent_activity: {
+    type: string;
+    lesson_id: string;
+    progress_percent: number;
+    last_accessed_at: string;
+  }[];
+}
+
+export interface AdminDashboard {
+  stats: {
+    student_count: number;
+    active_courses: number;
+    lesson_count: number;
+    failed_video_jobs: number;
+    completion_rate: number;
+  };
+  failed_jobs: {
+    lesson_id: string;
+    status: string;
+    error_message?: string | null;
+    attempts: number;
+    updated_at: string;
+  }[];
+  popular_lessons: {
+    lesson_id: string;
+    title: string;
+    views: number;
+  }[];
+  recent_progress: {
+    user_id: string;
+    lesson_id: string;
+    progress_percent: number;
+    completion_status: string;
+    last_accessed_at: string;
+  }[];
 }
 
 const buildHeaders = (isMultipart = false): HeadersInit => {
@@ -362,8 +435,20 @@ export const api = {
       if (!res.ok) throw new Error("Failed to fetch my courses.");
       return res.json();
     },
-    async updateProgress(lessonId: string, progressPercent: number, status = "in_progress") {
-      const res = await apiFetch(`/api/student/lessons/${lessonId}/progress?progress_percent=${progressPercent}&status=${status}`, {
+    async updateProgress(
+      lessonId: string,
+      progressPercent: number,
+      status = "in_progress",
+      details?: { watchedSeconds?: number; lastPositionSeconds?: number; durationSeconds?: number }
+    ) {
+      const params = new URLSearchParams({
+        progress_percent: String(progressPercent),
+        status,
+      });
+      if (details?.watchedSeconds !== undefined) params.set("watched_seconds", String(Math.round(details.watchedSeconds)));
+      if (details?.lastPositionSeconds !== undefined) params.set("last_position_seconds", String(Math.round(details.lastPositionSeconds)));
+      if (details?.durationSeconds !== undefined) params.set("duration_seconds", String(Math.round(details.durationSeconds)));
+      const res = await apiFetch(`/api/student/lessons/${lessonId}/progress?${params.toString()}`, {
         method: "POST",
         headers: buildHeaders(),
       });
@@ -373,6 +458,33 @@ export const api = {
     async getProgress(lessonId: string): Promise<UserProgress | null> {
       const res = await apiFetch(`/api/student/lessons/${lessonId}/progress`, { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch progress.");
+      return res.json();
+    },
+    async getDashboard(): Promise<StudentDashboard> {
+      const res = await apiFetch("/api/student/dashboard", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch student dashboard.");
+      return res.json();
+    },
+    async reviewFlashcard(flashcardId: string, isCorrect: boolean) {
+      const res = await apiFetch(`/api/student/flashcards/${flashcardId}/review?is_correct=${isCorrect}`, {
+        method: "POST",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to save flashcard review.");
+      return res.json();
+    },
+    async listLessonQuizzes(lessonId: string) {
+      const res = await apiFetch(`/api/student/lessons/${lessonId}/quizzes`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch lesson quizzes.");
+      return res.json();
+    },
+    async submitQuiz(quizId: string, answers: Record<string, string>) {
+      const res = await apiFetch(`/api/student/quizzes/${quizId}/submit`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({ answers }),
+      });
+      if (!res.ok) throw new Error("Failed to submit quiz.");
       return res.json();
     },
     async getProfile(): Promise<StudentProfileData> {
@@ -395,6 +507,15 @@ export const api = {
          const error = await res.text();
          throw new Error(error || "Failed to fetch certificate.");
       }
+      return res.json();
+    }
+  }
+  ,
+
+  admin: {
+    async getDashboard(): Promise<AdminDashboard> {
+      const res = await apiFetch("/api/admin/dashboard", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch admin dashboard.");
       return res.json();
     }
   }

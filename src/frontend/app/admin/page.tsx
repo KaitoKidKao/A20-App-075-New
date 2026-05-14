@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   Activity, 
   Cpu, 
@@ -17,6 +17,7 @@ import {
   Plus
 } from 'lucide-react';
 import { StatusBadge, type Status } from '@/components/ui/StatusBadge';
+import { api, type AdminDashboard } from '@/lib/api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -27,7 +28,19 @@ function cn(...inputs: ClassValue[]) {
 export default function AdminDashboardPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        setDashboard(await api.admin.getDashboard());
+      } catch (err) {
+        console.error('Failed to fetch admin dashboard', err);
+      }
+    };
+    fetchDashboard();
+  }, []);
 
   const kpis = [
     { label: 'Jobs đang xử lý', value: '4', icon: Activity, color: 'text-amber-600', bg: 'bg-amber-50', trend: '+12%', isUp: true },
@@ -44,6 +57,23 @@ export default function AdminDashboardPage() {
     { id: 'JOB-8819', type: 'Video', status: 'ready', model: 'Whisper-L3', start: '13:50:22', time: '04:15' },
     { id: 'JOB-8818', type: 'Audio', status: 'error', model: 'Whisper-L3', start: '13:45:00', time: '01:02' },
   ];
+
+  const dashboardKpis = dashboard ? [
+    { label: 'Học sinh', value: String(dashboard.stats.student_count), icon: Users, color: 'text-slate-600', bg: 'bg-slate-50', trend: 'active', isUp: true },
+    { label: 'Khóa học', value: String(dashboard.stats.active_courses), icon: Database, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: 'live', isUp: true },
+    { label: 'Bài học', value: String(dashboard.stats.lesson_count), icon: FileVideo, color: 'text-blue-600', bg: 'bg-blue-50', trend: 'total', isUp: true },
+    { label: 'Video lỗi', value: String(dashboard.stats.failed_video_jobs), icon: Activity, color: 'text-amber-600', bg: 'bg-amber-50', trend: 'failed', isUp: false },
+    { label: 'Tỷ lệ hoàn thành', value: `${dashboard.stats.completion_rate}%`, icon: Zap, color: 'text-[#FF4F6E]', bg: 'bg-[#FF4F6E]/5', trend: 'avg', isUp: true },
+    { label: 'Bài phổ biến', value: String(dashboard.popular_lessons.length), icon: Cpu, color: 'text-primary', bg: 'bg-primary-soft', trend: 'top', isUp: true },
+  ] : kpis;
+
+  const dashboardJobs = dashboard?.failed_jobs.map((job, index) => ({
+    id: `JOB-${index + 1}`,
+    type: 'Video',
+    status: 'error',
+    lessonId: job.lesson_id,
+    attempts: job.attempts,
+  })) ?? jobs;
 
   const handleUploadSim = () => {
     setIsUploading(true);
@@ -174,7 +204,7 @@ export default function AdminDashboardPage() {
 
           {/* KPI Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-            {kpis.map((kpi, i) => (
+            {dashboardKpis.map((kpi, i) => (
               <div key={i} className="bg-white p-6 rounded-[28px] border border-slate-50 shadow-sm group hover:shadow-xl transition-all duration-500">
                 <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3", kpi.bg, kpi.color)}>
                   <kpi.icon size={22} />
@@ -207,7 +237,7 @@ export default function AdminDashboardPage() {
             <div className="overflow-x-auto">
                <table className="w-full text-left">
                   <tbody className="divide-y divide-slate-50">
-                     {jobs.map((job) => (
+                     {dashboardJobs.map((job) => (
                         <tr key={job.id} className="hover:bg-slate-50/50 transition-colors">
                            <td className="px-8 py-6">
                               <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">ID</p>

@@ -31,7 +31,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { api, type HandsSignGloss } from '@/lib/api';
+import { api, type HandsSignGloss, type UserProgress } from '@/lib/api';
 import SignAvatar2D from '@/components/SignAvatar2D';
 import { InfographicViewer, type InfographicData } from '@/components/infographic/InfographicViewer';
 
@@ -148,6 +148,8 @@ export default function VideoLessonPage() {
   const [captionPosition, setCaptionPosition] = useState<'low' | 'middle' | 'high'>('low');
   const [reducedMotion, setReducedMotion] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastProgressSaveSecondRef = useRef(0);
+  const hasRestoredProgressRef = useRef(false);
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
   const [isFlashcardFlipped, setIsFlashcardFlipped] = useState(false);
@@ -157,6 +159,7 @@ export default function VideoLessonPage() {
   /** Ưu tiên stream file theo videoId (Next proxy → data/uploads/videos); lỗi thì dùng video mẫu. */
   const [videoSourceMode, setVideoSourceMode] = useState<'byId' | 'demo'>('byId');
   const [videoBroken, setVideoBroken] = useState(false);
+  const [savedProgress, setSavedProgress] = useState<UserProgress | null>(null);
 
   const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `/api/video/${videoId}`;
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -215,6 +218,21 @@ export default function VideoLessonPage() {
   useEffect(() => {
     setVideoSourceMode('byId');
     setVideoBroken(false);
+    setSavedProgress(null);
+    lastProgressSaveSecondRef.current = 0;
+    hasRestoredProgressRef.current = false;
+  }, [videoId]);
+
+  useEffect(() => {
+    const loadSavedProgress = async () => {
+      try {
+        const progress = await api.student.getProgress(videoId);
+        setSavedProgress(progress);
+      } catch (err) {
+        console.error('Failed to load lesson progress', err);
+      }
+    };
+    loadSavedProgress();
   }, [videoId]);
 
   useEffect(() => {
@@ -229,6 +247,12 @@ export default function VideoLessonPage() {
     const updateDuration = () => {
       if (vid.duration && vid.duration !== Infinity && vid.duration > 0) {
         setDuration(vid.duration);
+        const resumeAt = savedProgress?.last_position_seconds || 0;
+        if (!hasRestoredProgressRef.current && resumeAt > 5 && resumeAt < vid.duration - 5) {
+          vid.currentTime = resumeAt;
+          setCurrentTime(resumeAt);
+          hasRestoredProgressRef.current = true;
+        }
       }
     };
     
@@ -251,7 +275,7 @@ export default function VideoLessonPage() {
       vid.removeEventListener('durationchange', updateDuration);
       clearInterval(poll);
     };
-  }, [videoSrc]);
+  }, [savedProgress?.last_position_seconds, videoSrc]);
 
   useEffect(() => {
     const closeMenu = () => setShowSpeedMenu(false);
@@ -517,8 +541,9 @@ export default function VideoLessonPage() {
       const time = videoRef.current.currentTime;
       setCurrentTime(time);
       
-      // Save progress every 10 seconds
-      if (Math.floor(time) % 10 === 0 && Math.floor(time) !== 0) {
+      const second = Math.floor(time);
+      if (second - lastProgressSaveSecondRef.current >= 10) {
+        lastProgressSaveSecondRef.current = second;
         saveProgress(time);
       }
     }
@@ -528,7 +553,12 @@ export default function VideoLessonPage() {
     if (!duration) return;
     const percent = Math.round((time / duration) * 100);
     try {
-      await api.student.updateProgress(videoId, percent, status);
+      const progress = await api.student.updateProgress(videoId, percent, status, {
+        watchedSeconds: time,
+        lastPositionSeconds: time,
+        durationSeconds: duration,
+      });
+      setSavedProgress(progress);
     } catch (err) {
       console.error("Failed to save progress", err);
     }
@@ -537,6 +567,18 @@ export default function VideoLessonPage() {
   const handleVideoEnded = () => {
     setIsPlaying(false);
     saveProgress(duration, "completed");
+  };
+
+  const handleFlashcardReview = async (isCorrect: boolean) => {
+    const card = flashcards[currentFlashcardIndex];
+    if (!card?.id) return;
+    try {
+      await api.student.reviewFlashcard(card.id, isCorrect);
+      setCurrentFlashcardIndex((prev) => (prev + 1) % flashcards.length);
+      setIsFlashcardFlipped(false);
+    } catch (err) {
+      console.error('Failed to save flashcard review', err);
+    }
   };
 
   const seekTo = (timeStr: string) => {
@@ -668,7 +710,16 @@ export default function VideoLessonPage() {
                 key={`${videoId}-${videoSourceMode}`}
                 ref={videoRef}
                 onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onLoadedMetadata={(e) => {
+                  const nextDuration = e.currentTarget.duration;
+                  setDuration(nextDuration);
+                  const resumeAt = savedProgress?.last_position_seconds || 0;
+                  if (!hasRestoredProgressRef.current && resumeAt > 5 && resumeAt < nextDuration - 5) {
+                    e.currentTarget.currentTime = resumeAt;
+                    setCurrentTime(resumeAt);
+                    hasRestoredProgressRef.current = true;
+                  }
+                }}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => {
                   setIsPlaying(false);
@@ -1244,6 +1295,22 @@ export default function VideoLessonPage() {
                               <p className="text-center text-[11px] text-slate-400 font-bold">
                                 Kéo trái/phải để chuyển thẻ. Chạm để lật thẻ.
                               </p>
+                              <div className="mx-auto grid max-w-[380px] grid-cols-2 gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleFlashcardReview(false)}
+                                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-extrabold uppercase tracking-widest text-slate-600 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                                >
+                                  Cần ôn lại
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleFlashcardReview(true)}
+                                  className="rounded-2xl bg-[#FF4F6E] px-4 py-3 text-xs font-extrabold uppercase tracking-widest text-white transition-colors hover:bg-[#e64663]"
+                                >
+                                  Đã nhớ
+                                </button>
+                              </div>
                             </>
                           )}
                        </div>

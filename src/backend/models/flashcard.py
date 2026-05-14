@@ -22,6 +22,10 @@ class UserFlashcardProgress(SQLModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="users.id")
     flashcard_id: uuid.UUID = Field(foreign_key="flashcards.id")
     box_level: int = Field(default=1) # Leitner system
+    review_count: int = Field(default=0)
+    correct_count: int = Field(default=0)
+    incorrect_count: int = Field(default=0)
+    status: str = Field(default="new") # new, learning, learned
     next_review_at: datetime = Field(default_factory=utc_now)
     last_reviewed_at: Optional[datetime] = None
     

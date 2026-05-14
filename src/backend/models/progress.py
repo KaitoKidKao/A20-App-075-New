@@ -24,6 +24,9 @@ class UserProgress(SQLModel, table=True):
     lesson_id: uuid.UUID = Field(foreign_key="lessons.id")
     completion_status: str = Field(default="in_progress") # in_progress, completed
     progress_percent: int = Field(default=0)
+    watched_seconds: int = Field(default=0)
+    last_position_seconds: int = Field(default=0)
+    duration_seconds: int = Field(default=0)
     last_accessed_at: datetime = Field(default_factory=utc_now)
     completed_at: Optional[datetime] = None
     

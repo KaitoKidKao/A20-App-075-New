@@ -1,11 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlmodel import Session, select
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
 from src.backend.database import get_session
 from src.backend.auth import get_current_user
-from src.backend.models import User, Enrollment, UserProgress, UserFlashcardProgress, Lesson, Flashcard, Profile, Course, Module
+from src.backend.models import (
+    User,
+    Enrollment,
+    UserProgress,
+    UserFlashcardProgress,
+    Lesson,
+    Flashcard,
+    Profile,
+    Course,
+    Module,
+    Quiz,
+    Question,
+    QuestionOption,
+    QuizAttempt,
+)
 from src.backend.utils.datetime_utils import utc_now
 
 router = APIRouter(prefix="/api/student", tags=["student"])
@@ -34,6 +50,9 @@ async def update_progress(
     lesson_id: uuid.UUID, 
     progress_percent: int, 
     status: str = "in_progress",
+    watched_seconds: int = 0,
+    last_position_seconds: int = 0,
+    duration_seconds: int = 0,
     current_user: User = Depends(get_current_user), 
     session: Session = Depends(get_session)
 ):
@@ -43,8 +62,12 @@ async def update_progress(
     if not progress:
         progress = UserProgress(user_id=current_user.id, lesson_id=lesson_id)
     
-    progress.progress_percent = progress_percent
+    progress.progress_percent = max(0, min(100, progress_percent))
     progress.completion_status = status
+    progress.watched_seconds = max(progress.watched_seconds or 0, watched_seconds)
+    progress.last_position_seconds = max(0, last_position_seconds)
+    if duration_seconds > 0:
+        progress.duration_seconds = duration_seconds
     progress.last_accessed_at = utc_now()
     
     if status == "completed" and not progress.completed_at:
@@ -52,11 +75,114 @@ async def update_progress(
         
     session.add(progress)
     session.commit()
-    return {"message": "Progress updated"}
+    session.refresh(progress)
+    return progress
 
 @router.get("/lessons/{lesson_id}/progress", response_model=Optional[UserProgress])
 async def get_my_lesson_progress(lesson_id: uuid.UUID, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
     return session.exec(select(UserProgress).where(UserProgress.user_id == current_user.id, UserProgress.lesson_id == lesson_id)).first()
+
+
+@router.get("/dashboard")
+async def get_student_dashboard(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    enrollments = session.exec(select(Enrollment).where(Enrollment.user_id == current_user.id)).all()
+    progress_rows = session.exec(
+        select(UserProgress)
+        .where(UserProgress.user_id == current_user.id)
+        .order_by(UserProgress.last_accessed_at.desc())
+    ).all()
+    quiz_attempts = session.exec(
+        select(QuizAttempt)
+        .where(QuizAttempt.user_id == current_user.id)
+        .order_by(QuizAttempt.created_at.desc())
+        .limit(10)
+    ).all()
+    flashcard_progress = session.exec(
+        select(UserFlashcardProgress).where(UserFlashcardProgress.user_id == current_user.id)
+    ).all()
+
+    course_cards = []
+    for enrollment in enrollments:
+        course = session.get(Course, enrollment.course_id)
+        if not course:
+            continue
+        modules = session.exec(select(Module).where(Module.course_id == course.id)).all()
+        module_ids = [m.id for m in modules]
+        lessons = session.exec(select(Lesson).where(Lesson.module_id.in_(module_ids))).all() if module_ids else []
+        lesson_ids = {lesson.id for lesson in lessons}
+        course_progress = [p for p in progress_rows if p.lesson_id in lesson_ids]
+        completed = [p for p in course_progress if p.completion_status == "completed"]
+        percent = round((len(completed) / len(lessons)) * 100) if lessons else 0
+        course_cards.append(
+            {
+                "course_id": str(course.id),
+                "title": course.title,
+                "thumbnail_url": course.thumbnail_url,
+                "enrollment_status": enrollment.enrollment_status,
+                "total_lessons": len(lessons),
+                "completed_lessons": len(completed),
+                "progress_percent": percent,
+            }
+        )
+
+    incomplete_lessons = []
+    for progress in progress_rows:
+        if progress.completion_status == "completed":
+            continue
+        lesson = session.get(Lesson, progress.lesson_id)
+        if not lesson:
+            continue
+        incomplete_lessons.append(
+            {
+                "lesson_id": str(lesson.id),
+                "title": lesson.title,
+                "progress_percent": progress.progress_percent,
+                "last_position_seconds": progress.last_position_seconds,
+                "last_accessed_at": progress.last_accessed_at,
+            }
+        )
+
+    recent_quizzes = []
+    for attempt in quiz_attempts:
+        quiz = session.get(Quiz, attempt.quiz_id)
+        recent_quizzes.append(
+            {
+                "quiz_id": str(attempt.quiz_id),
+                "title": quiz.title if quiz else "Quiz",
+                "score": float(attempt.score),
+                "status": attempt.status,
+                "created_at": attempt.created_at,
+            }
+        )
+
+    total_watch_seconds = sum(p.watched_seconds or 0 for p in progress_rows)
+    return {
+        "stats": {
+            "active_courses": len([e for e in enrollments if e.enrollment_status == "active"]),
+            "completed_lessons": len([p for p in progress_rows if p.completion_status == "completed"]),
+            "total_watch_seconds": total_watch_seconds,
+            "learned_flashcards": len([p for p in flashcard_progress if p.status == "learned"]),
+            "average_quiz_score": round(
+                sum(float(a.score) for a in quiz_attempts) / len(quiz_attempts),
+                1,
+            ) if quiz_attempts else 0,
+        },
+        "courses": course_cards,
+        "incomplete_lessons": incomplete_lessons[:8],
+        "quiz_scores": recent_quizzes,
+        "recent_activity": [
+            {
+                "type": "lesson_progress",
+                "lesson_id": str(p.lesson_id),
+                "progress_percent": p.progress_percent,
+                "last_accessed_at": p.last_accessed_at,
+            }
+            for p in progress_rows[:10]
+        ],
+    }
 
 # --- SRS Flashcards ---
 @router.get("/flashcards/due", response_model=List[Flashcard])
@@ -92,13 +218,128 @@ async def review_flashcard(
         
     # Interval in days: 1, 2, 4, 8, 16
     interval_days = 2 ** (progress.box_level - 1)
-    from datetime import timedelta
     progress.next_review_at = utc_now() + timedelta(days=interval_days)
     progress.last_reviewed_at = utc_now()
+    progress.review_count = (progress.review_count or 0) + 1
+    if is_correct:
+        progress.correct_count = (progress.correct_count or 0) + 1
+    else:
+        progress.incorrect_count = (progress.incorrect_count or 0) + 1
+    progress.status = "learned" if progress.box_level >= 4 and is_correct else "learning"
     
     session.add(progress)
     session.commit()
-    return {"next_review_at": progress.next_review_at}
+    session.refresh(progress)
+    return {
+        "next_review_at": progress.next_review_at,
+        "box_level": progress.box_level,
+        "status": progress.status,
+        "review_count": progress.review_count,
+    }
+
+
+@router.get("/lessons/{lesson_id}/quizzes")
+async def list_lesson_quizzes(
+    lesson_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    quizzes = session.exec(select(Quiz).where(Quiz.lesson_id == lesson_id)).all()
+    result = []
+    for quiz in quizzes:
+        questions = session.exec(
+            select(Question).where(Question.quiz_id == quiz.id).order_by(Question.sort_order)
+        ).all()
+        result.append(
+            {
+                "id": str(quiz.id),
+                "lesson_id": str(quiz.lesson_id),
+                "title": quiz.title,
+                "passing_score": quiz.passing_score,
+                "questions": [
+                    {
+                        "id": str(question.id),
+                        "question_text": question.question_text,
+                        "explanation": question.explanation,
+                        "difficulty": question.difficulty,
+                        "options": [
+                            {
+                                "id": str(option.id),
+                                "option_text": option.option_text,
+                            }
+                            for option in session.exec(
+                                select(QuestionOption).where(QuestionOption.question_id == question.id)
+                            ).all()
+                        ],
+                    }
+                    for question in questions
+                ],
+            }
+        )
+    return {"lesson_id": str(lesson_id), "quizzes": result}
+
+
+@router.post("/quizzes/{quiz_id}/submit")
+async def submit_quiz_attempt(
+    quiz_id: uuid.UUID,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    quiz = session.get(Quiz, quiz_id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Khong tim thay quiz.")
+
+    answers = data.get("answers", {})
+    if not isinstance(answers, dict):
+        raise HTTPException(status_code=400, detail="answers phai la object question_id -> option_id.")
+
+    questions = session.exec(select(Question).where(Question.quiz_id == quiz_id)).all()
+    total = len(questions)
+    correct = 0
+    details = []
+
+    for question in questions:
+        selected = answers.get(str(question.id))
+        correct_option = session.exec(
+            select(QuestionOption).where(
+                QuestionOption.question_id == question.id,
+                QuestionOption.is_correct == True,
+            )
+        ).first()
+        is_correct = bool(correct_option and selected == str(correct_option.id))
+        if is_correct:
+            correct += 1
+        details.append(
+            {
+                "question_id": str(question.id),
+                "selected_option_id": selected,
+                "correct_option_id": str(correct_option.id) if correct_option else None,
+                "is_correct": is_correct,
+            }
+        )
+
+    score = Decimal(str(round((correct / total) * 100, 2))) if total else Decimal("0")
+    status = "passed" if score >= quiz.passing_score else "failed"
+    attempt = QuizAttempt(
+        quiz_id=quiz.id,
+        user_id=current_user.id,
+        score=score,
+        status=status,
+        answers_json={"answers": answers, "details": details},
+    )
+    session.add(attempt)
+    session.commit()
+    session.refresh(attempt)
+    return {
+        "attempt_id": str(attempt.id),
+        "quiz_id": str(quiz.id),
+        "score": float(attempt.score),
+        "status": attempt.status,
+        "correct": correct,
+        "total": total,
+        "details": details,
+    }
 # --- Profile & Certificates ---
 @router.get("/profile")
 async def get_student_profile(
