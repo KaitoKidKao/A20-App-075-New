@@ -35,6 +35,52 @@ export interface HandsSignResponse {
   handsign_data: HandsSignGloss[];
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface Course {
+  id: string;
+  category_id: string;
+  instructor_id: string;
+  title: string;
+  description?: string;
+  cover_image_url?: string;
+}
+
+export interface Module {
+  id: string;
+  course_id: string;
+  title: string;
+  description?: string;
+  sort_order: number;
+}
+
+export interface Lesson {
+  id: string;
+  module_id: string;
+  title: string;
+  content_type: "video" | "article" | "quiz";
+  status: string;
+  sort_order: number;
+}
+
+export interface Enrollment {
+  id: string;
+  user_id: string;
+  course_id: string;
+  enrollment_status: string;
+}
+
+export interface UserProgress {
+  id: string;
+  lesson_id: string;
+  progress_percent: number;
+  completion_status: string;
+}
+
 const buildHeaders = (isMultipart = false): HeadersInit => {
   const headers: HeadersInit = {};
   if (!isMultipart) headers["Content-Type"] = "application/json";
@@ -205,5 +251,69 @@ export const api = {
       if (!res.ok) throw new Error("Failed to fetch avatar video state.");
       return res.json();
     },
+
+    async listMyVideos() {
+      const res = await apiFetch("/api/videos/me", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch my videos.");
+      return res.json();
+    }
   },
+
+  courses: {
+    async listCategories(): Promise<Category[]> {
+      const res = await apiFetch("/api/courses/categories", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch categories.");
+      return res.json();
+    },
+    async listCourses(categoryId?: string): Promise<Course[]> {
+      const path = categoryId ? `/api/courses/?category_id=${categoryId}` : "/api/courses/";
+      const res = await apiFetch(path, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch courses.");
+      return res.json();
+    },
+    async getCourse(courseId: string): Promise<Course> {
+      const res = await apiFetch(`/api/courses/${courseId}`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch course details.");
+      return res.json();
+    },
+    async listModules(courseId: string): Promise<Module[]> {
+      const res = await apiFetch(`/api/courses/${courseId}/modules`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch modules.");
+      return res.json();
+    },
+    async listLessons(moduleId: string): Promise<Lesson[]> {
+      const res = await apiFetch(`/api/courses/modules/${moduleId}/lessons`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch lessons.");
+      return res.json();
+    }
+  },
+
+  student: {
+    async enroll(courseId: string): Promise<Enrollment> {
+      const res = await apiFetch(`/api/student/enroll/${courseId}`, {
+        method: "POST",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Enrollment failed.");
+      return res.json();
+    },
+    async listMyCourses(): Promise<Enrollment[]> {
+      const res = await apiFetch("/api/student/my-courses", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch my courses.");
+      return res.json();
+    },
+    async updateProgress(lessonId: string, progressPercent: number, status = "in_progress") {
+      const res = await apiFetch(`/api/student/lessons/${lessonId}/progress?progress_percent=${progressPercent}&status=${status}`, {
+        method: "POST",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to update progress.");
+      return res.json();
+    },
+    async getProgress(lessonId: string): Promise<UserProgress | null> {
+      const res = await apiFetch(`/api/student/lessons/${lessonId}/progress`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch progress.");
+      return res.json();
+    }
+  }
 };

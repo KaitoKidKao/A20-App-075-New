@@ -483,8 +483,29 @@ export default function VideoLessonPage() {
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
+      const time = videoRef.current.currentTime;
+      setCurrentTime(time);
+      
+      // Save progress every 10 seconds
+      if (Math.floor(time) % 10 === 0 && Math.floor(time) !== 0) {
+        saveProgress(time);
+      }
     }
+  };
+
+  const saveProgress = async (time: number, status = "in_progress") => {
+    if (!duration) return;
+    const percent = Math.round((time / duration) * 100);
+    try {
+      await api.student.updateProgress(videoId, percent, status);
+    } catch (err) {
+      console.error("Failed to save progress", err);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+    saveProgress(duration, "completed");
   };
 
   const seekTo = (timeStr: string) => {
@@ -588,8 +609,11 @@ export default function VideoLessonPage() {
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
                 onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onEnded={() => setIsPlaying(false)}
+                onPause={() => {
+                  setIsPlaying(false);
+                  saveProgress(currentTime);
+                }}
+                onEnded={handleVideoEnded}
                 className={cn('w-full h-full object-cover transition-opacity duration-500', videoBroken && 'hidden', isPlaying ? 'opacity-100' : 'opacity-80')}
                 src={videoSrc}
                 preload="metadata"

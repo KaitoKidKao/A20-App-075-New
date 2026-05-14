@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Play, 
   Clock, 
@@ -23,57 +21,62 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { mockLectures } from '@/lib/mockData';
+import { api, Course, Module, Lesson, Enrollment } from '@/lib/api';
 
 export default function CourseDetailPage() {
   const params = useParams();
-  const [activeAccordion, setActiveAccordion] = useState<number | null>(0);
-  
-  const courseId = Number(params.id);
-
-  interface Course {
-    id?: number;
-    title: string;
-    instructor: string;
-    cat: string;
-    thumb: string;
-    desc: string;
-  }
-
-  const allCoursesData: Record<number, Course> = {
-    1: { title: 'Information About UI/UX Design Degree', instructor: 'David Benitez', cat: 'Design', thumb: 'https://picsum.photos/seed/uiux1/800/450', desc: 'Become a professional UX designer from scratch.' },
-    2: { title: 'Wordpress for Beginners - Master Wordpress Quickly', instructor: 'Ana Reyes', cat: 'Wordpress', thumb: 'https://picsum.photos/seed/wp1/800/450', desc: 'Learn to build stunning websites with Wordpress.' },
-    3: { title: 'Sketch from A to Z (2024): Become an app designer', instructor: 'Andrew Pirtle', cat: 'Design', thumb: 'https://picsum.photos/seed/sketch1/800/450', desc: 'Master Sketch for mobile and web design.' },
-    4: { title: 'Build Responsive Real World Websites with Crash Course', instructor: 'Christy Gamer', cat: 'Programming', thumb: 'https://picsum.photos/seed/web1/800/450', desc: 'Modern HTML5, CSS3 and responsive design.' },
-    5: { title: 'Learn JavaScript and Express to become a Expert', instructor: 'Justin Gregory', cat: 'Programming', thumb: 'https://picsum.photos/seed/js1/800/450', desc: 'Deep dive into JS and Backend development.' },
-    6: { title: 'Introduction to Python Programming Basic to Master', instructor: 'Carolyn Hines', cat: 'Programming', thumb: 'https://picsum.photos/seed/py1/800/450', desc: 'Master Python from basics to advanced topics.' },
-    7: { title: 'Advanced Photoshop Techniques for Retouching', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://picsum.photos/seed/ps1/800/450', desc: 'Professional photo retouching in Photoshop.' },
-    8: { title: 'Digital Painting Masterclass: From Sketch to Final', instructor: 'Marco Rossi', cat: 'Art', thumb: 'https://picsum.photos/seed/art1/800/450', desc: 'Learn digital art techniques.' },
-    9: { title: 'Logo Design Mastery: Brand Identity from Scratch', instructor: 'Sarah Jenkins', cat: 'Design', thumb: 'https://picsum.photos/seed/logo1/800/450', desc: 'Create memorable brands.' },
-    10: { title: 'Node.js Mastery: Building Scalable APIs', instructor: 'Liam Wilson', cat: 'Programming', thumb: 'https://picsum.photos/seed/node1/800/450', desc: 'Scalable backend with Node.js.' },
-    11: { title: 'React Native for Mobile App Development', instructor: 'Elena Rodriguez', cat: 'Mobile', thumb: 'https://picsum.photos/seed/mobile1/800/450', desc: 'Build iOS and Android apps with React.' },
-    12: { title: 'Cybersecurity Fundamentals: Protecting Data', instructor: 'Kevin Smith', cat: 'IT', thumb: 'https://picsum.photos/seed/cyber1/800/450', desc: 'Learn to protect digital assets.' },
-    13: { title: 'Mastering Excel for Data Analysis', instructor: 'Robert Chen', cat: 'Business', thumb: 'https://picsum.photos/seed/excel1/800/450', desc: 'Data analysis with Excel.' },
-    14: { title: 'Public Speaking: Command the Room with Ease', instructor: 'Amanda Lee', cat: 'Soft Skills', thumb: 'https://picsum.photos/seed/speech1/800/450', desc: 'Confidence on stage.' },
-    15: { title: 'Photography 101: Mastering Your DSLR', instructor: 'Jack Thompson', cat: 'Photography', thumb: 'https://picsum.photos/seed/photo1/800/450', desc: 'Capture perfect moments.' },
-    16: { id: 16, title: 'Introduction to Artificial Intelligence', instructor: 'Dr. Emily Watson', cat: 'Tech', thumb: 'https://picsum.photos/seed/ai1/800/450', desc: 'Basics of AI and ML.' },
-    17: { id: 17, title: 'Video Editing with Adobe Premiere Pro', instructor: 'Chris Miller', cat: 'Media', thumb: 'https://picsum.photos/seed/video1/800/450', desc: 'Professional video editing.' },
-    18: { id: 18, title: 'Blogging for Profit: Building a Sustainable Business', instructor: 'Jessica Brown', cat: 'Marketing', thumb: 'https://picsum.photos/seed/blog1/800/450', desc: 'Make money with your blog.' },
-  };
-
-  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [lessonsMap, setLessonsMap] = useState<Record<string, Lesson[]>>({});
   const [isEnrolled, setIsEnrolled] = useState(false);
-  const [studentCount, setStudentCount] = useState(32);
+  const [loading, setLoading] = useState(true);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
 
-  const handleEnroll = () => {
-    setIsEnrolled(true);
-    setStudentCount(prev => prev + 1);
-    setShowEnrollModal(true);
-    setTimeout(() => setShowEnrollModal(false), 3000); // Auto close after 3s
+  const courseId = params.id as string;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const courseData = await api.courses.getCourse(courseId);
+        setCourse(courseData);
+        
+        const moduleData = await api.courses.listModules(courseId);
+        setModules(moduleData);
+        if (moduleData.length > 0) setActiveAccordion(moduleData[0].id);
+
+        // Fetch lessons for each module
+        const lMap: Record<string, Lesson[]> = {};
+        await Promise.all(moduleData.map(async (m) => {
+          lMap[m.id] = await api.courses.listLessons(m.id);
+        }));
+        setLessonsMap(lMap);
+
+        // Check enrollment
+        const myEnrollments = await api.student.listMyCourses();
+        setIsEnrolled(myEnrollments.some(e => e.course_id === courseId));
+      } catch (err) {
+        console.error("Failed to fetch course details", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [courseId]);
+
+  const handleEnroll = async () => {
+    try {
+      await api.student.enroll(courseId);
+      setIsEnrolled(true);
+      setShowEnrollModal(true);
+      setTimeout(() => setShowEnrollModal(false), 3000);
+    } catch (err) {
+      console.error("Enrollment failed", err);
+    }
   };
 
-  const course = allCoursesData[courseId] || allCoursesData[1];
-  const lessons = mockLectures;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-slate-400">Loading course...</div>;
+  if (!course) return <div className="min-h-screen flex items-center justify-center font-black text-rose-500">Course not found.</div>;
 
   return (
     <div className="min-h-screen bg-transparent relative">
@@ -104,9 +107,9 @@ export default function CourseDetailPage() {
         <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12">
           <div className="lg:col-span-8 space-y-6">
             <div className="flex items-center gap-2 text-sm font-bold text-primary">
-              <Link href="/student/documents" className="hover:underline">Courses</Link>
+              <Link href="/student/library" className="hover:underline">Dashboard</Link>
               <ArrowRight size={14} />
-              <span className="text-white/60">{course.cat}</span>
+              <span className="text-white/60">Khóa học</span>
             </div>
             
             <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight">
@@ -130,7 +133,7 @@ export default function CourseDetailPage() {
             <div className="flex items-center gap-4 text-sm font-bold">
                <div className="flex items-center gap-2">
                   <UserIcon size={16} />
-                  <span>Created by <span className="text-primary underline">{course.instructor}</span></span>
+                  <span>Instructor ID: <span className="text-primary underline">{course.instructor_id}</span></span>
                </div>
                <div className="flex items-center gap-2">
                   <Globe size={16} />
@@ -176,41 +179,40 @@ export default function CourseDetailPage() {
                   92 lectures • 10:56:11 total length
                 </div>
               </div>
-              
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                {[
-                  { title: "Getting Started", count: 5, time: "22:53" },
-                  { title: "The Brief", count: 8, time: "45:10" },
-                  { title: "Wireframing Low Fidelity", count: 12, time: "01:15:20" },
-                  { title: "Type, Color & Icon Introduction", count: 10, time: "58:45" },
-                ].map((section, idx) => (
-                  <div key={idx} className="border-b border-slate-200 last:border-0">
+                            <div className="border border-slate-200 rounded-xl overflow-hidden">
+                {modules.map((module) => (
+                  <div key={module.id} className="border-b border-slate-200 last:border-0">
                     <button 
-                      onClick={() => setActiveAccordion(activeAccordion === idx ? null : idx)}
+                      onClick={() => setActiveAccordion(activeAccordion === module.id ? null : module.id)}
                       className="w-full flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100 transition-colors"
                     >
                       <div className="flex items-center gap-3 font-black text-slate-900 text-sm">
-                        <ChevronDown size={18} className={activeAccordion === idx ? "rotate-180 transition-transform" : "transition-transform"} />
-                        {section.title}
+                        <ChevronDown size={18} className={activeAccordion === module.id ? "rotate-180 transition-transform" : "transition-transform"} />
+                        {module.title}
                       </div>
                       <div className="text-xs font-bold text-slate-500">
-                        {section.count} lectures • {section.time}
+                        {lessonsMap[module.id]?.length || 0} bài học
                       </div>
                     </button>
                     
-                    {activeAccordion === idx && (
+                    {activeAccordion === module.id && (
                       <div className="divide-y divide-slate-100 bg-white">
-                        {lessons.map((lesson, lIdx) => (
+                        {(lessonsMap[module.id] || []).map((lesson, lIdx) => (
                           <div key={lesson.id} className="p-4 flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                               <MonitorPlay size={16} className="text-slate-400" />
-                              <span className="text-sm font-bold text-slate-600 group-hover:text-primary transition-colors cursor-pointer">
-                                Lecture {idx + 1}.{lIdx + 1}: {lesson.title}
-                              </span>
+                              <Link 
+                                href={`/student/videos/${lesson.id}`}
+                                className="text-sm font-bold text-slate-600 group-hover:text-primary transition-colors"
+                              >
+                                {lIdx + 1}. {lesson.title}
+                              </Link>
                             </div>
                             <div className="flex items-center gap-4">
-                               <span className="text-xs font-black text-primary underline cursor-pointer">Preview</span>
-                               <span className="text-xs font-bold text-slate-400">{lesson.duration}</span>
+                               <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border border-slate-100 rounded">
+                                 {lesson.content_type}
+                               </span>
+                               <span className="text-xs font-bold text-slate-400">{lesson.status}</span>
                             </div>
                           </div>
                         ))}
@@ -218,7 +220,7 @@ export default function CourseDetailPage() {
                     )}
                   </div>
                 ))}
-              </div>
+              </div>div>
             </div>
 
             {/* Requirements */}
@@ -372,7 +374,7 @@ export default function CourseDetailPage() {
 
                    {isEnrolled ? (
                      <Link 
-                       href={`/student/videos/${lessons[0].id}`}
+                       href={`/student/videos/${Object.values(lessonsMap).flat()[0]?.id || ''}`}
                        className="block w-full py-4 rounded-xl bg-emerald-500 text-white font-black text-sm text-center uppercase tracking-widest transition-all shadow-xl hover:bg-emerald-600 active:scale-95"
                      >
                         Go to Course
