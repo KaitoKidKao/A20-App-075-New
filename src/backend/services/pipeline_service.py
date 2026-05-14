@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlmodel import Session
 
 from src.backend.database import engine
-from src.backend.models import Flashcard, LectureData, Video
+from src.backend.models import Flashcard, Lesson, ContentMetadata
 from src.backend.services.ai_service import AIService
 from src.backend.services.job_service import upsert_job_status
 from src.backend.services.video_service import VideoService
@@ -15,20 +15,18 @@ logger = logging.getLogger(__name__)
 
 executor = ThreadPoolExecutor(max_workers=2)
 
+def _run_transcription_sync(audio_path: Path, lesson_id: str):
+    return AIService.transcribe(audio_path, lesson_id)
 
-def _run_transcription_sync(audio_path: Path, video_id: str):
-    return AIService.transcribe(audio_path, video_id)
-
-
-async def run_video_pipeline(video_id: str, video_path: Path | str):
+async def run_video_pipeline(lesson_id: str, video_path: Path | str):
     video_path = Path(video_path)
     try:
         with Session(engine) as session:
             def update_status(new_status: str):
-                video = session.get(Video, video_id)
-                if video:
-                    video.status = new_status
-                    session.add(video)
+                lesson = session.get(Lesson, lesson_id)
+                if lesson:
+                    lesson.status = new_status
+                    session.add(lesson)
                     session.commit()
                 progress_map = {
                     "queued": 0,
@@ -40,7 +38,7 @@ async def run_video_pipeline(video_id: str, video_path: Path | str):
                 }
                 upsert_job_status(
                     session,
-                    video_id=video_id,
+                    lesson_id=lesson_id,
                     status=new_status,
                     progress=progress_map.get(new_status, 0),
                 )
@@ -51,7 +49,7 @@ async def run_video_pipeline(video_id: str, video_path: Path | str):
             update_status("transcribing")
             loop = asyncio.get_event_loop()
             transcript_data = await loop.run_in_executor(
-                executor, _run_transcription_sync, audio_path, video_id
+                executor, _run_transcription_sync, audio_path, lesson_id
             )
             original_transcript = transcript_data
             source_language = (original_transcript.get("language") or "").lower()
@@ -95,24 +93,30 @@ async def run_video_pipeline(video_id: str, video_path: Path | str):
                 AIService.generate_handsign_data(vi_transcript),
             )
 
-            lecture_entry = LectureData(
-                video_id=video_id,
-                transcript=stored_transcript,
-                summary=summary,
-                timeline=metadata.get("timeline"),
-                highlights=metadata.get("highlights"),
-                questions=metadata.get("questions"),
-                briefing=briefing,
-                visual_data=notebook_data.get("visual_data"),
-                cover_image_url=notebook_data.get("cover_image_url"),
-                handsign_data=handsign_data,
+            # Build comprehensive AI analysis object
+            ai_analysis = {
+                "transcript": stored_transcript,
+                "summary": summary,
+                "timeline": metadata.get("timeline"),
+                "highlights": metadata.get("highlights"),
+                "questions": metadata.get("questions"),
+                "briefing": briefing,
+                "visual_data": notebook_data.get("visual_data"),
+                "cover_image_url": notebook_data.get("cover_image_url"),
+                "handsign_data": handsign_data,
+            }
+
+            content_entry = ContentMetadata(
+                lesson_id=lesson_id,
+                video_url=str(video_path),
+                ai_analysis=ai_analysis
             )
-            session.add(lecture_entry)
+            session.add(content_entry)
 
             for fc in notebook_data.get("flashcards", []):
                 session.add(
                     Flashcard(
-                        video_id=video_id,
+                        lesson_id=lesson_id,
                         front=fc.get("front"),
                         back=fc.get("back"),
                     )
@@ -121,24 +125,22 @@ async def run_video_pipeline(video_id: str, video_path: Path | str):
             update_status("completed")
     except Exception as e:
         with Session(engine) as session:
-            video = session.get(Video, video_id)
-            if video:
-                video.status = f"failed: {str(e)}"
-                session.add(video)
+            lesson = session.get(Lesson, lesson_id)
+            if lesson:
+                lesson.status = f"failed: {str(e)}"
+                session.add(lesson)
                 session.commit()
             upsert_job_status(
                 session,
-                video_id=video_id,
+                lesson_id=lesson_id,
                 status="failed",
                 progress=100,
                 error_message=str(e),
             )
-        logger.error("Pipeline failed for %s: %s", video_id, e)
+        logger.error("Pipeline failed for %s: %s", lesson_id, e)
 
-
-def run_video_pipeline_sync(video_id: str, video_path: str):
-    asyncio.run(run_video_pipeline(video_id, Path(video_path)))
-
+def run_video_pipeline_sync(lesson_id: str, video_path: str):
+    asyncio.run(run_video_pipeline(lesson_id, Path(video_path)))
 
 def shutdown_pipeline_executor():
     executor.shutdown(wait=True)

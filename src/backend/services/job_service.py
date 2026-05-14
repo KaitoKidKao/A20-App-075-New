@@ -1,24 +1,23 @@
 from sqlmodel import Session, select
 
-from src.backend.models import ProcessingJob, Video
+from src.backend.models import ProcessingJob, Lesson
 from src.backend.utils.datetime_utils import utc_now
-
 
 def upsert_job_status(
     session: Session,
     *,
-    video_id: str,
+    lesson_id: str,
     status: str,
     progress: int | None = None,
     error_message: str | None = None,
 ):
     statement = select(ProcessingJob).where(
-        ProcessingJob.video_id == video_id,
+        ProcessingJob.lesson_id == lesson_id,
         ProcessingJob.job_type == "video_pipeline",
     )
     job = session.exec(statement).first()
     if not job:
-        job = ProcessingJob(video_id=video_id, job_type="video_pipeline", status=status)
+        job = ProcessingJob(lesson_id=lesson_id, job_type="video_pipeline", status=status)
     job.status = status
     if progress is not None:
         job.progress = progress
@@ -27,7 +26,6 @@ def upsert_job_status(
     job.updated_at = utc_now()
     session.add(job)
     session.commit()
-
 
 def mark_stale_jobs_as_failed(session: Session):
     non_terminal_statuses = {
@@ -44,8 +42,10 @@ def mark_stale_jobs_as_failed(session: Session):
         job.error_message = "Server restarted before job completion."
         job.updated_at = utc_now()
         session.add(job)
-        video = session.get(Video, job.video_id)
-        if video and video.status in non_terminal_statuses:
-            video.status = "failed_restart"
-            session.add(video)
+        
+        # Cap nhat trang thai Lesson neu co
+        lesson = session.get(Lesson, job.lesson_id)
+        if lesson and lesson.status in non_terminal_statuses:
+            lesson.status = "failed_restart"
+            session.add(lesson)
     session.commit()

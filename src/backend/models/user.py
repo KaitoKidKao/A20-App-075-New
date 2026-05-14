@@ -1,13 +1,44 @@
-from typing import Optional
-from sqlmodel import SQLModel, Field
+from typing import Optional, List
+from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 import uuid
 from src.backend.utils.datetime_utils import utc_now
 
+class Role(SQLModel, table=True):
+    __tablename__ = "roles"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(unique=True, index=True)
+    description: Optional[str] = None
+    
+    users: List["User"] = Relationship(back_populates="role")
+
 class User(SQLModel, table=True):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    email: str = Field(unique=True, index=True)
-    password_hash: str
+    __tablename__ = "users"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     full_name: Optional[str] = None
-    role: str = "student" # "admin" or "student"
+    email: str = Field(unique=True, index=True, nullable=False)
+    password_hash: str = Field(nullable=False)
+    role_id: Optional[uuid.UUID] = Field(default=None, foreign_key="roles.id")
+    is_deleted: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+    
+    role: Optional[Role] = Relationship(back_populates="users")
+    profile: Optional["Profile"] = Relationship(back_populates="user")
+    enrollments: List["Enrollment"] = Relationship(back_populates="user")
+
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column
+
+class Profile(SQLModel, table=True):
+    __tablename__ = "profiles"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id", unique=True)
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    learning_goals: Optional[str] = None
+    certifications: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+    
+    user: User = Relationship(back_populates="profile")

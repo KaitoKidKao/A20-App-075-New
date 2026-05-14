@@ -1,13 +1,29 @@
 from typing import Optional
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 import uuid
 from src.backend.utils.datetime_utils import utc_now
 
 class Flashcard(SQLModel, table=True):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    video_id: str = Field(foreign_key="video.id", index=True)
-    front: str
-    back: str
+    __tablename__ = "flashcards"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    lesson_id: uuid.UUID = Field(foreign_key="lessons.id")
+    front: str = Field(nullable=False)
+    back: str = Field(nullable=False)
     hint: Optional[str] = None
     created_at: datetime = Field(default_factory=utc_now)
+    
+    lesson: "Lesson" = Relationship(back_populates="flashcards")
+    progress: Optional["UserFlashcardProgress"] = Relationship(back_populates="flashcard")
+
+class UserFlashcardProgress(SQLModel, table=True):
+    __tablename__ = "user_flashcard_progress"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id")
+    flashcard_id: uuid.UUID = Field(foreign_key="flashcards.id")
+    box_level: int = Field(default=1) # Leitner system
+    next_review_at: datetime = Field(default_factory=utc_now)
+    last_reviewed_at: Optional[datetime] = None
+    
+    user: "User" = Relationship()
+    flashcard: Flashcard = Relationship(back_populates="progress")
