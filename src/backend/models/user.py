@@ -29,8 +29,7 @@ class User(SQLModel, table=True):
     profile: Optional["Profile"] = Relationship(back_populates="user")
     enrollments: List["Enrollment"] = Relationship(back_populates="user")
 
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Column
+from sqlalchemy import Column, JSON
 
 class Profile(SQLModel, table=True):
     __tablename__ = "profiles"
@@ -39,7 +38,7 @@ class Profile(SQLModel, table=True):
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
     learning_goals: Optional[str] = None
-    certifications: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    certifications: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
     

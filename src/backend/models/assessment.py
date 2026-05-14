@@ -21,8 +21,7 @@ class Quiz(SQLModel, table=True):
     questions: List["Question"] = Relationship(back_populates="quiz")
     attempts: List["QuizAttempt"] = Relationship(back_populates="quiz")
 
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Column
+from sqlalchemy import Column, JSON
 
 class Question(SQLModel, table=True):
     __tablename__ = "questions"
@@ -32,7 +31,7 @@ class Question(SQLModel, table=True):
     explanation: Optional[str] = None
     difficulty: str = Field(default="Trung bình")
     question_type: str = Field(default="multiple_choice")
-    question_data: dict = Field(default_factory=dict, sa_column=Column(JSONB))
+    question_data: dict = Field(default_factory=dict, sa_column=Column(JSON))
     score: int = Field(default=1)
     sort_order: int = Field(default=0)
     
@@ -55,7 +54,7 @@ class QuizAttempt(SQLModel, table=True):
     user_id: uuid.UUID = Field(foreign_key="users.id")
     score: Decimal = Field(default=0.0)
     status: str = Field(default="failed") # passed, failed
-    answers_json: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    answers_json: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=utc_now)
     
     quiz: Quiz = Relationship(back_populates="attempts")

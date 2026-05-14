@@ -1,22 +1,24 @@
 import asyncio
 import os
 from typing import Any, Callable
+from dotenv import load_dotenv
 
 from src.backend.services.pipeline_service import run_video_pipeline, run_video_pipeline_sync
 from src.backend.services.video_service import VideoService
 
-REDIS_URL = os.getenv("REDIS_URL", "").strip()
-
 
 def _get_rq_queue():
-    if not REDIS_URL:
+    load_dotenv()
+    redis_url = os.getenv("REDIS_URL", "").strip()
+    if not redis_url:
         return None
     try:
         from redis import Redis
         from rq import Queue
     except Exception:
         return None
-    redis_conn = Redis.from_url(REDIS_URL)
+    redis_conn = Redis.from_url(redis_url)
+    redis_conn.ping()
     return Queue("video-pipeline", connection=redis_conn)
 
 
@@ -28,8 +30,11 @@ def enqueue_pipeline_job(
 ):
     queue = _get_rq_queue()
     if queue is not None:
-        queue.enqueue(run_video_pipeline_sync, video_id, video_path, job_timeout=60 * 60)
-        return "rq"
+        try:
+            queue.enqueue(run_video_pipeline_sync, video_id, video_path, job_timeout=60 * 60)
+            return "rq"
+        except Exception:
+            pass
     if fallback_task_adder is not None:
         fallback_task_adder(run_video_pipeline, video_id, video_path)
         return "background_tasks"
@@ -50,9 +55,11 @@ def enqueue_download_and_pipeline(
 ):
     queue = _get_rq_queue()
     if queue is not None:
-        # Worker downloads and then runs pipeline.
-        queue.enqueue(_download_and_run_sync, video_id, url, job_timeout=60 * 60)
-        return "rq"
+        try:
+            queue.enqueue(_download_and_run_sync, video_id, url, job_timeout=60 * 60)
+            return "rq"
+        except Exception:
+            pass
     if fallback_task_adder is not None:
         fallback_task_adder(_download_and_run, video_id, url)
         return "background_tasks"

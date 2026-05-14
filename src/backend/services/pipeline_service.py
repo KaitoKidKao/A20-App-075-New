@@ -3,10 +3,12 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from sqlalchemy import delete
 from sqlmodel import Session
+from sqlmodel import select
 
 from ..database import engine
-from ..models import Flashcard, Lesson, ContentMetadata, Category, Course, Module, Quiz, Question, QuestionOption
+from ..models import Flashcard, Lesson, ContentMetadata, Category, Course, Module, Quiz, Question, QuestionOption, QuizAttempt, UserFlashcardProgress
 from .ai_service import AIService
 from .job_service import upsert_job_status
 from .video_service import VideoService
@@ -33,6 +35,7 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
                     "downloading": 5,
                     "extracting_audio": 20,
                     "transcribing": 50,
+                    "translating": 65,
                     "ai_processing": 80,
                     "completed": 100,
                 }
@@ -53,6 +56,7 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
             )
             original_transcript = transcript_data
             source_language = (original_transcript.get("language") or "").lower()
+            update_status("translating")
             if source_language == "vi":
                 vi_transcript = original_transcript
                 en_transcript = await AIService.translate_transcript_to_language_json(
@@ -95,7 +99,6 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
             )
 
             # Auto-Categorization logic
-            from sqlmodel import select
             categories = session.exec(select(Category)).all()
             cat_names = [c.name for c in categories]
             best_cat_name = await AIService.identify_category(summary, cat_names)
@@ -108,7 +111,7 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
                 if target_cat:
                     course = session.exec(select(Course).where(Course.category_id == target_cat.id)).first()
                     if not course:
-                        course = Course(title=f"Khóa học {target_cat.name}", category_id=target_cat.id, instructor_id="system")
+                        course = Course(title=f"Khóa học {target_cat.name}", category_id=target_cat.id, instructor_id=None)
                         session.add(course)
                         session.commit()
                         session.refresh(course)
@@ -136,13 +139,24 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
                 "handsign_data": handsign_data,
             }
 
-            content_entry = ContentMetadata(
-                lesson_id=lesson_id,
-                video_url=str(video_path),
-                ai_analysis=ai_analysis
-            )
+            content_entry = session.exec(
+                select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_id)
+            ).first()
+            if content_entry:
+                content_entry.video_url = str(video_path)
+                content_entry.ai_analysis = ai_analysis
+            else:
+                content_entry = ContentMetadata(
+                    lesson_id=lesson_id,
+                    video_url=str(video_path),
+                    ai_analysis=ai_analysis
+                )
             session.add(content_entry)
 
+            old_flashcards = session.exec(select(Flashcard).where(Flashcard.lesson_id == lesson_id)).all()
+            for old_flashcard in old_flashcards:
+                session.exec(delete(UserFlashcardProgress).where(UserFlashcardProgress.flashcard_id == old_flashcard.id))
+            session.exec(delete(Flashcard).where(Flashcard.lesson_id == lesson_id))
             for fc in notebook_data.get("flashcards", []):
                 session.add(
                     Flashcard(
@@ -154,6 +168,15 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
 
             # Save persistent Quizzes
             if persistent_quizzes:
+                old_quizzes = session.exec(select(Quiz).where(Quiz.lesson_id == lesson_id)).all()
+                for old_quiz in old_quizzes:
+                    old_questions = session.exec(select(Question).where(Question.quiz_id == old_quiz.id)).all()
+                    for old_question in old_questions:
+                        session.exec(delete(QuestionOption).where(QuestionOption.question_id == old_question.id))
+                    session.exec(delete(Question).where(Question.quiz_id == old_quiz.id))
+                    session.exec(delete(QuizAttempt).where(QuizAttempt.quiz_id == old_quiz.id))
+                session.exec(delete(Quiz).where(Quiz.lesson_id == lesson_id))
+
                 quiz = Quiz(title=f"Quiz: {lesson.title}", lesson_id=lesson_id)
                 session.add(quiz)
                 session.commit()

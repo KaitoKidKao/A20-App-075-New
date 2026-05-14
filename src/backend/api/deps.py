@@ -1,5 +1,6 @@
 import ipaddress
 import socket
+import uuid
 from urllib.parse import urlparse
 
 from fastapi import HTTPException
@@ -8,7 +9,12 @@ from sqlmodel import Session
 from src.backend.models import User, Lesson, Course, Module
 
 def check_video_access(lesson_id: str, user: User, session: Session):
-    lesson = session.get(Lesson, lesson_id)
+    try:
+        lesson_uuid = uuid.UUID(str(lesson_id))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid video id.")
+
+    lesson = session.get(Lesson, lesson_uuid)
     if not lesson:
         raise HTTPException(status_code=404, detail="Khong tim thay bai hoc.")
     

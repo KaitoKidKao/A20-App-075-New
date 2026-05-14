@@ -118,6 +118,22 @@ Run the RQ worker (in another terminal):
 python -m src.backend.scripts.run_worker
 ```
 
+If Redis is unavailable, the backend falls back to FastAPI `BackgroundTasks` for local development.
+
+## Reprocess A Video
+
+Use this when an uploaded video exists but transcript/AI output must be regenerated:
+
+```bash
+POST /api/videos/{video_id}/reprocess
+```
+
+The pipeline uses these main statuses:
+
+```text
+queued -> extracting_audio -> transcribing -> translating -> ai_processing -> completed
+```
+
 ## Tests
 
 Run backend tests from repository root:

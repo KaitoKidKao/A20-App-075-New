@@ -1,5 +1,6 @@
 import os
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from sqlmodel import Session, select
@@ -29,6 +30,27 @@ from src.backend.services.queue_service import enqueue_download_and_pipeline, en
 from src.backend.services.video_service import VideoService
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
+
+
+def _parse_lesson_id(lesson_id: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(str(lesson_id))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid video id.")
+
+
+def _find_existing_video_path(lesson_id: str, session: Session) -> Path | None:
+    lesson_uuid = _parse_lesson_id(lesson_id)
+    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)).first()
+    if content and content.video_url:
+        candidate = Path(content.video_url)
+        if candidate.exists() and candidate.is_file():
+            return candidate
+
+    for candidate in VideoService.UPLOAD_DIR.glob(f"{lesson_id}.*"):
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
@@ -71,7 +93,8 @@ async def upload_video(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    lesson_id = str(uuid.uuid4())
+    lesson_uuid = uuid.uuid4()
+    lesson_id = str(lesson_uuid)
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".mp4", ".mov", ".avi", ".mkv"]:
         raise HTTPException(status_code=400, detail="Unsupported file format.")
@@ -89,10 +112,10 @@ async def upload_video(
         module = await get_or_create_default_hierarchy(session, current_user.id)
         
         lesson = Lesson(
-            id=lesson_id,
+            id=lesson_uuid,
             module_id=module.id,
             title=file.filename,
-            lesson_type="video",
+            content_type="video",
             status="queued",
             sort_order=0
         )
@@ -128,15 +151,16 @@ async def process_url(
     session: Session = Depends(get_session),
 ):
     url = validate_external_video_url(data.get("url"))
-    lesson_id = str(uuid.uuid4())
+    lesson_uuid = uuid.uuid4()
+    lesson_id = str(lesson_uuid)
     
     module = await get_or_create_default_hierarchy(session, current_user.id)
     
     lesson = Lesson(
-        id=lesson_id,
+        id=lesson_uuid,
         module_id=module.id,
         title=f"Video from URL: {url[:30]}...",
-        lesson_type="video",
+        content_type="video",
         status="queued",
         sort_order=0
     )
@@ -170,13 +194,46 @@ async def list_my_videos(
     return session.exec(statement).all()
 
 
+@router.post("/{video_id}/reprocess")
+async def reprocess_video(
+    video_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    lesson = check_video_access(video_id, current_user, session)
+    video_path = _find_existing_video_path(video_id, session)
+    if not video_path:
+        raise HTTPException(
+            status_code=404,
+            detail="Khong tim thay file video da upload de xu ly lai.",
+        )
+
+    lesson.status = "queued"
+    session.add(lesson)
+    session.commit()
+    upsert_job_status(session, lesson_id=video_id, status="queued", progress=0, error_message="")
+
+    mode = enqueue_pipeline_job(
+        video_id=video_id,
+        video_path=str(video_path),
+        fallback_task_adder=background_tasks.add_task,
+    )
+    return {
+        "video_id": video_id,
+        "status": "processing",
+        "queue_mode": mode,
+        "message": "Video reprocess has been queued.",
+    }
+
+
 @router.get("/{video_id}/status")
 async def get_video_status(
     video_id: str,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    lesson = session.get(Lesson, video_id)
+    lesson = session.get(Lesson, _parse_lesson_id(video_id))
     if not lesson:
         raise HTTPException(status_code=404, detail="Khong tim thay bai hoc.")
     # Add access check if needed
@@ -190,8 +247,9 @@ async def get_video_job_status(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
+    lesson_uuid = _parse_lesson_id(video_id)
     statement = select(ProcessingJob).where(
-        ProcessingJob.lesson_id == video_id,
+        ProcessingJob.lesson_id == lesson_uuid,
         ProcessingJob.job_type == "video_pipeline",
     )
     job = session.exec(statement).first()
@@ -202,6 +260,8 @@ async def get_video_job_status(
         "status": job.status,
         "progress": job.progress,
         "error_message": job.error_message,
+        "attempts": job.attempts,
+        "last_failed_at": job.last_failed_at,
         "updated_at": job.updated_at,
     }
 

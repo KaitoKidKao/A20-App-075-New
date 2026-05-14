@@ -4,8 +4,7 @@ from datetime import datetime
 import uuid
 from src.backend.utils.datetime_utils import utc_now
 
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import Column
+from sqlalchemy import Column, JSON
 
 class ContentMetadata(SQLModel, table=True):
     __tablename__ = "content_metadata"
@@ -16,7 +15,7 @@ class ContentMetadata(SQLModel, table=True):
     attachment_url: Optional[str] = None
     avatar_video_url: Optional[str] = None
     handsign_manifest_url: Optional[str] = None
-    ai_analysis: Optional[dict] = Field(default=None, sa_column=Column(JSONB))
+    ai_analysis: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=utc_now)
     
     lesson: "Lesson" = Relationship(back_populates="content")

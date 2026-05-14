@@ -14,6 +14,8 @@ class ProcessingJob(SQLModel, table=True):
     status: str = Field(default="pending") # pending, processing, completed, failed
     progress: int = Field(default=0)
     error_message: Optional[str] = None
+    attempts: int = Field(default=0)
+    last_failed_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
     
