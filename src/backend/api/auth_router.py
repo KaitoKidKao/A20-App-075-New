@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from src.backend import config
 from src.backend.auth import create_access_token, get_password_hash, verify_password
 from src.backend.database import get_session
-from src.backend.models import User
+from src.backend.models import User, Role, Profile
 from src.backend.schemas.auth import Token, UserCreate
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -18,15 +18,30 @@ async def register(user_data: UserCreate, session: Session = Depends(get_session
     if existing_user:
         raise HTTPException(status_code=400, detail="Email is already in use.")
 
+    # Find role by name
+    role_stmt = select(Role).where(Role.name == user_data.role)
+    role = session.exec(role_stmt).first()
+    if not role:
+        # Fallback create role if not exists (for dev convenience)
+        role = Role(name=user_data.role)
+        session.add(role)
+        session.flush()
+
     new_user = User(
         email=user_data.email,
         password_hash=get_password_hash(user_data.password),
         full_name=user_data.full_name,
-        role=user_data.role,
+        role_id=role.id,
     )
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
+    
+    # Create profile automatically
+    profile = Profile(user_id=new_user.id)
+    session.add(profile)
+    session.commit()
+    
     return {"message": "Registration successful", "user_id": new_user.id}
 
 
@@ -52,7 +67,9 @@ async def login(
             max_age=config.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             path="/",
         )
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+    
+    role_name = user.role.name if user.role else "student"
+    return {"access_token": access_token, "token_type": "bearer", "role": role_name}
 
 
 @router.post("/logout")

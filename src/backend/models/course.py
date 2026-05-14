@@ -53,7 +53,8 @@ class Lesson(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     module_id: uuid.UUID = Field(foreign_key="modules.id")
     title: str = Field(nullable=False)
-    lesson_type: str = Field(default="video") # video, article, quiz
+    content_type: str = Field(default="video") # video, article, quiz
+    status: str = Field(default="queued")
     duration_minutes: int = Field(default=0)
     is_preview: bool = Field(default=False)
     sort_order: int = Field(default=0)

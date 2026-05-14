@@ -9,6 +9,7 @@ from src.backend.api.deps import check_video_access, validate_external_video_url
 from src.backend.auth import get_current_user
 from src.backend.database import get_session
 from src.backend.models import (
+    Category,
     Flashcard,
     ProcessingJob,
     User,
@@ -91,7 +92,7 @@ async def upload_video(
             id=lesson_id,
             module_id=module.id,
             title=file.filename,
-            content_type="video",
+            lesson_type="video",
             status="queued",
             sort_order=0
         )
@@ -135,7 +136,7 @@ async def process_url(
         id=lesson_id,
         module_id=module.id,
         title=f"Video from URL: {url[:30]}...",
-        content_type="video",
+        lesson_type="video",
         status="queued",
         sort_order=0
     )
@@ -296,7 +297,7 @@ async def get_flashcards(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    statement = select(Flashcard).where(Flashcard.video_id == video_id)
+    statement = select(Flashcard).where(Flashcard.lesson_id == video_id)
     return {"video_id": video_id, "flashcards": session.exec(statement).all()}
 
 
