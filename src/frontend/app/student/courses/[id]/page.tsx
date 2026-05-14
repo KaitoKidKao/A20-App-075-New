@@ -22,7 +22,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { api, Course, Module, Lesson, Enrollment } from '@/lib/api';
+import { api, Course, Module, Lesson } from '@/lib/api';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -221,7 +221,7 @@ export default function CourseDetailPage() {
                     )}
                   </div>
                 ))}
-              </div>div>
+              </div>
             </div>
 
             {/* Requirements */}

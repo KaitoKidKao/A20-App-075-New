@@ -33,7 +33,7 @@ function SettingsPageContent() {
   };
 
   const [profileData, setProfileData] = React.useState<StudentProfileData | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  const [, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     const fetchProfile = async () => {

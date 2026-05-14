@@ -7,6 +7,7 @@ import {
   Volume2,
   VolumeX,
   Maximize,
+  Captions,
   FileText, 
   Sparkles,
   Clock,
@@ -24,6 +25,8 @@ import {
   Lightbulb,
   Rocket,
   Download,
+  Type,
+  MoveVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
@@ -84,11 +87,25 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+const captionPositionClass = {
+  low: 'bottom-12',
+  middle: 'bottom-1/3',
+  high: 'top-16',
+};
+
+const captionPositionWithControlsClass = {
+  low: 'bottom-24',
+  middle: 'bottom-1/3',
+  high: 'top-16',
+};
+
 export default function VideoLessonPage() {
   const params = useParams();
   const videoId = params.id as string;
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoSourceModeRef = useRef<'byId' | 'demo'>('byId');
+  const transcriptPanelRef = useRef<HTMLDivElement>(null);
+  const transcriptItemRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   
   const [activeTab, setActiveTab] = useState('transcript');
   const [currentTime, setCurrentTime] = useState(0);
@@ -122,6 +139,12 @@ export default function VideoLessonPage() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [showCaptions, setShowCaptions] = useState(true);
+  const [captionBackground, setCaptionBackground] = useState(false);
+  const [captionSize, setCaptionSize] = useState(18);
+  const [captionLineHeight, setCaptionLineHeight] = useState(1.45);
+  const [captionPosition, setCaptionPosition] = useState<'low' | 'middle' | 'high'>('low');
+  const [reducedMotion, setReducedMotion] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
@@ -236,6 +259,14 @@ export default function VideoLessonPage() {
     return () => window.removeEventListener('click', closeMenu);
   }, [showSpeedMenu]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotion = () => setReducedMotion(mediaQuery.matches);
+    updateMotion();
+    mediaQuery.addEventListener('change', updateMotion);
+    return () => mediaQuery.removeEventListener('change', updateMotion);
+  }, []);
+
   // Video Control Handlers
   const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
@@ -298,6 +329,26 @@ export default function VideoLessonPage() {
     }
   };
 
+  const switchCaptionLanguage = useCallback(() => {
+    const available = ['vi', 'en'].filter(
+      (lang) => Array.isArray(segmentsByLanguage[lang]) && segmentsByLanguage[lang].length > 0
+    );
+    if (available.length <= 1) return;
+    const currentIndex = available.indexOf(language);
+    const nextLanguage = available[(currentIndex + 1) % available.length];
+    setLanguage(nextLanguage);
+  }, [language, segmentsByLanguage]);
+
+  const focusActiveTranscript = useCallback(() => {
+    setRightPanelTab('transcript');
+    const activeIndex = segments.findIndex((s) => currentTime >= s.start && currentTime <= s.end);
+    if (activeIndex >= 0) {
+      requestAnimationFrame(() => {
+        transcriptItemRefs.current[activeIndex]?.focus();
+      });
+    }
+  }, [currentTime, segments]);
+
   const handleUserActivity = useCallback(() => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -315,14 +366,20 @@ export default function VideoLessonPage() {
         e.preventDefault();
         togglePlay();
       } else if (e.code === 'ArrowRight') {
-        skip(5);
+        skip(e.shiftKey ? 10 : 5);
       } else if (e.code === 'ArrowLeft') {
-        skip(-5);
+        skip(e.shiftKey ? -10 : -5);
+      } else if (e.key.toLowerCase() === 'c') {
+        setShowCaptions((value) => !value);
+      } else if (e.key.toLowerCase() === 'l') {
+        switchCaptionLanguage();
+      } else if (e.key.toLowerCase() === 't') {
+        focusActiveTranscript();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay]);
+  }, [focusActiveTranscript, switchCaptionLanguage, togglePlay]);
 
   const fetchAllMetadata = useCallback(async () => {
     setIsLoadingMetadata(true);
@@ -498,6 +555,19 @@ export default function VideoLessonPage() {
     [segments, currentTime]
   );
 
+  const activeSegmentIndex = useMemo(
+    () => segments.findIndex((s) => currentTime >= s.start && currentTime <= s.end),
+    [segments, currentTime]
+  );
+
+  useEffect(() => {
+    if (rightPanelTab !== 'transcript' || activeSegmentIndex < 0) return;
+    transcriptItemRefs.current[activeSegmentIndex]?.scrollIntoView({
+      block: 'center',
+      behavior: reducedMotion ? 'auto' : 'smooth',
+    });
+  }, [activeSegmentIndex, reducedMotion, rightPanelTab]);
+
   const renderPanelState = (message: string) => (
     <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold text-center leading-relaxed">
       {message}
@@ -526,11 +596,16 @@ export default function VideoLessonPage() {
           <div className="lg:col-span-7 space-y-8">
             
             <div 
-              className="video-container-premium bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group cursor-pointer"
+              className={cn(
+                "video-container-premium bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group cursor-pointer",
+                reducedMotion && "motion-reduce"
+              )}
               onMouseMove={handleUserActivity}
               onMouseEnter={() => setShowControls(true)}
               onMouseLeave={() => isPlaying && setShowControls(false)}
               onClick={togglePlay}
+              role="region"
+              aria-label="Trình phát video bài học"
             >
               {videoSourceMode === 'demo' && (
                 <div className="absolute top-4 left-4 z-20 pointer-events-none rounded-full bg-amber-500/95 text-white text-[10px] font-extrabold uppercase tracking-widest px-4 py-2 shadow-lg max-w-[90%]">
@@ -578,6 +653,7 @@ export default function VideoLessonPage() {
                 src={videoSrc}
                 preload="metadata"
                 playsInline
+                aria-label="Video bài học"
                 onError={() => {
                   if (videoSourceModeRef.current === 'byId') {
                     setVideoSourceMode('demo');
@@ -604,8 +680,9 @@ export default function VideoLessonPage() {
               )}>
                 {/* Progress Bar */}
                 <div className="relative group/progress mb-4">
-                   <input 
-                     type="range"
+                     <input 
+                       type="range"
+                       aria-label="Tua video"
                      min="0"
                      max={duration || 0}
                      step="0.1"
@@ -626,16 +703,17 @@ export default function VideoLessonPage() {
 
                 <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                    <div className="flex items-center gap-6">
-                      <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform">
+                      <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform" aria-label={isPlaying ? 'Tạm dừng video' : 'Phát video'}>
                         {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
                       </button>
                       
                       <div className="flex items-center gap-2">
-                        <button onClick={toggleMute} className="text-white/80 hover:text-white transition-colors">
+                        <button onClick={toggleMute} className="text-white/80 hover:text-white transition-colors" aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}>
                           {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
                         </button>
                         <input 
                           type="range"
+                          aria-label="Âm lượng"
                           min="0"
                           max="1"
                           step="0.1"
@@ -680,10 +758,11 @@ export default function VideoLessonPage() {
                           setShowSpeedMenu(!showSpeedMenu);
                         }} 
                         className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-[10px] font-black text-white/90 transition-colors font-heading"
+                        aria-label="Chọn tốc độ phát"
                       >
                         {playbackSpeed === 1 ? '1x' : `${playbackSpeed}x`}
                       </button>
-                      <button onClick={toggleFullscreen} className="text-white/80 hover:text-white hover:scale-110 transition-transform">
+                      <button onClick={toggleFullscreen} className="text-white/80 hover:text-white hover:scale-110 transition-transform" aria-label="Mở toàn màn hình">
                         <Maximize size={20} />
                       </button>
                    </div>
@@ -691,17 +770,24 @@ export default function VideoLessonPage() {
               </div>
 
               {/* Subtitle Overlay - moved up slightly to avoid overlapping controls */}
-              {activeSegment && (
+              {showCaptions && activeSegment && (
                 <div
                   key={`${activeSegment.start}-${activeSegment.end}`}
                   className={cn(
                     "absolute left-1/2 -translate-x-1/2 w-[92%] md:w-[86%] pointer-events-none z-30 transition-all duration-500",
-                    showControls ? "bottom-24" : "bottom-12"
+                    showControls ? captionPositionWithControlsClass[captionPosition] : captionPositionClass[captionPosition]
                   )}
                 >
                   <div className="px-1 md:px-2 py-1">
                     <div className="flex items-center gap-2 justify-center">
-                      <p className="text-center text-sm md:text-base font-extrabold leading-relaxed tracking-tight text-white">
+                      <p
+                        aria-live="polite"
+                        className={cn(
+                          "text-center font-extrabold tracking-tight text-white",
+                          captionBackground && "rounded-xl bg-black/75 px-4 py-2"
+                        )}
+                        style={{ fontSize: captionSize, lineHeight: captionLineHeight }}
+                      >
                         {activeSegment.text}
                       </p>
                     </div>
@@ -724,6 +810,114 @@ export default function VideoLessonPage() {
               
               {/* Visual Sound Pulse REMOVED per user request */}
             </div>
+
+            <section className="bg-white/95 backdrop-blur-md rounded-[32px] p-5 border border-white/20 shadow-lg">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Captions size={18} />
+                    <span className="text-xs font-extrabold uppercase tracking-widest">Phụ đề</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCaptions((value) => !value)}
+                    className={cn(
+                      "h-7 w-12 rounded-full p-1 transition-colors",
+                      showCaptions ? "bg-[#FF4F6E]" : "bg-slate-300"
+                    )}
+                    aria-pressed={showCaptions}
+                    aria-label={showCaptions ? 'Tắt phụ đề' : 'Bật phụ đề'}
+                  >
+                    <span className={cn("block h-5 w-5 rounded-full bg-white transition-transform", showCaptions && "translate-x-5")} />
+                  </button>
+                </div>
+
+                <label className="rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="mb-2 flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-slate-700">
+                    <Type size={16} />
+                    Cỡ chữ
+                  </span>
+                  <input
+                    type="range"
+                    min="14"
+                    max="30"
+                    value={captionSize}
+                    onChange={(event) => setCaptionSize(Number(event.target.value))}
+                    className="w-full accent-[#FF4F6E]"
+                    aria-label="Cỡ chữ phụ đề"
+                  />
+                </label>
+
+                <label className="rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="mb-2 flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-slate-700">
+                    <MoveVertical size={16} />
+                    Dòng
+                  </span>
+                  <input
+                    type="range"
+                    min="1.1"
+                    max="1.9"
+                    step="0.1"
+                    value={captionLineHeight}
+                    onChange={(event) => setCaptionLineHeight(Number(event.target.value))}
+                    className="w-full accent-[#FF4F6E]"
+                    aria-label="Khoảng cách dòng phụ đề"
+                  />
+                </label>
+
+                <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                  <div className="mb-2 text-xs font-extrabold uppercase tracking-widest text-slate-700">Vị trí</div>
+                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-white p-1">
+                    {[
+                      ['low', 'Dưới'],
+                      ['middle', 'Giữa'],
+                      ['high', 'Trên'],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setCaptionPosition(value as 'low' | 'middle' | 'high')}
+                        className={cn(
+                          "rounded-lg px-2 py-1.5 text-[11px] font-extrabold transition-colors",
+                          captionPosition === value ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-900"
+                        )}
+                        aria-pressed={captionPosition === value}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCaptionBackground((value) => !value)}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-xs font-extrabold uppercase tracking-widest transition-colors",
+                    captionBackground ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-600"
+                  )}
+                  aria-pressed={captionBackground}
+                >
+                  Nền caption
+                </button>
+                <button
+                  type="button"
+                  onClick={switchCaptionLanguage}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-extrabold uppercase tracking-widest text-slate-600 transition-colors hover:border-[#FF4F6E]/50"
+                >
+                  Đổi VI/EN
+                </button>
+                <button
+                  type="button"
+                  onClick={focusActiveTranscript}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-extrabold uppercase tracking-widest text-slate-600 transition-colors hover:border-[#FF4F6E]/50"
+                >
+                  Focus transcript
+                </button>
+              </div>
+            </section>
 
             {/* AI Smart Analysis Panel - High Accessibility for Deaf Users */}
             <div className="bg-white/95 backdrop-blur-md rounded-[40px] p-10 border border-white/20 shadow-xl relative overflow-hidden group">
@@ -1141,9 +1335,11 @@ export default function VideoLessonPage() {
              <div className="sticky top-28 bg-white/95 backdrop-blur-md border border-white/20 rounded-[40px] shadow-2xl shadow-slate-200/40 h-[calc(100vh-140px)] flex flex-col overflow-hidden">
                 
                 {/* Panel Tabs */}
-                <div className="flex border-b border-slate-50">
+                <div className="flex border-b border-slate-50" role="tablist" aria-label="Bảng nội dung bên phải">
                    <button 
                      onClick={() => setRightPanelTab('transcript')}
+                     role="tab"
+                     aria-selected={rightPanelTab === 'transcript'}
                      className={cn(
                        "flex-1 py-8 flex items-center justify-center gap-3 transition-all",
                        rightPanelTab === 'transcript' ? "bg-white text-slate-900" : "bg-slate-50 text-slate-400 hover:text-slate-600"
@@ -1156,6 +1352,8 @@ export default function VideoLessonPage() {
                    </button>
                    <button 
                      onClick={() => setRightPanelTab('lessons')}
+                     role="tab"
+                     aria-selected={rightPanelTab === 'lessons'}
                      className={cn(
                        "flex-1 py-8 flex items-center justify-center gap-3 transition-all",
                        rightPanelTab === 'lessons' ? "bg-white text-slate-900" : "bg-slate-50 text-slate-400 hover:text-slate-600"
@@ -1177,6 +1375,8 @@ export default function VideoLessonPage() {
                           type="button"
                           disabled={!enabled}
                           onClick={() => enabled && setLanguage(lang)}
+                          aria-label={`Chọn phụ đề ${lang.toUpperCase()}`}
+                          aria-pressed={language === lang}
                           className={cn(
                             "px-3 py-1.5 text-xs font-extrabold uppercase tracking-widest rounded-lg transition-colors",
                             language === lang ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700",
@@ -1190,7 +1390,7 @@ export default function VideoLessonPage() {
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                <div ref={transcriptPanelRef} className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
                    {rightPanelTab === 'transcript' ? (
                      <>
                         {isLoadingTranscript && renderPanelState('Đang tải phụ đề...')}
@@ -1198,11 +1398,16 @@ export default function VideoLessonPage() {
                         {segments.map((s, i) => {
                            const isActive = currentTime >= s.start && currentTime <= s.end;
                            return (
-                              <div 
+                              <button
+                                type="button"
+                                ref={(node) => {
+                                  transcriptItemRefs.current[i] = node;
+                                }}
                                 key={i} 
                                 onClick={() => seekTo(formatTime(s.start))}
+                                aria-current={isActive ? 'true' : undefined}
                                 className={cn(
-                                  "p-6 rounded-[32px] transition-all cursor-pointer group relative",
+                                  "block w-full p-6 rounded-[32px] transition-all cursor-pointer group relative text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FF4F6E]/35",
                                   isActive ? "bg-[#FF4F6E] text-white shadow-2xl shadow-[#FF4F6E]/30 scale-[1.02]" : "hover:bg-slate-50 border border-transparent hover:border-slate-100 text-slate-600"
                                 )}
                               >
@@ -1218,10 +1423,10 @@ export default function VideoLessonPage() {
                                  )}>
                                     {s.text}
                                  </p>
-                                 {isActive && (
+                                 {isActive && !reducedMotion && (
                                    <div className="absolute top-8 right-8 animate-ping w-3 h-3 bg-white rounded-full" />
                                  )}
-                              </div>
+                              </button>
                            );
                         })}
                      </>

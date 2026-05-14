@@ -38,7 +38,7 @@ export interface HandsSignResponse {
 export interface Profile {
   bio?: string;
   learning_goals?: string;
-  certifications?: any[];
+  certifications?: Record<string, unknown>[];
 }
 
 export interface StudentProfileData {

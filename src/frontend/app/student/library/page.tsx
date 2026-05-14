@@ -44,30 +44,6 @@ export default function StudentDashboard() {
     { label: 'Khóa học đã hoàn thành', value: enrollments.filter(e => e.enrollment_status === 'completed').length.toString().padStart(2, '0'), icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-600' },
   ];
 
-  const recentEnrolled = [
-    { 
-      id: 1, 
-      title: 'Information About UI/UX Design Degree', 
-      instructor: 'David Benitez', 
-      category: 'Design', 
-      thumbnail: 'https://images.unsplash.com/photo-1586717791821-3f44a563de4c?q=80&w=2070&auto=format&fit=crop' 
-    },
-    { 
-      id: 2, 
-      title: 'Wordpress for Beginners - Master Wordpress Quickly', 
-      instructor: 'Ana Reyes', 
-      category: 'Wordpress', 
-      thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop' 
-    },
-    { 
-      id: 3, 
-      title: 'Sketch from A to Z (2024): Become an app designer', 
-      instructor: 'Andrew Pirtle', 
-      category: 'Design', 
-      thumbnail: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?q=80&w=2070&auto=format&fit=crop' 
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-bg-main">
       <div className="px-6 md:px-10 py-10 max-w-7xl mx-auto space-y-10">
