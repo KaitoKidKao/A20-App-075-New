@@ -25,14 +25,32 @@ export interface VSLInfo {
 }
 
 export interface HandsSignGloss {
+  index?: number;
   time: number;
   word: string;
   vsl_info: VSLInfo | null;
+  source?: string;
+  review_status?: string;
+}
+
+export interface AvatarState {
+  video_id: string;
+  status: "not_generated" | "ready" | "failed" | string;
+  avatar_video_url: string | null;
+  error?: string | null;
+  is_optional?: boolean;
+  disclaimer?: string;
 }
 
 export interface HandsSignResponse {
   video_id: string;
   handsign_data: HandsSignGloss[];
+  glosses?: HandsSignGloss[];
+  segments?: Record<string, unknown>[];
+  review_required?: boolean;
+  review_status?: string;
+  disclaimer?: string;
+  avatar?: AvatarState;
 }
 
 export interface Profile {
@@ -263,7 +281,20 @@ export const api = {
       return res.json();
     },
 
-    async generateAvatar(videoId: string) {
+    async updateHandsSign(videoId: string, glosses: HandsSignGloss[]): Promise<HandsSignResponse> {
+      const res = await apiFetch(`/api/videos/${videoId}/handsign`, {
+        method: "PUT",
+        headers: buildHeaders(),
+        body: JSON.stringify({ glosses, review_status: "reviewed" }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to update sign language data.");
+      }
+      return res.json();
+    },
+
+    async generateAvatar(videoId: string): Promise<AvatarState> {
       const res = await apiFetch(`/api/videos/${videoId}/generate-avatar`, {
         method: "POST",
         headers: buildHeaders(),
@@ -275,7 +306,7 @@ export const api = {
       return res.json();
     },
 
-    async getAvatar(videoId: string) {
+    async getAvatar(videoId: string): Promise<AvatarState> {
       const res = await apiFetch(`/api/videos/${videoId}/avatar`, { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch avatar video state.");
       return res.json();

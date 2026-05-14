@@ -19,11 +19,12 @@ from src.backend.models import (
     ContentMetadata,
     Module,
 )
-from src.backend.services.ai_service import AIService
 from src.backend.services.avatar_video_service import AvatarVideoService
 from src.backend.services.handsign_animation_service import (
+    build_handsign_payload,
     build_render_manifest,
     expand_handsign_segments,
+    normalize_glosses,
 )
 from src.backend.services.job_service import upsert_job_status
 from src.backend.services.queue_service import enqueue_download_and_pipeline, enqueue_pipeline_job
@@ -60,6 +61,25 @@ def _get_ai_analysis(video_id: str, session: Session) -> dict:
         select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)
     ).first()
     return content.ai_analysis if content and isinstance(content.ai_analysis, dict) else {}
+
+
+def _get_content_metadata(video_id: str, session: Session) -> ContentMetadata | None:
+    lesson_uuid = _parse_lesson_id(video_id)
+    return session.exec(
+        select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)
+    ).first()
+
+
+def _ensure_handsign_editor(video_id: str, current_user: User, session: Session) -> Lesson:
+    lesson = check_video_access(video_id, current_user, session)
+    role_name = (current_user.role.name if current_user.role else "student").lower()
+    if role_name == "admin":
+        return lesson
+    if lesson.module:
+        course = session.get(Course, lesson.module.course_id)
+        if course and course.instructor_id == current_user.id:
+            return lesson
+    raise HTTPException(status_code=403, detail="Only teacher/admin can review VSL gloss.")
 
 
 async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
@@ -423,9 +443,53 @@ async def get_handsign_data(
 ):
     check_video_access(video_id, current_user, session)
     ai_analysis = _get_ai_analysis(video_id, session)
-    if "handsign_data" not in ai_analysis:
-        return {"video_id": video_id, "handsign_data": []}
-    return {"video_id": video_id, "handsign_data": ai_analysis["handsign_data"]}
+    raw = ai_analysis.get("handsign_data", [])
+    avatar = AvatarVideoService.get_cached_avatar_video(video_id)
+    payload = build_handsign_payload(video_id, raw, avatar=avatar)
+    payload["handsign_data"] = payload["glosses"]
+    return payload
+
+
+@router.put("/{video_id}/handsign")
+async def update_handsign_data(
+    video_id: str,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    _ensure_handsign_editor(video_id, current_user, session)
+    content = _get_content_metadata(video_id, session)
+    if not content:
+        raise HTTPException(status_code=404, detail="Khong tim thay metadata cua bai hoc.")
+
+    glosses = data.get("glosses", data.get("handsign_data", []))
+    review_status = str(data.get("review_status") or "reviewed")
+    normalized = [
+        {**gloss, "review_status": review_status, "source": gloss.get("source") or "human_review"}
+        for gloss in normalize_glosses(glosses)
+    ]
+
+    ai_analysis = dict(content.ai_analysis or {})
+    ai_analysis["handsign_data"] = normalized
+    artifact_status = dict(ai_analysis.get("artifact_status") or {})
+    artifact_status["handsign_data"] = {
+        "status": "ready" if normalized else "empty",
+        "error": None,
+        "review_status": review_status if normalized else "empty",
+    }
+    ai_analysis["artifact_status"] = artifact_status
+    ai_analysis["handsign_review"] = {
+        "status": review_status if normalized else "empty",
+        "reviewed_by": current_user.email,
+    }
+    content.ai_analysis = ai_analysis
+    session.add(content)
+    session.commit()
+
+    avatar = AvatarVideoService.get_cached_avatar_video(video_id)
+    payload = build_handsign_payload(video_id, normalized, avatar=avatar)
+    payload["handsign_data"] = payload["glosses"]
+    return payload
 
 
 @router.post("/{video_id}/generate-avatar")
@@ -437,22 +501,16 @@ async def generate_avatar_endpoint(
 ):
     check_video_access(video_id, current_user, session)
     ai_analysis = _get_ai_analysis(video_id, session)
-    if "handsign_data" not in ai_analysis:
+    glosses = normalize_glosses(ai_analysis.get("handsign_data", []))
+    if not glosses:
         raise HTTPException(status_code=400, detail="Khong co du lieu handsign de sinh video.")
     
     cached = AvatarVideoService.get_cached_avatar_video(video_id)
-    if cached:
+    if cached and cached.get("status") == "ready":
         return cached
-    
-    summary = ai_analysis.get("summary")
-    if not summary:
-        raise HTTPException(status_code=400, detail="Video chua co tom tat tieng Viet.")
-    
-    summary_text = "\n".join(summary)
-    summary_glosses = await AIService.generate_handsign_from_text(summary_text)
-    result = await AvatarVideoService.generate_avatar_video(video_id, summary_text, summary_glosses)
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
+
+    gloss_text = " ".join(str(item.get("word", "")) for item in glosses if item.get("word"))
+    result = await AvatarVideoService.generate_avatar_video(video_id, gloss_text, glosses)
     return result
 
 
@@ -465,7 +523,11 @@ async def get_avatar_video(
     check_video_access(video_id, current_user, session)
     cached = AvatarVideoService.get_cached_avatar_video(video_id)
     if not cached:
-        return {"video_id": video_id, "avatar_video_url": None}
+        return AvatarVideoService.build_avatar_state(
+            video_id,
+            status="not_generated",
+            avatar_video_url=None,
+        )
     return cached
 
 
@@ -477,9 +539,7 @@ async def get_handsign_segments(
 ):
     check_video_access(video_id, current_user, session)
     ai_analysis = _get_ai_analysis(video_id, session)
-    raw = ai_analysis.get("handsign_data", [])
-    if not isinstance(raw, list):
-        raw = []
+    raw = normalize_glosses(ai_analysis.get("handsign_data", []))
     segments = expand_handsign_segments(raw)
     return {"video_id": video_id, "segments": segments}
 
@@ -492,8 +552,6 @@ async def get_handsign_export_manifest(
 ):
     check_video_access(video_id, current_user, session)
     ai_analysis = _get_ai_analysis(video_id, session)
-    raw = ai_analysis.get("handsign_data", [])
-    if not isinstance(raw, list):
-        raw = []
+    raw = normalize_glosses(ai_analysis.get("handsign_data", []))
     segments = expand_handsign_segments(raw)
     return build_render_manifest(video_id, segments)

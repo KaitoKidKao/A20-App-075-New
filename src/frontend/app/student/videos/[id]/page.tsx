@@ -124,6 +124,8 @@ export default function VideoLessonPage() {
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [avatarVideoUrl, setAvatarVideoUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState('');
+  const [avatarStatus, setAvatarStatus] = useState('not_generated');
+  const [avatarDisclaimer, setAvatarDisclaimer] = useState('');
   
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
@@ -413,10 +415,14 @@ export default function VideoLessonPage() {
 
     try {
       const handsignRes = await api.videos.getHandsSign(videoId);
-      const raw = handsignRes.handsign_data || [];
+      const raw = handsignRes.glosses || handsignRes.handsign_data || [];
       setHandsSignGlosses(
         [...raw].sort((a, b) => (Number(a.time) || 0) - (Number(b.time) || 0))
       );
+      setAvatarDisclaimer(handsignRes.disclaimer || handsignRes.avatar?.disclaimer || '');
+      if (handsignRes.avatar?.status) {
+        setAvatarStatus(handsignRes.avatar.status);
+      }
     } catch (err) {
       console.error('Handsign fetch error:', err);
       setHandsSignGlosses([]);
@@ -425,6 +431,13 @@ export default function VideoLessonPage() {
     try {
       const avatarRes = await api.videos.getAvatar(videoId);
       const rawUrl = avatarRes?.avatar_video_url;
+      setAvatarStatus(avatarRes?.status || 'not_generated');
+      if (avatarRes?.disclaimer) {
+        setAvatarDisclaimer(avatarRes.disclaimer);
+      }
+      if (avatarRes?.error) {
+        setAvatarError(avatarRes.error);
+      }
       if (!rawUrl) {
         setAvatarVideoUrl(null);
       } else if (typeof rawUrl === 'string' && rawUrl.startsWith('/api/avatar-video/')) {
@@ -454,6 +467,8 @@ export default function VideoLessonPage() {
     setHandsSignGlosses([]);
     setAvatarVideoUrl(null);
     setAvatarError('');
+    setAvatarStatus('not_generated');
+    setAvatarDisclaimer('');
     setIsGeneratingAvatar(false);
   }, [videoId]);
 
@@ -462,9 +477,20 @@ export default function VideoLessonPage() {
     setAvatarError('');
     try {
       const result = await api.videos.generateAvatar(videoId);
+      setAvatarStatus(result?.status || 'not_generated');
+      if (result?.disclaimer) {
+        setAvatarDisclaimer(result.disclaimer);
+      }
+      if (result?.status === 'failed') {
+        setAvatarVideoUrl(null);
+        setAvatarError(result.error || 'Khong the tao video avatar.');
+        return;
+      }
       const rawUrl = result?.avatar_video_url;
       if (!rawUrl) {
-        throw new Error('Backend chưa trả về URL video avatar.');
+        setAvatarVideoUrl(null);
+        setAvatarError('Video avatar chua san sang.');
+        return;
       }
       if (typeof rawUrl === 'string' && rawUrl.startsWith('/api/avatar-video/')) {
         setAvatarVideoUrl(`${backendBaseUrl}${rawUrl}`);
@@ -1246,6 +1272,9 @@ export default function VideoLessonPage() {
                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                  <div>
                                    <p className="text-sm font-extrabold text-slate-900">Generate Video</p>
+                                   <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                                     Trang thai: {avatarStatus.replace(/_/g, ' ')}
+                                   </p>
                                    <p className="text-xs font-bold text-slate-500">
                                      Tạo video avatar từ dữ liệu VSL của bài học này.
                                    </p>
@@ -1266,6 +1295,11 @@ export default function VideoLessonPage() {
                                </div>
                                {avatarError && (
                                  <p className="mt-3 text-sm font-bold text-red-600">{avatarError}</p>
+                               )}
+                               {avatarDisclaimer && (
+                                 <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500">
+                                   {avatarDisclaimer}
+                                 </p>
                                )}
                              </div>
 

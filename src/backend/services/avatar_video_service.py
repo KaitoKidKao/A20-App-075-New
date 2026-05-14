@@ -9,6 +9,8 @@ from pathlib import Path
 import json
 
 from src.backend import config
+from src.backend.services.handsign_animation_service import HANDSIGN_DISCLAIMER
+from src.backend.utils.datetime_utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,37 @@ logger = logging.getLogger(__name__)
 class AvatarVideoService:
     RESULTS_DIR = Path("data/uploads/ai_results")
     AVATAR_VIDEOS_DIR = Path("data/uploads/avatar_videos")
+
+    @classmethod
+    def build_avatar_state(
+        cls,
+        video_id: str,
+        *,
+        status: str,
+        avatar_video_url: str | None = None,
+        error: str | None = None,
+        extra: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "video_id": video_id,
+            "status": status,
+            "avatar_video_url": avatar_video_url,
+            "error": error,
+            "is_optional": True,
+            "disclaimer": HANDSIGN_DISCLAIMER,
+            "updated_at": utc_now().isoformat(),
+        }
+        if extra:
+            payload.update(extra)
+        return payload
+
+    @classmethod
+    def _write_avatar_state(cls, video_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        result_dir = cls.RESULTS_DIR / video_id
+        result_dir.mkdir(parents=True, exist_ok=True)
+        with open(result_dir / "avatar_video.json", "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        return payload
 
     @classmethod
     def _build_prompt_for_chunk(cls, chunk_text: str, chunk_glosses: List[str], chunk_index: int) -> str:
@@ -201,7 +234,14 @@ class AvatarVideoService:
         """
         if not config.REPLICATE_API_TOKEN:
             logger.error("REPLICATE_API_TOKEN is not set.")
-            return {"error": "API token not configured"}
+            return cls._write_avatar_state(
+                video_id,
+                cls.build_avatar_state(
+                    video_id,
+                    status="failed",
+                    error="API token not configured",
+                ),
+            )
 
         try:
             import replicate
@@ -259,7 +299,15 @@ class AvatarVideoService:
                     logger.warning(f"⚠️ Không tải được clip {i}, bỏ qua.")
 
             if not clip_paths:
-                return {"error": "Không sinh được clip nào."}
+                return cls._write_avatar_state(
+                    video_id,
+                    cls.build_avatar_state(
+                        video_id,
+                        status="failed",
+                        error="Khong sinh duoc clip avatar nao.",
+                        extra={"total_clips": len(clip_urls), "clip_urls": clip_urls},
+                    ),
+                )
 
             # Nối các clip lại thành 1 video dài
             final_video_path = cls.AVATAR_VIDEOS_DIR / f"{video_id}_avatar.mp4"
@@ -276,34 +324,42 @@ class AvatarVideoService:
             if not success or not final_video_path.exists():
                 # Fallback: trả về clip đầu tiên nếu nối thất bại
                 logger.warning("⚠️ Nối video thất bại, trả về clip đầu tiên.")
-                result = {
-                    "video_id": video_id,
-                    "avatar_video_url": clip_urls[0] if clip_urls else "",
-                    "total_clips": len(clip_urls),
-                    "clip_urls": clip_urls,
-                    "prompt_used": "multi-clip generation"
-                }
+                result = cls.build_avatar_state(
+                    video_id,
+                    status="ready",
+                    avatar_video_url=clip_urls[0] if clip_urls else None,
+                    extra={
+                        "total_clips": len(clip_urls),
+                        "clip_urls": clip_urls,
+                        "prompt_used": "multi-clip generation",
+                    },
+                )
             else:
                 # Trả về đường dẫn local để frontend serve
-                result = {
-                    "video_id": video_id,
-                    "avatar_video_url": f"/api/avatar-video/{video_id}",
-                    "total_clips": len(clip_paths),
-                    "total_duration_estimate": f"~{len(clip_paths) * 5}s",
-                    "clip_urls": clip_urls,
-                    "prompt_used": "multi-clip generation"
-                }
+                result = cls.build_avatar_state(
+                    video_id,
+                    status="ready",
+                    avatar_video_url=f"/api/avatar-video/{video_id}",
+                    extra={
+                        "total_clips": len(clip_paths),
+                        "total_duration_estimate": f"~{len(clip_paths) * 5}s",
+                        "clip_urls": clip_urls,
+                        "prompt_used": "multi-clip generation",
+                    },
+                )
 
             # Lưu cache
-            with open(result_dir / "avatar_video.json", "w", encoding="utf-8") as f:
-                json.dump(result, f, ensure_ascii=False, indent=2)
+            cls._write_avatar_state(video_id, result)
 
             logger.info(f"🎉 Hoàn tất! Video avatar {len(clip_paths)} clips = ~{len(clip_paths)*5}s")
             return result
 
         except Exception as e:
             logger.error(f"❌ Lỗi khi sinh video avatar qua Replicate: {e}")
-            return {"error": str(e)}
+            return cls._write_avatar_state(
+                video_id,
+                cls.build_avatar_state(video_id, status="failed", error=str(e)),
+            )
 
     @classmethod
     def get_cached_avatar_video(cls, video_id: str) -> Dict[str, Any]:

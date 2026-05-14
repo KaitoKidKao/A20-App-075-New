@@ -1,5 +1,7 @@
 from typing import Any
 
+from src.backend.services.handsign_animation_service import normalize_glosses
+
 
 ARTIFACT_KEYS = (
     "summary",
@@ -164,7 +166,7 @@ def build_ai_analysis(
         "briefing": normalize_briefing(briefing),
         "visual_data": notebook_data.get("visual_data") if isinstance(notebook_data.get("visual_data"), dict) else {},
         "cover_image_url": notebook_data.get("cover_image_url"),
-        "handsign_data": handsign_data if isinstance(handsign_data, list) else [],
+        "handsign_data": normalize_glosses(handsign_data),
         "flashcards": normalize_flashcards(notebook_data.get("flashcards")),
         "quizzes": normalize_quizzes(quizzes),
     }
