@@ -11,6 +11,7 @@ from sqlmodel import select
 from ..database import engine
 from ..models import Flashcard, Lesson, ContentMetadata, Category, Course, Module, Quiz, Question, QuestionOption, QuizAttempt, UserFlashcardProgress
 from .ai_service import AIService
+from .artifact_service import build_ai_analysis
 from .job_service import upsert_job_status
 from .video_service import VideoService
 
@@ -20,6 +21,14 @@ executor = ThreadPoolExecutor(max_workers=2)
 
 def _run_transcription_sync(audio_path: Path, lesson_id: str):
     return AIService.transcribe(audio_path, lesson_id)
+
+
+async def _run_artifact_task(name: str, coro):
+    try:
+        return await coro, None
+    except Exception as exc:
+        logger.exception("Artifact generation failed: %s", name)
+        return None, str(exc)
 
 async def run_video_pipeline(lesson_id: str, video_path: Path | str):
     video_path = Path(video_path)
@@ -76,14 +85,26 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
             )
 
             update_status("ai_processing")
-            summary, metadata, briefing, notebook_data, handsign_data, persistent_quizzes = await asyncio.gather(
-                AIService.summarize(vi_transcript),
-                AIService.process_all_lecture_metadata(vi_transcript),
-                AIService.generate_pre_lecture_briefing(vi_transcript),
-                AIService.generate_notebook_data(vi_transcript),
-                AIService.generate_handsign_data(vi_transcript),
-                AIService.generate_persistent_quizzes(vi_transcript),
+            artifact_results = await asyncio.gather(
+                _run_artifact_task("summary", AIService.summarize(vi_transcript)),
+                _run_artifact_task("metadata", AIService.process_all_lecture_metadata(vi_transcript)),
+                _run_artifact_task("briefing", AIService.generate_pre_lecture_briefing(vi_transcript)),
+                _run_artifact_task("notebook_data", AIService.generate_notebook_data(vi_transcript)),
+                _run_artifact_task("handsign_data", AIService.generate_handsign_data(vi_transcript)),
+                _run_artifact_task("quizzes", AIService.generate_persistent_quizzes(vi_transcript)),
             )
+            artifact_names = ["summary", "metadata", "briefing", "notebook_data", "handsign_data", "quizzes"]
+            artifact_values = dict(zip(artifact_names, [result for result, _ in artifact_results]))
+            artifact_errors = dict(zip(artifact_names, [error for _, error in artifact_results]))
+            for artifact_name, artifact_value in artifact_values.items():
+                if isinstance(artifact_value, dict) and artifact_value.get("error") and not artifact_errors.get(artifact_name):
+                    artifact_errors[artifact_name] = str(artifact_value.get("error"))
+            summary = artifact_values.get("summary") or []
+            metadata = artifact_values.get("metadata") or {}
+            briefing = artifact_values.get("briefing") or {}
+            notebook_data = artifact_values.get("notebook_data") or {}
+            handsign_data = artifact_values.get("handsign_data") or []
+            persistent_quizzes = artifact_values.get("quizzes") or []
 
             # Auto-Categorization logic
             categories = session.exec(select(Category)).all()
@@ -113,18 +134,16 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
                     lesson.module_id = module.id
                     session.add(lesson)
 
-            # Build comprehensive AI analysis object
-            ai_analysis = {
-                "transcript": stored_transcript,
-                "summary": summary,
-                "timeline": metadata.get("timeline"),
-                "highlights": metadata.get("highlights"),
-                "questions": metadata.get("questions"),
-                "briefing": briefing,
-                "visual_data": notebook_data.get("visual_data"),
-                "cover_image_url": notebook_data.get("cover_image_url"),
-                "handsign_data": handsign_data,
-            }
+            ai_analysis = build_ai_analysis(
+                transcript=stored_transcript,
+                summary=summary,
+                metadata=metadata,
+                briefing=briefing,
+                notebook_data=notebook_data,
+                handsign_data=handsign_data,
+                quizzes=persistent_quizzes,
+                errors=artifact_errors,
+            )
 
             content_entry = session.exec(
                 select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)
@@ -144,7 +163,7 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
             for old_flashcard in old_flashcards:
                 session.exec(delete(UserFlashcardProgress).where(UserFlashcardProgress.flashcard_id == old_flashcard.id))
             session.exec(delete(Flashcard).where(Flashcard.lesson_id == lesson_uuid))
-            for fc in notebook_data.get("flashcards", []):
+            for fc in ai_analysis.get("flashcards", []):
                 session.add(
                     Flashcard(
                         lesson_id=lesson_uuid,
@@ -154,7 +173,7 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
                 )
 
             # Save persistent Quizzes
-            if persistent_quizzes:
+            if ai_analysis.get("quizzes"):
                 old_quizzes = session.exec(select(Quiz).where(Quiz.lesson_id == lesson_uuid)).all()
                 for old_quiz in old_quizzes:
                     old_questions = session.exec(select(Question).where(Question.quiz_id == old_quiz.id)).all()
@@ -169,7 +188,7 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
                 session.commit()
                 session.refresh(quiz)
                 
-                for q_data in persistent_quizzes:
+                for q_data in ai_analysis.get("quizzes", []):
                     question = Question(
                         quiz_id=quiz.id,
                         question_text=q_data["question_text"],

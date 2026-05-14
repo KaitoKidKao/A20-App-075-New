@@ -54,6 +54,14 @@ def _find_existing_video_path(lesson_id: str, session: Session) -> Path | None:
     return None
 
 
+def _get_ai_analysis(video_id: str, session: Session) -> dict:
+    lesson_uuid = _parse_lesson_id(video_id)
+    content = session.exec(
+        select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)
+    ).first()
+    return content.ai_analysis if content and isinstance(content.ai_analysis, dict) else {}
+
+
 async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
     # Get or create "Chung" category
     category = session.exec(select(Category).where(Category.name == "Chung")).first()
@@ -284,16 +292,30 @@ async def get_transcript(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "transcript" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "transcript" not in ai_analysis:
         return {"video_id": video_id, "message": "Phu de chua san sang."}
-    transcript = content.ai_analysis["transcript"]
+    transcript = ai_analysis["transcript"]
     if isinstance(transcript, dict) and "segments_by_language" not in transcript:
         segments = transcript.get("segments", [])
         lang = transcript.get("language", "vi")
         transcript["segments_by_language"] = {lang: segments}
         transcript["available_languages"] = [lang]
     return transcript
+
+
+@router.get("/{video_id}/artifacts/status")
+async def get_artifact_status(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    ai_analysis = _get_ai_analysis(video_id, session)
+    return {
+        "video_id": video_id,
+        "artifact_status": ai_analysis.get("artifact_status", {}),
+    }
 
 
 @router.get("/{video_id}/summary")
@@ -303,10 +325,14 @@ async def get_summary(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "summary" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "summary" not in ai_analysis:
         return {"video_id": video_id, "message": "Tom tat chua san sang."}
-    return {"video_id": video_id, "summary": content.ai_analysis["summary"]}
+    return {
+        "video_id": video_id,
+        "summary": ai_analysis["summary"],
+        "status": ai_analysis.get("artifact_status", {}).get("summary"),
+    }
 
 
 @router.get("/{video_id}/timeline")
@@ -316,10 +342,10 @@ async def get_timeline(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "timeline" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "timeline" not in ai_analysis:
         return {"video_id": video_id, "timeline": []}
-    return {"video_id": video_id, "timeline": content.ai_analysis["timeline"]}
+    return {"video_id": video_id, "timeline": ai_analysis["timeline"]}
 
 
 @router.get("/{video_id}/highlights")
@@ -329,10 +355,10 @@ async def get_highlights(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "highlights" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "highlights" not in ai_analysis:
         return {"video_id": video_id, "highlights": []}
-    return {"video_id": video_id, "highlights": content.ai_analysis["highlights"]}
+    return {"video_id": video_id, "highlights": ai_analysis["highlights"]}
 
 
 @router.get("/{video_id}/questions")
@@ -342,10 +368,10 @@ async def get_questions(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "questions" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "questions" not in ai_analysis:
         return {"video_id": video_id, "questions": []}
-    return {"video_id": video_id, "questions": content.ai_analysis["questions"]}
+    return {"video_id": video_id, "questions": ai_analysis["questions"]}
 
 
 @router.get("/{video_id}/briefing")
@@ -355,10 +381,10 @@ async def get_briefing(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "briefing" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "briefing" not in ai_analysis:
         return {"video_id": video_id, "message": "Briefing chua san sang."}
-    return {"video_id": video_id, "briefing": content.ai_analysis["briefing"]}
+    return {"video_id": video_id, "briefing": ai_analysis["briefing"]}
 
 
 @router.get("/{video_id}/flashcards")
@@ -368,7 +394,7 @@ async def get_flashcards(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    statement = select(Flashcard).where(Flashcard.lesson_id == video_id)
+    statement = select(Flashcard).where(Flashcard.lesson_id == _parse_lesson_id(video_id))
     return {"video_id": video_id, "flashcards": session.exec(statement).all()}
 
 
@@ -379,13 +405,13 @@ async def get_viz_data(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "visual_data" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "visual_data" not in ai_analysis:
         return {"video_id": video_id, "visual_data": {}, "cover_image_url": None}
     return {
         "video_id": video_id,
-        "visual_data": content.ai_analysis["visual_data"],
-        "cover_image_url": content.ai_analysis.get("cover_image_url"),
+        "visual_data": ai_analysis["visual_data"],
+        "cover_image_url": ai_analysis.get("cover_image_url"),
     }
 
 
@@ -396,10 +422,10 @@ async def get_handsign_data(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "handsign_data" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "handsign_data" not in ai_analysis:
         return {"video_id": video_id, "handsign_data": []}
-    return {"video_id": video_id, "handsign_data": content.ai_analysis["handsign_data"]}
+    return {"video_id": video_id, "handsign_data": ai_analysis["handsign_data"]}
 
 
 @router.post("/{video_id}/generate-avatar")
@@ -410,15 +436,15 @@ async def generate_avatar_endpoint(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    if not content or not content.ai_analysis or "handsign_data" not in content.ai_analysis:
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "handsign_data" not in ai_analysis:
         raise HTTPException(status_code=400, detail="Khong co du lieu handsign de sinh video.")
     
     cached = AvatarVideoService.get_cached_avatar_video(video_id)
     if cached:
         return cached
     
-    summary = content.ai_analysis.get("summary")
+    summary = ai_analysis.get("summary")
     if not summary:
         raise HTTPException(status_code=400, detail="Video chua co tom tat tieng Viet.")
     
@@ -450,8 +476,8 @@ async def get_handsign_segments(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    raw = content.ai_analysis.get("handsign_data") if content and content.ai_analysis else []
+    ai_analysis = _get_ai_analysis(video_id, session)
+    raw = ai_analysis.get("handsign_data", [])
     if not isinstance(raw, list):
         raw = []
     segments = expand_handsign_segments(raw)
@@ -465,8 +491,8 @@ async def get_handsign_export_manifest(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == video_id)).first()
-    raw = content.ai_analysis.get("handsign_data") if content and content.ai_analysis else []
+    ai_analysis = _get_ai_analysis(video_id, session)
+    raw = ai_analysis.get("handsign_data", [])
     if not isinstance(raw, list):
         raw = []
     segments = expand_handsign_segments(raw)

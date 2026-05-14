@@ -215,6 +215,12 @@ export const api = {
       return res.json();
     },
 
+    async getArtifactStatus(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/artifacts/status`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch artifact status.");
+      return res.json();
+    },
+
     async getTimeline(videoId: string) {
       const res = await apiFetch(`/api/videos/${videoId}/timeline`, { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch timeline.");
