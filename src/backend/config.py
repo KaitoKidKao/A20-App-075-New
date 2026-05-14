@@ -22,9 +22,26 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "500"))
+MAX_VIDEO_DURATION_SECONDS = int(os.getenv("MAX_VIDEO_DURATION_SECONDS", "14400"))
+ALLOWED_VIDEO_EXTENSIONS = {
+    ext.strip().lower()
+    for ext in os.getenv("ALLOWED_VIDEO_EXTENSIONS", ".mp4,.mov,.avi,.mkv").split(",")
+    if ext.strip()
+}
+ALLOWED_VIDEO_MIME_TYPES = {
+    mime.strip().lower()
+    for mime in os.getenv(
+        "ALLOWED_VIDEO_MIME_TYPES",
+        "video/mp4,video/quicktime,video/x-msvideo,video/x-matroska",
+    ).split(",")
+    if mime.strip()
+}
 AUTH_COOKIE_NAME = os.getenv("AUTH_COOKIE_NAME", "access_token")
 AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
 AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "lax")
+LOGIN_RATE_LIMIT = os.getenv("LOGIN_RATE_LIMIT", "10/minute")
+UPLOAD_RATE_LIMIT = os.getenv("UPLOAD_RATE_LIMIT", "20/hour")
+AVATAR_RATE_LIMIT = os.getenv("AVATAR_RATE_LIMIT", "10/hour")
 
 
 def _parse_cors_origins(raw: str) -> list[str]:

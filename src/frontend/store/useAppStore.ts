@@ -17,7 +17,6 @@ interface User {
 interface AppState {
   // Auth State
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   login: (user: User, token?: string) => void;
   logout: () => void;
@@ -43,18 +42,16 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       // Auth
       user: null,
-      token: null,
       isAuthenticated: false,
       login: (user) => {
         set({
           user,
-          token: null,
           isAuthenticated: true,
           currentRole: user.role
         });
       },
       logout: () => {
-        set({ user: null, token: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false });
       },
 
       currentRole: 'student',
@@ -79,7 +76,6 @@ export const useAppStore = create<AppState>()(
         const state = (persistedState as { state?: Record<string, unknown> })?.state || {};
         return {
           ...state,
-          token: null,
         };
       },
     }

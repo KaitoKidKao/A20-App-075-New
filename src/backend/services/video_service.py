@@ -6,6 +6,8 @@ from pathlib import Path
 from fastapi import UploadFile
 import aiofiles
 
+from src.backend import config
+
 logger = logging.getLogger(__name__)
 
 class VideoService:
@@ -61,6 +63,37 @@ class VideoService:
 
         await upload_file.seek(0)
         return file_path
+
+    @classmethod
+    def validate_video_duration(cls, video_path: Path) -> None:
+        if not video_path.exists():
+            return
+
+        command = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(video_path),
+        ]
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            duration = float((result.stdout or "0").strip() or 0)
+        except FileNotFoundError:
+            logger.warning("ffprobe is not installed; skipping duration validation for %s", video_path)
+            return
+        except Exception as exc:
+            raise ValueError(f"Unable to validate video duration: {exc}") from exc
+
+        if duration > config.MAX_VIDEO_DURATION_SECONDS:
+            try:
+                video_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            raise ValueError("Uploaded video exceeds allowed duration.")
 
     @classmethod
     async def download_video(cls, url: str, video_id: str) -> Path:

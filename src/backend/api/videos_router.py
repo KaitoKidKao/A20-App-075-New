@@ -27,6 +27,7 @@ from src.backend.services.handsign_animation_service import (
 )
 from src.backend.services.job_service import upsert_job_status
 from src.backend.services.queue_service import enqueue_download_and_pipeline, enqueue_pipeline_job
+from src.backend.services.rate_limit_service import rate_limit
 from src.backend.services.video_service import VideoService
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
@@ -62,7 +63,12 @@ async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
         session.flush()
     
     # Get or create "Quick Uploads" course
-    course = session.exec(select(Course).where(Course.title == "Khoa hoc tai len nhanh")).first()
+    course = session.exec(
+        select(Course).where(
+            Course.title == "Khoa hoc tai len nhanh",
+            Course.instructor_id == user_id,
+        )
+    ).first()
     if not course:
         course = Course(
             category_id=category.id,
@@ -89,6 +95,7 @@ async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
 @router.post("/upload")
 async def upload_video(
     background_tasks: BackgroundTasks,
+    _: None = Depends(rate_limit("upload", config.UPLOAD_RATE_LIMIT)),
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -96,8 +103,11 @@ async def upload_video(
     lesson_uuid = uuid.uuid4()
     lesson_id = str(lesson_uuid)
     ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in [".mp4", ".mov", ".avi", ".mkv"]:
+    if ext not in config.ALLOWED_VIDEO_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Unsupported file format.")
+    content_type = (file.content_type or "").lower()
+    if content_type not in config.ALLOWED_VIDEO_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Unsupported video MIME type.")
 
     filename = f"{lesson_id}{ext}"
     max_upload_size_bytes = config.MAX_UPLOAD_SIZE_MB * 1024 * 1024
@@ -108,6 +118,7 @@ async def upload_video(
             filename=filename,
             max_size_bytes=max_upload_size_bytes,
         )
+        VideoService.validate_video_duration(video_path)
         
         module = await get_or_create_default_hierarchy(session, current_user.id)
         
@@ -134,10 +145,12 @@ async def upload_video(
             "queue_mode": mode,
             "message": "Video uploaded and queued for processing.",
         }
-    except ValueError:
+    except ValueError as exc:
+        message = str(exc)
+        status_code = 413 if "size" in message.lower() or "large" in message.lower() else 400
         raise HTTPException(
-            status_code=413,
-            detail=f"File too large. Maximum allowed size is {config.MAX_UPLOAD_SIZE_MB} MB.",
+            status_code=status_code,
+            detail=message or f"File too large. Maximum allowed size is {config.MAX_UPLOAD_SIZE_MB} MB.",
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -147,6 +160,7 @@ async def upload_video(
 async def process_url(
     background_tasks: BackgroundTasks,
     data: dict,
+    _: None = Depends(rate_limit("upload", config.UPLOAD_RATE_LIMIT)),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -233,10 +247,7 @@ async def get_video_status(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    lesson = session.get(Lesson, _parse_lesson_id(video_id))
-    if not lesson:
-        raise HTTPException(status_code=404, detail="Khong tim thay bai hoc.")
-    # Add access check if needed
+    lesson = check_video_access(video_id, current_user, session)
     return {"video_id": video_id, "status": lesson.status}
 
 
@@ -394,6 +405,7 @@ async def get_handsign_data(
 @router.post("/{video_id}/generate-avatar")
 async def generate_avatar_endpoint(
     video_id: str,
+    _: None = Depends(rate_limit("generate_avatar", config.AVATAR_RATE_LIMIT)),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
