@@ -79,6 +79,10 @@ export default function CourseDetailPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-slate-400">Loading course...</div>;
   if (!course) return <div className="min-h-screen flex items-center justify-center font-black text-rose-500">Course not found.</div>;
 
+  const studentCount = Object.values(lessonsMap).flat().length;
+  const courseDescription = course.description || course.desc || `Learn everything you need to know about ${course.cat || course.title} from industry experts.`;
+  const courseImage = course.thumbnail_url || course.cover_image_url || course.thumb || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
+
   return (
     <div className="min-h-screen bg-transparent relative">
       
@@ -117,7 +121,7 @@ export default function CourseDetailPage() {
               {course.title}
             </h1>
             <p className="text-lg text-white/80 font-medium max-w-2xl">
-              {course.desc} Learn everything you need to know about {course.cat} from industry experts.
+              {courseDescription}
             </p>
             
             <div className="flex flex-wrap items-center gap-6 text-sm">
@@ -360,7 +364,7 @@ export default function CourseDetailPage() {
           <div className="lg:col-span-4">
              <div className="lg:sticky lg:top-8 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                 <div className="relative aspect-video group cursor-pointer">
-                   <Image src={course.thumb} alt="Preview" fill className="object-cover" unoptimized={true} />
+                   <Image src={courseImage} alt="Preview" fill className="object-cover" unoptimized={true} />
                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center">
                       <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-slate-900 group-hover:scale-110 transition-transform">
                          <Play size={24} fill="currentColor" />

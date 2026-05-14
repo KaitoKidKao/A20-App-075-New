@@ -87,6 +87,8 @@ Health check:
 
 ```bash
 GET /api/health
+GET /api/health/deep
+GET /api/metrics
 ```
 
 ### Frontend
@@ -120,6 +122,33 @@ python -m src.backend.scripts.run_worker
 
 If Redis is unavailable, the backend falls back to FastAPI `BackgroundTasks` for local development.
 
+## Docker / Production-like Local Stack
+
+Run API, worker, frontend, PostgreSQL and Redis:
+
+```bash
+docker compose up --build
+```
+
+Run database migrations inside the backend container:
+
+```bash
+docker compose exec backend python -m alembic upgrade head
+```
+
+Optional MinIO profile for local object storage experiments:
+
+```bash
+docker compose --profile storage up --build
+```
+
+Useful URLs:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+- Deep health: `http://localhost:8000/api/health/deep`
+- Metrics JSON: `http://localhost:8000/api/metrics`
+
 ## Reprocess A Video
 
 Use this when an uploaded video exists but transcript/AI output must be regenerated:
@@ -140,6 +169,15 @@ Run backend tests from repository root:
 
 ```bash
 python -m pytest -q src/backend/tests
+```
+
+Run frontend checks:
+
+```bash
+cd src/frontend
+npm run lint
+npm run typecheck
+npm run build
 ```
 
 Optional script:

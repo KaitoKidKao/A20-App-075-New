@@ -33,6 +33,14 @@ export interface HandsSignGloss {
   review_status?: string;
 }
 
+export interface HandsSignSegment {
+  start: number;
+  end: number;
+  word: string;
+  vsl_info: VSLInfo | null;
+  hamnosys_hand?: string | null;
+}
+
 export interface AvatarState {
   video_id: string;
   status: "not_generated" | "ready" | "failed" | string;
@@ -56,7 +64,12 @@ export interface HandsSignResponse {
 export interface Profile {
   bio?: string;
   learning_goals?: string;
-  certifications?: Record<string, unknown>[];
+  certifications?: {
+    cert_id: string;
+    course_id?: string;
+    course_title: string;
+    issue_date: string;
+  }[];
 }
 
 export interface StudentProfileData {
@@ -90,6 +103,9 @@ export interface Course {
   description?: string;
   cover_image_url?: string;
   thumbnail_url?: string;
+  desc?: string;
+  cat?: string;
+  thumb?: string;
 }
 
 export interface Module {
@@ -351,6 +367,12 @@ export const api = {
     async getHandsSign(videoId: string): Promise<HandsSignResponse> {
       const res = await apiFetch(`/api/videos/${videoId}/handsign`, { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch sign language data.");
+      return res.json();
+    },
+
+    async getHandsSignExport(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/handsign-export`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch sign language manifest.");
       return res.json();
     },
 

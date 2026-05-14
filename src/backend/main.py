@@ -1,8 +1,10 @@
 import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlmodel import Session
 
 from src.backend import config
@@ -14,10 +16,11 @@ from src.backend.api.course_router import router as course_router
 from src.backend.api.student_router import router as student_router
 from src.backend.database import create_db_and_tables, engine
 from src.backend.services.job_service import mark_stale_jobs_as_failed
+from src.backend.services.observability_service import configure_logging, runtime_metrics
 from src.backend.services.pipeline_service import shutdown_pipeline_executor
 from src.backend.services.video_service import VideoService
 
-logging.basicConfig(level=getattr(logging, config.LOG_LEVEL), format="%(asctime)s [%(levelname)s] %(message)s")
+configure_logging(config.LOG_LEVEL, config.JSON_LOGS)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -44,6 +47,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def metrics_middleware(request: Request, call_next):
+    started = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - started) * 1000
+    runtime_metrics.record_request(request.url.path, response.status_code, duration_ms)
+    response.headers["X-Process-Time-ms"] = f"{duration_ms:.2f}"
+    return response
+
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(videos_router)
@@ -54,3 +67,48 @@ app.include_router(student_router)
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy", "service": "Video Captioning API"}
+
+
+@app.get("/api/health/deep")
+def deep_health_check():
+    checks = {
+        "api": {"status": "healthy"},
+        "database": {"status": "unknown"},
+        "redis": {"status": "skipped"},
+        "queue": {"status": "skipped"},
+        "worker": {"status": "skipped"},
+    }
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        checks["database"] = {"status": "healthy"}
+    except Exception as exc:
+        checks["database"] = {"status": "unhealthy", "error": str(exc)}
+
+    if config.REDIS_URL:
+        try:
+            from redis import Redis
+            from rq import Queue, Worker
+
+            redis_conn = Redis.from_url(config.REDIS_URL)
+            redis_conn.ping()
+            queue = Queue("video-pipeline", connection=redis_conn)
+            workers = Worker.all(connection=redis_conn)
+            checks["redis"] = {"status": "healthy"}
+            checks["queue"] = {"status": "healthy", "name": queue.name, "length": len(queue)}
+            checks["worker"] = {"status": "healthy" if workers else "degraded", "count": len(workers)}
+        except Exception as exc:
+            checks["redis"] = {"status": "unhealthy", "error": str(exc)}
+            checks["queue"] = {"status": "unknown"}
+            checks["worker"] = {"status": "unknown"}
+
+    overall = "healthy" if all(
+        check["status"] in {"healthy", "skipped"} for check in checks.values()
+    ) else "degraded"
+    return {"status": overall, "checks": checks}
+
+
+@app.get("/api/metrics")
+def metrics_snapshot():
+    return runtime_metrics.snapshot()
