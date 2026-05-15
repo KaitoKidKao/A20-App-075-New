@@ -180,10 +180,27 @@ export default function CourseDetailPage() {
                 </div>
               </div>
               <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <div className="rounded-xl border-b border-slate-100 bg-slate-50 p-4">
+                  <div className="text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Ho tro nguoi khiem thinh</div>
+                  <div className="flex flex-wrap gap-2 text-xs font-bold">
+                    <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700">Phu de song ngu: VI/EN</span>
+                    <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700">
+                      Transcript san sang: {stats.transcript_ready_lessons}/{stats.total_lessons}
+                    </span>
+                    {stats.processing_lessons > 0 && (
+                      <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700">
+                        Dang xu ly: {stats.processing_lessons}
+                      </span>
+                    )}
+                    <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700">Dieu huong ban phim</span>
+                  </div>
+                </div>
                 {modules.map((module) => (
                   <div key={module.id} className="border-b border-slate-200 last:border-0">
                     <button
                       onClick={() => setActiveAccordion(activeAccordion === module.id ? null : module.id)}
+                      aria-expanded={activeAccordion === module.id}
+                      aria-controls={`module-panel-${module.id}`}
                       className="w-full flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100 transition-colors"
                     >
                       <div className="flex items-center gap-3 font-black text-slate-900 text-sm">
@@ -193,12 +210,12 @@ export default function CourseDetailPage() {
                       <div className="text-xs font-bold text-slate-500">{module.lessons.length} bài học</div>
                     </button>
                     {activeAccordion === module.id && (
-                      <div className="divide-y divide-slate-100 bg-white">
+                      <div id={`module-panel-${module.id}`} className="divide-y divide-slate-100 bg-white">
                         {module.lessons.map((lesson, idx) => (
                           <div key={lesson.id} className="p-4 flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                               <MonitorPlay size={16} className="text-slate-400" />
-                              <Link href={`/student/videos/${lesson.id}`} className="text-sm font-bold text-slate-600 group-hover:text-primary transition-colors">
+                              <Link href={`/student/videos/${lesson.id}`} aria-label={`Mo bai hoc ${lesson.title}`} className="text-sm font-bold text-slate-600 group-hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded">
                                 {idx + 1}. {lesson.title}
                               </Link>
                             </div>
@@ -257,7 +274,7 @@ export default function CourseDetailPage() {
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Gửi đánh giá của bạn</h3>
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <button key={s} type="button" onClick={() => setReviewRating(s)} className="text-amber-400">
+                      <button key={s} type="button" aria-label={`Chon ${s} sao`} onClick={() => setReviewRating(s)} className="text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 rounded">
                         <Star size={20} fill={s <= reviewRating ? 'currentColor' : 'none'} className={s <= reviewRating ? '' : 'text-slate-300'} />
                       </button>
                     ))}
@@ -315,7 +332,7 @@ export default function CourseDetailPage() {
               <div className="p-8 space-y-6">
                 {cta.enrolled ? (
                   cta.href ? (
-                    <Link href={cta.href} className="block w-full py-4 rounded-xl bg-emerald-500 text-white font-black text-sm text-center uppercase tracking-widest">
+                    <Link href={cta.href} aria-label={cta.label} className="block w-full py-4 rounded-xl bg-emerald-500 text-white font-black text-sm text-center uppercase tracking-widest focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300">
                       {cta.label}
                     </Link>
                   ) : (
@@ -324,7 +341,7 @@ export default function CourseDetailPage() {
                     </div>
                   )
                 ) : (
-                  <button onClick={handleEnroll} className="block w-full py-4 rounded-xl bg-slate-900 text-white font-black text-sm text-center uppercase tracking-widest">
+                  <button onClick={handleEnroll} aria-label="Dang ky khoa hoc" className="block w-full py-4 rounded-xl bg-slate-900 text-white font-black text-sm text-center uppercase tracking-widest focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300">
                     Enroll Now
                   </button>
                 )}

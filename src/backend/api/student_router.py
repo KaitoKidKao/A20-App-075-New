@@ -252,6 +252,8 @@ async def get_course_detail(
             break
 
     total_duration_minutes = sum(max(int(l.duration_minutes or 0), 0) for l in lessons)
+    transcript_ready_lessons = len([l for l in lessons if (l.status or "").lower() == "completed"])
+    processing_lessons = len([l for l in lessons if (l.status or "").lower() in {"queued", "processing"}])
     reviews = session.exec(
         select(CourseReview).where(CourseReview.course_id == course_id).order_by(CourseReview.updated_at.desc())
     ).all()
@@ -281,6 +283,8 @@ async def get_course_detail(
             "rating_avg": avg_rating,
             "rating_count": rating_count,
             "rating_distribution": dist,
+            "transcript_ready_lessons": transcript_ready_lessons,
+            "processing_lessons": processing_lessons,
         },
         "user_context": {
             "is_enrolled": bool(enrollment),

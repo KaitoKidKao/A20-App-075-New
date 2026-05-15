@@ -258,6 +258,8 @@ export interface StudentCourseDetail {
     rating_avg: number;
     rating_count: number;
     rating_distribution: Record<number, number>;
+    transcript_ready_lessons: number;
+    processing_lessons: number;
   };
   user_context: {
     is_enrolled: boolean;
