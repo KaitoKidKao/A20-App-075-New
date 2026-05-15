@@ -1,18 +1,22 @@
+from typing import Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .course import Lesson
+from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
-from typing import Optional
 import uuid
-
-from sqlmodel import Field, SQLModel
-from src.backend.utils.datetime_utils import utc_now
-
+from ..utils.datetime_utils import utc_now
 
 class ProcessingJob(SQLModel, table=True):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    video_id: str = Field(foreign_key="video.id", index=True)
-    job_type: str = Field(default="video_pipeline", index=True)
-    status: str = Field(default="queued", index=True)
+    __tablename__ = "processing_jobs"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    lesson_id: uuid.UUID = Field(foreign_key="lessons.id")
+    job_type: str = Field(nullable=False) # transcript, sign_language, infographic
+    status: str = Field(default="pending") # pending, processing, completed, failed
     progress: int = Field(default=0)
     error_message: Optional[str] = None
     attempts: int = Field(default=0)
+    last_failed_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
+    
+    lesson: "Lesson" = Relationship(back_populates="processing_jobs")

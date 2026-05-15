@@ -7,9 +7,7 @@ import {
   Volume2,
   VolumeX,
   Maximize,
-  RotateCcw,
-  SkipForward,
-  SkipBack,
+  Captions,
   FileText, 
   Sparkles,
   Clock,
@@ -29,9 +27,9 @@ import {
   Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { api, type HandsSignGloss } from '@/lib/api';
+import { api, type HandsSignGloss, type UserProgress } from '@/lib/api';
 import SignAvatar2D from '@/components/SignAvatar2D';
 import { InfographicViewer, type InfographicData } from '@/components/infographic/InfographicViewer';
 
@@ -42,45 +40,6 @@ interface TranscriptSegment {
 }
 
 type TranscriptByLanguage = Record<string, TranscriptSegment[]>;
-
-function isMostlyEnglish(text: string): boolean {
-  const t = (text || "").trim();
-  if (!t) return false;
-  const asciiLetters = (t.match(/[A-Za-z]/g) || []).length;
-  const viChars = (t.match(/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/gi) || []).length;
-  return asciiLetters > 25 && viChars < 5;
-}
-
-function splitSentences(text: string): string[] {
-  return (text || "")
-    .split(/(?<=[.!?。！？])\s+|\n+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function alignTextToTimeline(sourceText: string, timelineSegments: TranscriptSegment[]): TranscriptSegment[] {
-  const parts = splitSentences(sourceText);
-  if (parts.length === 0) return timelineSegments;
-  const result: TranscriptSegment[] = [];
-  const totalChars = parts.reduce((acc, p) => acc + p.length, 0);
-  let cursor = 0;
-  for (const seg of timelineSegments) {
-    const segDuration = Math.max(0.2, seg.end - seg.start);
-    const ratio = segDuration / Math.max(0.2, timelineSegments[timelineSegments.length - 1].end - timelineSegments[0].start);
-    const charsForSeg = Math.max(8, Math.round(totalChars * ratio));
-    let text = "";
-    while (cursor < parts.length && text.length < charsForSeg) {
-      text += (text ? " " : "") + parts[cursor];
-      cursor += 1;
-    }
-    if (!text && cursor < parts.length) {
-      text = parts[cursor];
-      cursor += 1;
-    }
-    result.push({ ...seg, text: text || seg.text });
-  }
-  return result;
-}
 
 interface TimelineItem {
   time: string;
@@ -118,6 +77,13 @@ interface VisualData {
   cover_image_url?: string | null;
 }
 
+interface ModuleLessonItem {
+  id: string;
+  title: string;
+  duration: string;
+  thumb: string;
+}
+
 const flashcardBackgroundImages = Array.from({ length: 10 }, (_, i) => `/assets/images/flashcards/flashcard_${i + 1}.png`);
 
 function formatTime(seconds: number): string {
@@ -126,11 +92,38 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function formatDuration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '--:--';
+  const total = Math.round(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+const captionPositionClass = {
+  low: 'bottom-12',
+  middle: 'bottom-1/3',
+  high: 'top-16',
+};
+
+const captionPositionWithControlsClass = {
+  low: 'bottom-24',
+  middle: 'bottom-1/3',
+  high: 'top-16',
+};
+
 export default function VideoLessonPage() {
   const params = useParams();
+  const router = useRouter();
   const videoId = params.id as string;
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoSourceModeRef = useRef<'byId' | 'demo'>('byId');
+  const transcriptPanelRef = useRef<HTMLDivElement>(null);
+  const transcriptItemRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   
   const [activeTab, setActiveTab] = useState('transcript');
   const [currentTime, setCurrentTime] = useState(0);
@@ -149,6 +142,8 @@ export default function VideoLessonPage() {
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [avatarVideoUrl, setAvatarVideoUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState('');
+  const [avatarStatus, setAvatarStatus] = useState('not_generated');
+  const [avatarDisclaimer, setAvatarDisclaimer] = useState('');
   
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
@@ -164,7 +159,16 @@ export default function VideoLessonPage() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [showCaptions, setShowCaptions] = useState(true);
+  const [captionBackground, setCaptionBackground] = useState(false);
+  const [captionSize] = useState(18);
+  const [captionLineHeight] = useState(1.45);
+  const [captionPosition] = useState<'low' | 'middle' | 'high'>('low');
+  const [reducedMotion, setReducedMotion] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastProgressSaveSecondRef = useRef(0);
+  const hasRestoredProgressRef = useRef(false);
+  const lastScrolledIndexRef = useRef<number>(-1);
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
   const [isFlashcardFlipped, setIsFlashcardFlipped] = useState(false);
@@ -174,37 +178,100 @@ export default function VideoLessonPage() {
   /** Ưu tiên stream file theo videoId (Next proxy → data/uploads/videos); lỗi thì dùng video mẫu. */
   const [videoSourceMode, setVideoSourceMode] = useState<'byId' | 'demo'>('byId');
   const [videoBroken, setVideoBroken] = useState(false);
+  const [savedProgress, setSavedProgress] = useState<UserProgress | null>(null);
+  const [moduleLessons, setModuleLessons] = useState<ModuleLessonItem[]>([]);
+  const [isLoadingModuleLessons, setIsLoadingModuleLessons] = useState(false);
 
   const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `/api/video/${videoId}`;
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+  const buildLessonPreview = useCallback(async (lessonId: string, initialDuration?: string): Promise<{ duration: string; thumb: string }> => {
+    const fallbackThumb = `https://picsum.photos/seed/${lessonId}/200/120`;
+    if (typeof window === 'undefined') {
+      return { duration: initialDuration || '--:--', thumb: fallbackThumb };
+    }
+
+    return await new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      video.src = `/api/video/${lessonId}`;
+
+      let resolved = false;
+      const timeout = window.setTimeout(() => {
+        cleanup();
+        resolve({ duration: initialDuration || '--:--', thumb: fallbackThumb });
+      }, 12000);
+
+      const cleanup = () => {
+        if (resolved) return;
+        resolved = true;
+        window.clearTimeout(timeout);
+        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        video.src = '';
+      };
+
+      const onError = () => {
+        cleanup();
+        resolve({ duration: initialDuration || '--:--', thumb: fallbackThumb });
+      };
+
+      const onSeeked = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 200;
+          canvas.height = 120;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            cleanup();
+            resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+            return;
+          }
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const thumb = canvas.toDataURL('image/jpeg', 0.75);
+          cleanup();
+          resolve({ duration: formatDuration(video.duration), thumb });
+        } catch {
+          cleanup();
+          resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+        }
+      };
+
+      const onLoadedMetadata = () => {
+        try {
+          video.currentTime = 0.05;
+        } catch {
+          cleanup();
+          resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+        }
+      };
+
+      video.addEventListener('loadedmetadata', onLoadedMetadata);
+      video.addEventListener('seeked', onSeeked);
+      video.addEventListener('error', onError);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchTranscript = async () => {
       try {
         const data = await api.videos.getTranscript(videoId);
         const fromApi = (data.segments_by_language || {}) as TranscriptByLanguage;
-        const normalized: TranscriptByLanguage = { ...fromApi };
+        const normalized: TranscriptByLanguage = {};
 
-        if (!normalized.vi && Array.isArray(data.segments)) normalized.vi = data.segments;
-
-        // Legacy transcript compatibility:
-        // Some old files store mixed EN/VI in one segments array.
-        if (Array.isArray(data.segments) && !fromApi.en) {
-          const enSegments = data.segments.filter((s: TranscriptSegment) => isMostlyEnglish(s.text));
-          if (enSegments.length >= 3) {
-            normalized.en = enSegments;
-            if (!fromApi.vi) {
-              const viSegments = data.segments.filter((s: TranscriptSegment) => !isMostlyEnglish(s.text));
-              normalized.vi = viSegments.length > 0 ? viSegments : data.segments;
-            }
-            // Fallback for corrupted legacy transcript.
-            if ((normalized.vi?.length || 0) <= 1 && enSegments.length > 3) {
-              const longViText = normalized.vi?.[0]?.text || "";
-              normalized.vi = longViText
-                ? alignTextToTimeline(longViText, enSegments)
-                : enSegments;
-            }
+        for (const lang of ['vi', 'en']) {
+          const langSegments = fromApi[lang];
+          if (Array.isArray(langSegments) && langSegments.length > 0) {
+            normalized[lang] = langSegments;
           }
+        }
+
+        if (Object.keys(normalized).length === 0 && Array.isArray(data.segments)) {
+          const legacyLang = String(data.language || data.source_language || 'vi').toLowerCase().startsWith('en') ? 'en' : 'vi';
+          normalized[legacyLang] = data.segments;
         }
 
         const availableLangs = Object.keys(normalized).filter(
@@ -242,7 +309,92 @@ export default function VideoLessonPage() {
   useEffect(() => {
     setVideoSourceMode('byId');
     setVideoBroken(false);
+    setSavedProgress(null);
+    lastProgressSaveSecondRef.current = 0;
+    hasRestoredProgressRef.current = false;
   }, [videoId]);
+
+  useEffect(() => {
+    const loadSavedProgress = async () => {
+      try {
+        const progress = await api.student.getProgress(videoId);
+        setSavedProgress(progress);
+      } catch (err) {
+        console.error('Failed to load lesson progress', err);
+      }
+    };
+    loadSavedProgress();
+  }, [videoId]);
+
+  useEffect(() => {
+    const fetchModuleLessons = async () => {
+      setIsLoadingModuleLessons(true);
+      try {
+        const currentLesson = await api.courses.getLesson(videoId);
+        const lessons = await api.courses.listLessons(currentLesson.module_id);
+        const sortedByTitle = [...lessons].sort((a, b) => a.title.localeCompare(b.title, 'vi', { sensitivity: 'base' }));
+        const hydrated = await Promise.all(
+          sortedByTitle.map(async (lesson) => {
+            const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? `${lesson.duration_minutes}m` : '--:--';
+            const preview = await buildLessonPreview(lesson.id, durationFromDb);
+            return {
+              id: lesson.id,
+              title: lesson.title,
+              duration: preview.duration,
+              thumb: preview.thumb,
+            };
+          })
+        );
+        setModuleLessons(hydrated);
+      } catch (err) {
+        console.error('Failed to fetch module lessons', err);
+        setModuleLessons([]);
+      } finally {
+        setIsLoadingModuleLessons(false);
+      }
+    };
+    fetchModuleLessons();
+  }, [videoId, buildLessonPreview]);
+
+  useEffect(() => {
+    if (moduleLessons.length === 0) return;
+    const unresolved = moduleLessons.filter(
+      (item) => item.duration === '--:--' || item.thumb.includes('picsum.photos/seed/')
+    );
+    if (unresolved.length === 0) return;
+
+    let attempts = 0;
+    const timer = window.setInterval(async () => {
+      attempts += 1;
+      const latest = await Promise.all(
+        unresolved.map(async (item) => {
+          const preview = await buildLessonPreview(item.id, item.duration);
+          return { id: item.id, duration: preview.duration, thumb: preview.thumb };
+        })
+      );
+      const map = new Map(latest.map((x) => [x.id, x]));
+      setModuleLessons((prev) =>
+        prev.map((item) => {
+          const next = map.get(item.id);
+          if (!next) return item;
+          return {
+            ...item,
+            duration: next.duration || item.duration,
+            thumb: next.thumb || item.thumb,
+          };
+        })
+      );
+
+      const stillUnresolved = latest.some(
+        (item) => item.duration === '--:--' || item.thumb.includes('picsum.photos/seed/')
+      );
+      if (!stillUnresolved || attempts >= 6) {
+        window.clearInterval(timer);
+      }
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [moduleLessons, buildLessonPreview]);
 
   useEffect(() => {
     videoSourceModeRef.current = videoSourceMode;
@@ -256,6 +408,12 @@ export default function VideoLessonPage() {
     const updateDuration = () => {
       if (vid.duration && vid.duration !== Infinity && vid.duration > 0) {
         setDuration(vid.duration);
+        const resumeAt = savedProgress?.last_position_seconds || 0;
+        if (!hasRestoredProgressRef.current && resumeAt > 5 && resumeAt < vid.duration - 5) {
+          vid.currentTime = resumeAt;
+          setCurrentTime(resumeAt);
+          hasRestoredProgressRef.current = true;
+        }
       }
     };
     
@@ -278,7 +436,7 @@ export default function VideoLessonPage() {
       vid.removeEventListener('durationchange', updateDuration);
       clearInterval(poll);
     };
-  }, [videoSrc]);
+  }, [savedProgress?.last_position_seconds, videoSrc]);
 
   useEffect(() => {
     const closeMenu = () => setShowSpeedMenu(false);
@@ -287,6 +445,14 @@ export default function VideoLessonPage() {
     }
     return () => window.removeEventListener('click', closeMenu);
   }, [showSpeedMenu]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotion = () => setReducedMotion(mediaQuery.matches);
+    updateMotion();
+    mediaQuery.addEventListener('change', updateMotion);
+    return () => mediaQuery.removeEventListener('change', updateMotion);
+  }, []);
 
   // Video Control Handlers
   const togglePlay = useCallback(() => {
@@ -350,6 +516,26 @@ export default function VideoLessonPage() {
     }
   };
 
+  const switchCaptionLanguage = useCallback(() => {
+    const available = ['vi', 'en'].filter(
+      (lang) => Array.isArray(segmentsByLanguage[lang]) && segmentsByLanguage[lang].length > 0
+    );
+    if (available.length <= 1) return;
+    const currentIndex = available.indexOf(language);
+    const nextLanguage = available[(currentIndex + 1) % available.length];
+    setLanguage(nextLanguage);
+  }, [language, segmentsByLanguage]);
+
+  const focusActiveTranscript = useCallback(() => {
+    setRightPanelTab('transcript');
+    const activeIndex = segments.findIndex((s) => currentTime >= s.start && currentTime <= s.end);
+    if (activeIndex >= 0) {
+      requestAnimationFrame(() => {
+        transcriptItemRefs.current[activeIndex]?.focus();
+      });
+    }
+  }, [currentTime, segments]);
+
   const handleUserActivity = useCallback(() => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -367,14 +553,20 @@ export default function VideoLessonPage() {
         e.preventDefault();
         togglePlay();
       } else if (e.code === 'ArrowRight') {
-        skip(5);
+        skip(e.shiftKey ? 10 : 5);
       } else if (e.code === 'ArrowLeft') {
-        skip(-5);
+        skip(e.shiftKey ? -10 : -5);
+      } else if (e.key.toLowerCase() === 'c') {
+        setShowCaptions((value) => !value);
+      } else if (e.key.toLowerCase() === 'l') {
+        switchCaptionLanguage();
+      } else if (e.key.toLowerCase() === 't') {
+        focusActiveTranscript();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay]);
+  }, [focusActiveTranscript, switchCaptionLanguage, togglePlay]);
 
   const fetchAllMetadata = useCallback(async () => {
     setIsLoadingMetadata(true);
@@ -408,10 +600,14 @@ export default function VideoLessonPage() {
 
     try {
       const handsignRes = await api.videos.getHandsSign(videoId);
-      const raw = handsignRes.handsign_data || [];
+      const raw = handsignRes.glosses || handsignRes.handsign_data || [];
       setHandsSignGlosses(
         [...raw].sort((a, b) => (Number(a.time) || 0) - (Number(b.time) || 0))
       );
+      setAvatarDisclaimer(handsignRes.disclaimer || handsignRes.avatar?.disclaimer || '');
+      if (handsignRes.avatar?.status) {
+        setAvatarStatus(handsignRes.avatar.status);
+      }
     } catch (err) {
       console.error('Handsign fetch error:', err);
       setHandsSignGlosses([]);
@@ -420,6 +616,13 @@ export default function VideoLessonPage() {
     try {
       const avatarRes = await api.videos.getAvatar(videoId);
       const rawUrl = avatarRes?.avatar_video_url;
+      setAvatarStatus(avatarRes?.status || 'not_generated');
+      if (avatarRes?.disclaimer) {
+        setAvatarDisclaimer(avatarRes.disclaimer);
+      }
+      if (avatarRes?.error) {
+        setAvatarError(avatarRes.error);
+      }
       if (!rawUrl) {
         setAvatarVideoUrl(null);
       } else if (typeof rawUrl === 'string' && rawUrl.startsWith('/api/avatar-video/')) {
@@ -439,6 +642,32 @@ export default function VideoLessonPage() {
     }
   }, [fetchAllMetadata, isLoadingTranscript, segments]);
 
+  // Auto-scroll transcript when video plays
+  useEffect(() => {
+    if (rightPanelTab === 'transcript' && segments.length > 0) {
+      const activeIndex = segments.findIndex(
+        (s) => currentTime >= s.start && currentTime <= s.end
+      );
+      
+      if (activeIndex >= 0 && activeIndex !== lastScrolledIndexRef.current) {
+        lastScrolledIndexRef.current = activeIndex;
+        const container = transcriptPanelRef.current;
+        const target = transcriptItemRefs.current[activeIndex];
+        
+        if (container && target) {
+          const targetOffset = target.offsetTop;
+          const containerHeight = container.offsetHeight;
+          const targetHeight = target.offsetHeight;
+          
+          container.scrollTo({
+            top: targetOffset - containerHeight / 2 + targetHeight / 2,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }
+  }, [currentTime, segments, rightPanelTab]);
+
   useEffect(() => {
     setCurrentFlashcardIndex(0);
     setIsFlashcardFlipped(false);
@@ -449,6 +678,8 @@ export default function VideoLessonPage() {
     setHandsSignGlosses([]);
     setAvatarVideoUrl(null);
     setAvatarError('');
+    setAvatarStatus('not_generated');
+    setAvatarDisclaimer('');
     setIsGeneratingAvatar(false);
   }, [videoId]);
 
@@ -457,9 +688,20 @@ export default function VideoLessonPage() {
     setAvatarError('');
     try {
       const result = await api.videos.generateAvatar(videoId);
+      setAvatarStatus(result?.status || 'not_generated');
+      if (result?.disclaimer) {
+        setAvatarDisclaimer(result.disclaimer);
+      }
+      if (result?.status === 'failed') {
+        setAvatarVideoUrl(null);
+        setAvatarError(result.error || 'Khong the tao video avatar.');
+        return;
+      }
       const rawUrl = result?.avatar_video_url;
       if (!rawUrl) {
-        throw new Error('Backend chưa trả về URL video avatar.');
+        setAvatarVideoUrl(null);
+        setAvatarError('Video avatar chua san sang.');
+        return;
       }
       if (typeof rawUrl === 'string' && rawUrl.startsWith('/api/avatar-video/')) {
         setAvatarVideoUrl(`${backendBaseUrl}${rawUrl}`);
@@ -483,9 +725,38 @@ export default function VideoLessonPage() {
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
+      const time = videoRef.current.currentTime;
+      setCurrentTime(time);
+      
+      const second = Math.floor(time);
+      if (second - lastProgressSaveSecondRef.current >= 10) {
+        lastProgressSaveSecondRef.current = second;
+        saveProgress(time);
+      }
     }
   };
+
+  const saveProgress = async (time: number, status = "in_progress") => {
+    if (!duration) return;
+    const percent = Math.round((time / duration) * 100);
+    try {
+      const progress = await api.student.updateProgress(videoId, percent, status, {
+        watchedSeconds: time,
+        lastPositionSeconds: time,
+        durationSeconds: duration,
+      });
+      setSavedProgress(progress);
+    } catch (err) {
+      console.error("Failed to save progress", err);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+    saveProgress(duration, "completed");
+  };
+
+
 
   const seekTo = (timeStr: string) => {
     const [m, s] = timeStr.split(':').map(Number);
@@ -529,18 +800,9 @@ export default function VideoLessonPage() {
     [segments, currentTime]
   );
 
-  const visibleCaptionWords = useMemo(() => {
-    if (!activeSegment) return [] as string[];
 
-    const words = activeSegment.text.split(/\s+/).filter(Boolean);
-    if (words.length === 0) return [] as string[];
 
-    const elapsed = Math.max(0, currentTime - activeSegment.start);
-    const duration = Math.max(0.2, activeSegment.end - activeSegment.start);
-    const progress = Math.min(1, elapsed / duration);
-    const visibleCount = Math.max(1, Math.ceil(progress * words.length));
-    return words.slice(0, visibleCount);
-  }, [activeSegment, currentTime]);
+
 
   const renderPanelState = (message: string) => (
     <div className="p-8 rounded-3xl bg-slate-50 text-slate-500 font-bold text-center leading-relaxed">
@@ -570,11 +832,16 @@ export default function VideoLessonPage() {
           <div className="lg:col-span-7 space-y-8">
             
             <div 
-              className="video-container-premium bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group cursor-pointer"
+              className={cn(
+                "video-container-premium bg-black rounded-[40px] overflow-hidden shadow-2xl border-4 border-white relative aspect-video group cursor-pointer",
+                reducedMotion && "motion-reduce"
+              )}
               onMouseMove={handleUserActivity}
               onMouseEnter={() => setShowControls(true)}
               onMouseLeave={() => isPlaying && setShowControls(false)}
               onClick={togglePlay}
+              role="region"
+              aria-label="Trình phát video bài học"
             >
               {videoSourceMode === 'demo' && (
                 <div className="absolute top-4 left-4 z-20 pointer-events-none rounded-full bg-amber-500/95 text-white text-[10px] font-extrabold uppercase tracking-widest px-4 py-2 shadow-lg max-w-[90%]">
@@ -582,18 +849,33 @@ export default function VideoLessonPage() {
                 </div>
               )}
 
+
+
               <video
                 key={`${videoId}-${videoSourceMode}`}
                 ref={videoRef}
                 onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onLoadedMetadata={(e) => {
+                  const nextDuration = e.currentTarget.duration;
+                  setDuration(nextDuration);
+                  const resumeAt = savedProgress?.last_position_seconds || 0;
+                  if (!hasRestoredProgressRef.current && resumeAt > 5 && resumeAt < nextDuration - 5) {
+                    e.currentTarget.currentTime = resumeAt;
+                    setCurrentTime(resumeAt);
+                    hasRestoredProgressRef.current = true;
+                  }
+                }}
                 onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onEnded={() => setIsPlaying(false)}
+                onPause={() => {
+                  setIsPlaying(false);
+                  saveProgress(currentTime);
+                }}
+                onEnded={handleVideoEnded}
                 className={cn('w-full h-full object-cover transition-opacity duration-500', videoBroken && 'hidden', isPlaying ? 'opacity-100' : 'opacity-80')}
                 src={videoSrc}
                 preload="metadata"
                 playsInline
+                aria-label="Video bài học"
                 onError={() => {
                   if (videoSourceModeRef.current === 'byId') {
                     setVideoSourceMode('demo');
@@ -620,8 +902,9 @@ export default function VideoLessonPage() {
               )}>
                 {/* Progress Bar */}
                 <div className="relative group/progress mb-4">
-                   <input 
-                     type="range"
+                     <input 
+                       type="range"
+                       aria-label="Tua video"
                      min="0"
                      max={duration || 0}
                      step="0.1"
@@ -642,16 +925,17 @@ export default function VideoLessonPage() {
 
                 <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                    <div className="flex items-center gap-6">
-                      <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform">
+                      <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform" aria-label={isPlaying ? 'Tạm dừng video' : 'Phát video'}>
                         {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
                       </button>
                       
                       <div className="flex items-center gap-2">
-                        <button onClick={toggleMute} className="text-white/80 hover:text-white transition-colors">
+                        <button onClick={toggleMute} className="text-white/80 hover:text-white transition-colors" aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}>
                           {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
                         </button>
                         <input 
                           type="range"
+                          aria-label="Âm lượng"
                           min="0"
                           max="1"
                           step="0.1"
@@ -666,67 +950,137 @@ export default function VideoLessonPage() {
                       </div>
                    </div>
 
-                   <div className="flex items-center gap-4 relative">
-                      {/* Speed Selection Menu */}
-                      {showSpeedMenu && (
-                        <div className="absolute bottom-full mb-4 right-0 bg-slate-900/95 backdrop-blur-md rounded-2xl p-2 border border-white/10 shadow-2xl min-w-[100px] z-[60] flex flex-col gap-1 overflow-hidden">
-                          {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
-                            <button
-                              key={speed}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePlaybackSpeedChange(speed);
-                              }}
-                              className={cn(
-                                "px-4 py-2 text-[11px] font-extrabold rounded-xl transition-all text-left",
-                                playbackSpeed === speed 
-                                  ? "bg-[#FF4F6E] text-white" 
-                                  : "text-white/60 hover:bg-white/10 hover:text-white"
-                              )}
-                            >
-                              {speed === 1 ? 'Chuẩn' : `${speed}x`}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    <div className="flex items-center gap-3 relative">
+                       {/* Settings Group: Captions, Lang, Speed, Fullscreen */}
+                       
+                       <button 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           setShowCaptions(!showCaptions);
+                         }} 
+                         className={cn(
+                           "p-2 rounded-xl transition-all",
+                           showCaptions ? "text-[#FF4F6E] bg-[#FF4F6E]/10" : "text-white/60 hover:text-white"
+                         )}
+                         aria-label={showCaptions ? 'Tắt phụ đề' : 'Bật phụ đề'}
+                       >
+                         <Captions size={20} />
+                       </button>
 
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowSpeedMenu(!showSpeedMenu);
-                        }} 
-                        className="px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-[10px] font-black text-white/90 transition-colors font-heading"
-                      >
-                        {playbackSpeed === 1 ? '1x' : `${playbackSpeed}x`}
-                      </button>
-                      <button onClick={toggleFullscreen} className="text-white/80 hover:text-white hover:scale-110 transition-transform">
-                        <Maximize size={20} />
-                      </button>
-                   </div>
+                       <div className="flex bg-white/10 backdrop-blur-md rounded-xl p-1 border border-white/10 items-center gap-1">
+                         <button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             setCaptionBackground(!captionBackground);
+                           }}
+                           className={cn(
+                             "px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                             captionBackground ? "bg-white/20 text-white shadow-sm" : "text-white/40 hover:text-white/70"
+                           )}
+                           title="Nền phụ đề"
+                         >
+                           BG
+                         </button>
+                         <div className="w-[1px] h-3 bg-white/10" />
+                         {['vi', 'en'].map((l) => {
+                           const isEnabled = Array.isArray(segmentsByLanguage[l]) && segmentsByLanguage[l].length > 0;
+                           return (
+                             <button
+                               key={l}
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 if (isEnabled) setLanguage(l);
+                               }}
+                               disabled={!isEnabled}
+                               className={cn(
+                                 "px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                                 language === l ? "bg-[#FF4F6E] text-white shadow-lg" : "text-white/40 hover:text-white/70",
+                                 !isEnabled && "opacity-20 cursor-not-allowed"
+                               )}
+                             >
+                               {l}
+                             </button>
+                           );
+                         })}
+                       </div>
+
+                       <div className="relative">
+                         {showSpeedMenu && (
+                           <div className="absolute bottom-full mb-4 right-0 bg-slate-900/95 backdrop-blur-md rounded-2xl p-2 border border-white/10 shadow-2xl min-w-[100px] z-[60] flex flex-col gap-1 overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+                             {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
+                               <button
+                                 key={speed}
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handlePlaybackSpeedChange(speed);
+                                 }}
+                                 className={cn(
+                                   "px-4 py-2 text-[11px] font-extrabold rounded-xl transition-all text-left",
+                                   playbackSpeed === speed 
+                                     ? "bg-[#FF4F6E] text-white" 
+                                     : "text-white/60 hover:bg-white/10 hover:text-white"
+                                 )}
+                               >
+                                 {speed === 1 ? 'Chuẩn' : `${speed}x`}
+                               </button>
+                             ))}
+                           </div>
+                         )}
+
+                         <button 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             setShowSpeedMenu(!showSpeedMenu);
+                           }} 
+                           className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-black text-white/90 transition-all font-heading border border-white/5"
+                           aria-label="Chọn tốc độ phát"
+                         >
+                           {playbackSpeed === 1 ? '1x' : `${playbackSpeed}x`}
+                         </button>
+                       </div>
+
+                       <button onClick={toggleFullscreen} className="p-2 text-white/80 hover:text-white hover:scale-110 transition-all" aria-label="Mở toàn màn hình">
+                         <Maximize size={20} />
+                       </button>
+                    </div>
                 </div>
               </div>
 
               {/* Subtitle Overlay - moved up slightly to avoid overlapping controls */}
-              {activeSegment && (
+              {showCaptions && activeSegment && (
                 <div
                   key={`${activeSegment.start}-${activeSegment.end}`}
                   className={cn(
                     "absolute left-1/2 -translate-x-1/2 w-[92%] md:w-[86%] pointer-events-none z-30 transition-all duration-500",
-                    showControls ? "bottom-24" : "bottom-12"
+                    showControls ? captionPositionWithControlsClass[captionPosition] : captionPositionClass[captionPosition]
                   )}
                 >
                   <div className="px-1 md:px-2 py-1">
                     <div className="flex items-center gap-2 justify-center">
-                      <p className="text-center text-xs md:text-sm font-extrabold leading-relaxed tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                      {visibleCaptionWords.map((word, idx) => (
-                        <span
-                          key={`${word}-${idx}`}
-                          className="inline-block mr-2 caption-word-pop"
-                          style={{ animationDelay: `${idx * 24}ms` }}
-                        >
-                          {word}
-                        </span>
-                      ))}
+                      <p
+                        aria-live="polite"
+                        className={cn(
+                          "text-center font-extrabold tracking-tight text-white",
+                          captionBackground && "rounded-xl bg-black/45 px-4 py-2 backdrop-blur-sm"
+                        )}
+                        style={{ fontSize: captionSize, lineHeight: captionLineHeight }}
+                      >
+                        {activeSegment.text.split(' ').map((word, idx, arr) => {
+                          const duration = activeSegment.end - activeSegment.start;
+                          const wordStartTime = activeSegment.start + (idx / arr.length) * duration;
+                          const isWordActive = currentTime >= wordStartTime;
+                          return (
+                            <span 
+                              key={idx} 
+                              className={cn(
+                                "transition-all duration-300",
+                                isWordActive ? "text-white" : "text-white/25 blur-[0.5px]"
+                              )}
+                            >
+                              {word}{' '}
+                            </span>
+                          );
+                        })}
                       </p>
                     </div>
                   </div>
@@ -748,6 +1102,8 @@ export default function VideoLessonPage() {
               
               {/* Visual Sound Pulse REMOVED per user request */}
             </div>
+
+
 
             {/* AI Smart Analysis Panel - High Accessibility for Deaf Users */}
             <div className="bg-white/95 backdrop-blur-md rounded-[40px] p-10 border border-white/20 shadow-xl relative overflow-hidden group">
@@ -1048,6 +1404,7 @@ export default function VideoLessonPage() {
                               <p className="text-center text-[11px] text-slate-400 font-bold">
                                 Kéo trái/phải để chuyển thẻ. Chạm để lật thẻ.
                               </p>
+
                             </>
                           )}
                        </div>
@@ -1076,6 +1433,9 @@ export default function VideoLessonPage() {
                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                  <div>
                                    <p className="text-sm font-extrabold text-slate-900">Generate Video</p>
+                                   <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                                     Trang thai: {avatarStatus.replace(/_/g, ' ')}
+                                   </p>
                                    <p className="text-xs font-bold text-slate-500">
                                      Tạo video avatar từ dữ liệu VSL của bài học này.
                                    </p>
@@ -1096,6 +1456,11 @@ export default function VideoLessonPage() {
                                </div>
                                {avatarError && (
                                  <p className="mt-3 text-sm font-bold text-red-600">{avatarError}</p>
+                               )}
+                               {avatarDisclaimer && (
+                                 <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500">
+                                   {avatarDisclaimer}
+                                 </p>
                                )}
                              </div>
 
@@ -1165,9 +1530,11 @@ export default function VideoLessonPage() {
              <div className="sticky top-28 bg-white/95 backdrop-blur-md border border-white/20 rounded-[40px] shadow-2xl shadow-slate-200/40 h-[calc(100vh-140px)] flex flex-col overflow-hidden">
                 
                 {/* Panel Tabs */}
-                <div className="flex border-b border-slate-50">
+                <div className="flex border-b border-slate-50" role="tablist" aria-label="Bảng nội dung bên phải">
                    <button 
                      onClick={() => setRightPanelTab('transcript')}
+                     role="tab"
+                     aria-selected={rightPanelTab === 'transcript'}
                      className={cn(
                        "flex-1 py-8 flex items-center justify-center gap-3 transition-all",
                        rightPanelTab === 'transcript' ? "bg-white text-slate-900" : "bg-slate-50 text-slate-400 hover:text-slate-600"
@@ -1180,6 +1547,8 @@ export default function VideoLessonPage() {
                    </button>
                    <button 
                      onClick={() => setRightPanelTab('lessons')}
+                     role="tab"
+                     aria-selected={rightPanelTab === 'lessons'}
                      className={cn(
                        "flex-1 py-8 flex items-center justify-center gap-3 transition-all",
                        rightPanelTab === 'lessons' ? "bg-white text-slate-900" : "bg-slate-50 text-slate-400 hover:text-slate-600"
@@ -1191,30 +1560,9 @@ export default function VideoLessonPage() {
                       <span className="text-sm font-extrabold uppercase tracking-widest">Bài học</span>
                    </button>
                 </div>
-                <div className="px-8 pt-4">
-                  <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-                    {["vi", "en"].map((lang) => {
-                      const enabled = Array.isArray(segmentsByLanguage[lang]) && segmentsByLanguage[lang].length > 0;
-                      return (
-                        <button
-                          key={lang}
-                          type="button"
-                          disabled={!enabled}
-                          onClick={() => enabled && setLanguage(lang)}
-                          className={cn(
-                            "px-3 py-1.5 text-xs font-extrabold uppercase tracking-widest rounded-lg transition-colors",
-                            language === lang ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700",
-                            !enabled && "opacity-40 cursor-not-allowed hover:text-slate-500"
-                          )}
-                        >
-                          {lang.toUpperCase()}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+
                 
-                <div className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                <div ref={transcriptPanelRef} className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
                    {rightPanelTab === 'transcript' ? (
                      <>
                         {isLoadingTranscript && renderPanelState('Đang tải phụ đề...')}
@@ -1222,11 +1570,16 @@ export default function VideoLessonPage() {
                         {segments.map((s, i) => {
                            const isActive = currentTime >= s.start && currentTime <= s.end;
                            return (
-                              <div 
+                              <button
+                                type="button"
+                                ref={(node) => {
+                                  transcriptItemRefs.current[i] = node;
+                                }}
                                 key={i} 
                                 onClick={() => seekTo(formatTime(s.start))}
+                                aria-current={isActive ? 'true' : undefined}
                                 className={cn(
-                                  "p-6 rounded-[32px] transition-all cursor-pointer group relative",
+                                  "block w-full p-6 rounded-[32px] transition-all cursor-pointer group relative text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FF4F6E]/35",
                                   isActive ? "bg-[#FF4F6E] text-white shadow-2xl shadow-[#FF4F6E]/30 scale-[1.02]" : "hover:bg-slate-50 border border-transparent hover:border-slate-100 text-slate-600"
                                 )}
                               >
@@ -1242,27 +1595,22 @@ export default function VideoLessonPage() {
                                  )}>
                                     {s.text}
                                  </p>
-                                 {isActive && (
+                                 {isActive && !reducedMotion && (
                                    <div className="absolute top-8 right-8 animate-ping w-3 h-3 bg-white rounded-full" />
                                  )}
-                              </div>
+                              </button>
                            );
                         })}
                      </>
                    ) : (
                      <div className="space-y-4">
-                        {[
-                           { id: 'vid-001', title: 'Bắt đầu với lập trình', duration: '12:45', thumb: 'https://picsum.photos/seed/v1/200/120' },
-                           { id: 'vid-002', title: 'Nền tảng Deep Learning', duration: '15:20', thumb: 'https://picsum.photos/seed/v2/200/120' },
-                           { id: 'vid-003', title: 'Giới thiệu Machine Learning', duration: '22:10', thumb: 'https://picsum.photos/seed/v3/200/120' },
-                           { id: 'vid-004', title: 'AI cho người học trực quan', duration: '08:45', thumb: 'https://picsum.photos/seed/v4/200/120' },
-                           { id: 'vid-005', title: 'Mạng nơ-ron nâng cao', duration: '30:15', thumb: 'https://picsum.photos/seed/v5/200/120' },
-                           { id: 'vid-006', title: 'Ứng dụng AI thực tiễn', duration: '18:30', thumb: 'https://picsum.photos/seed/v6/200/120' },
-                        ].map((lesson, idx) => (
+                        {isLoadingModuleLessons && renderPanelState('Đang tải danh sách bài học...')}
+                        {!isLoadingModuleLessons && moduleLessons.length === 0 && renderPanelState('Chưa có video trong chương này.')}
+                        {!isLoadingModuleLessons && moduleLessons.map((lesson, idx) => (
                            <div 
                              key={lesson.id}
                              onClick={() => {
-                               window.location.href = `/student/videos/${lesson.id}`;
+                               router.push(`/student/videos/${lesson.id}`);
                              }}
                              className={cn(
                                "flex items-center gap-4 p-4 rounded-3xl cursor-pointer transition-all border-2",
@@ -1301,26 +1649,6 @@ export default function VideoLessonPage() {
 
         </div>
       </div>
-      <style jsx global>{`
-        @keyframes captionWordPop {
-          0% {
-            opacity: 0;
-            transform: translateY(8px) scale(0.86);
-          }
-          70% {
-            opacity: 1;
-            transform: translateY(-2px) scale(1.04);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        .caption-word-pop {
-          animation: captionWordPop 260ms ease-out both;
-        }
-      `}</style>
     </div>
   );
 }

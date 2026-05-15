@@ -11,21 +11,43 @@ import {
   Moon, 
   Eye, 
   ScrollText,
-  Check
+  Check,
+  Award,
+  BookOpen,
+  Clock,
+  LayoutDashboard
 } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
+import { api, StudentProfileData } from '@/lib/api';
 
 function SettingsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = (searchParams.get('tab') as 'profile' | 'accessibility') || 'profile';
+  const activeTab = (searchParams.get('tab') as 'dashboard' | 'profile' | 'accessibility') || 'dashboard';
   
-  const setActiveTab = (tab: 'profile' | 'accessibility') => {
+  const setActiveTab = (tab: 'dashboard' | 'profile' | 'accessibility') => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
     router.push(`/student/settings?${params.toString()}`);
   };
+
+  const [profileData, setProfileData] = React.useState<StudentProfileData | null>(null);
+  const [, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await api.student.getProfile();
+        setProfileData(data);
+      } catch (err) {
+        console.error("Failed to fetch profile", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const { 
     fontSize, setFontSize, 
@@ -35,17 +57,7 @@ function SettingsPageContent() {
     user 
   } = useAppStore();
 
-  const profileData = {
-    firstName: user?.name.split(' ')[0] || 'Ronald',
-    lastName: user?.name.split(' ')[1] || 'Richard',
-    regDate: '16 Jan 2024, 11:15 AM',
-    userName: user?.email.split('@')[0] || 'studentdemo',
-    phone: '90154-91036',
-    email: user?.email || 'student@example.com',
-    gender: 'Male',
-    dob: '16 Jan 2000',
-    bio: "Xin chào! Tôi là học viên tại DreamsLMS. Tôi yêu thích học tập và ứng dụng AI để nâng cao trải nghiệm học của mình."
-  };
+
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -54,6 +66,18 @@ function SettingsPageContent() {
           
           {/* Sidebar Tabs */}
           <div className="w-full md:w-64 space-y-2">
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className={cn(
+                "w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all font-bold text-sm",
+                activeTab === 'dashboard' 
+                  ? "bg-white text-primary shadow-sm" 
+                  : "text-slate-500 hover:bg-white/50"
+              )}
+            >
+              <LayoutDashboard size={18} />
+              Dashboard học tập
+            </button>
             <button 
               onClick={() => setActiveTab('profile')}
               className={cn(
@@ -82,6 +106,60 @@ function SettingsPageContent() {
 
           {/* Main Content */}
           <div className="flex-1">
+            {activeTab === 'dashboard' && profileData && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                   {[
+                     { label: 'Đã đăng ký', value: profileData.stats.total_enrollments, icon: BookOpen, color: 'bg-blue-500' },
+                     { label: 'Hoàn thành', value: profileData.stats.completed_lessons, icon: Check, color: 'bg-emerald-500' },
+                     { label: 'Giờ học', value: `${profileData.stats.total_hours}h`, icon: Clock, color: 'bg-amber-500' },
+                     { label: 'Chứng chỉ', value: profileData.stats.certificates_count, icon: Award, color: 'bg-rose-500' },
+                   ].map((stat, i) => (
+                     <div key={i} className="card-premium p-6 bg-white flex flex-col gap-4">
+                        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg", stat.color)}>
+                           <stat.icon size={24} />
+                        </div>
+                        <div>
+                           <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                           <p className="text-2xl font-black text-slate-900">{stat.value}</p>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+
+                {/* Certificates List */}
+                <div className="card-premium p-10 bg-white">
+                  <h2 className="text-xl font-extrabold tracking-tight text-slate-900 mb-8">Chứng chỉ của tôi</h2>
+                  {profileData.profile.certifications && profileData.profile.certifications.length > 0 ? (
+                    <div className="grid gap-4">
+                      {profileData.profile.certifications.map((cert, idx) => (
+                        <div key={idx} className="p-6 bg-slate-50 rounded-[28px] border border-slate-100 flex items-center justify-between group hover:bg-white hover:shadow-xl transition-all">
+                           <div className="flex items-center gap-6">
+                              <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                                 <Award size={28} />
+                              </div>
+                              <div>
+                                 <h4 className="font-black text-slate-900">{cert.course_title}</h4>
+                                 <p className="text-xs font-bold text-slate-400">ID: {cert.cert_id} • Cấp ngày: {new Date(cert.issue_date).toLocaleDateString('vi-VN')}</p>
+                              </div>
+                           </div>
+                           <button className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all">
+                              Tải xuống
+                           </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center">
+                       <Award size={48} className="mx-auto text-slate-200 mb-4" />
+                       <p className="text-slate-400 font-bold">Bạn chưa có chứng chỉ nào. Hãy hoàn thành các khóa học để nhận chứng chỉ!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'profile' ? (
               <div className="card-premium p-10 bg-white animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center justify-between mb-8 pb-5 border-b border-slate-100">
@@ -93,31 +171,30 @@ function SettingsPageContent() {
 
                 <div className="grid md:grid-cols-2 gap-y-8 gap-x-10">
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tên</p>
-                    <p className="text-[15px] font-bold text-slate-700">{profileData.firstName}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Họ</p>
-                    <p className="text-[15px] font-bold text-slate-700">{profileData.lastName}</p>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tên hiển thị</p>
+                    <p className="text-[15px] font-bold text-slate-700">{user?.name}</p>
                   </div>
                   <div>
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Địa chỉ email</p>
-                    <p className="text-[15px] font-bold text-slate-700">{profileData.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Số điện thoại</p>
-                    <p className="text-[15px] font-bold text-slate-700">{profileData.phone}</p>
+                    <p className="text-[15px] font-bold text-slate-700">{user?.email}</p>
                   </div>
                 </div>
 
                 <div className="mt-10 pt-8 border-t border-slate-100">
                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Giới thiệu</p>
                   <p className="text-[15px] font-medium text-slate-600 leading-relaxed">
-                    {profileData.bio}
+                    {profileData?.profile.bio || "Bạn chưa có thông tin giới thiệu."}
+                  </p>
+                </div>
+                
+                <div className="mt-8">
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Mục tiêu học tập</p>
+                  <p className="text-[15px] font-medium text-slate-600 leading-relaxed">
+                    {profileData?.profile.learning_goals || "Hãy đặt ra mục tiêu để có động lực hơn nhé!"}
                   </p>
                 </div>
               </div>
-            ) : (
+            ) : activeTab === 'accessibility' ? (
               <div className="card-premium p-10 bg-white animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center justify-between mb-8 pb-5 border-b border-slate-100">
                   <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Cấu hình trợ năng</h2>
@@ -232,7 +309,7 @@ function SettingsPageContent() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

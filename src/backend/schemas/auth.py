@@ -22,6 +22,14 @@ class UserCreate(BaseModel):
             raise ValueError("Password must include at least one number.")
         return value
 
+    @field_validator("role")
+    @classmethod
+    def normalize_role(cls, value: Optional[str]) -> str:
+        role = (value or "student").strip().lower()
+        if role not in {"student", "teacher", "admin"}:
+            raise ValueError("Role must be student, teacher, or admin.")
+        return role
+
     @model_validator(mode="after")
     def validate_password_confirmation(self):
         if self.password != self.confirm_password:

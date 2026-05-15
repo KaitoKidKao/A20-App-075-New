@@ -1,36 +1,26 @@
-# Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Define build-time arguments
-ARG NEXT_PUBLIC_API_URL
-
-# Set environment variables for build
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-
-# Install dependencies
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy source code
+FROM node:20-alpine AS builder
+WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Stage 2: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
-
-ENV NODE_ENV=production
-
-# Copy standalone output from builder
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
 
-# Expose port
 EXPOSE 3000
 
-# Run the app
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start"]

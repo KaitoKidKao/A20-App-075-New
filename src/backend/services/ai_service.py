@@ -5,7 +5,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 from openai import AsyncOpenAI
-from src.backend import config
+from .. import config
 
 logger = logging.getLogger(__name__)
 
@@ -23,23 +23,71 @@ class AIService:
     _whisper_model = None
 
     @staticmethod
-    def build_bilingual_transcript(original_transcript: dict, vi_transcript: dict) -> dict:
-        original_language = (original_transcript.get("language") or "").lower() or "unknown"
-        original_segments = original_transcript.get("segments", []) or []
-        vi_segments = vi_transcript.get("segments", []) or []
+    def normalize_caption_language(language: str | None) -> str:
+        lang = (language or "").strip().lower()
+        if lang.startswith("vi"):
+            return "vi"
+        return "en"
 
-        segments_by_language: dict[str, list[dict[str, Any]]] = {"vi": vi_segments}
-        if original_language and original_language != "vi":
-            segments_by_language[original_language] = original_segments
-        elif original_language == "vi":
-            segments_by_language["vi"] = original_segments
+    @staticmethod
+    def _normalize_segments(segments: list[dict]) -> list[dict[str, Any]]:
+        normalized = []
+        for index, segment in enumerate(segments or []):
+            normalized.append(
+                {
+                    "index": index,
+                    "start": float(segment.get("start", 0) or 0),
+                    "end": float(segment.get("end", 0) or 0),
+                    "text": str(segment.get("text", "")).strip(),
+                }
+            )
+        return normalized
 
+    @classmethod
+    def build_bilingual_transcript(
+        cls,
+        source_transcript: dict,
+        translated_transcript: dict | None = None,
+        translation_error: str | None = None,
+    ) -> dict:
+        source_language = cls.normalize_caption_language(source_transcript.get("language"))
+        source_segments = cls._normalize_segments(source_transcript.get("segments", []))
+        target_language = "en" if source_language == "vi" else "vi"
+
+        segments_by_language: dict[str, list[dict[str, Any]]] = {
+            source_language: source_segments
+        }
+        translation_status = {
+            target_language: {
+                "status": "translation_failed",
+                "error": translation_error or "Translation is not available.",
+            }
+        }
+
+        if translated_transcript and translated_transcript.get("language") == target_language:
+            translated_segments = cls._normalize_segments(translated_transcript.get("segments", []))
+            timeline_matches = len(translated_segments) == len(source_segments) and all(
+                translated.get("start") == source.get("start") and translated.get("end") == source.get("end")
+                for source, translated in zip(source_segments, translated_segments)
+            )
+            if timeline_matches:
+                segments_by_language[target_language] = translated_segments
+                translation_status[target_language] = {"status": "completed", "error": None}
+            else:
+                translation_status[target_language] = {
+                    "status": "translation_failed",
+                    "error": "Translated timeline does not match source transcript.",
+                }
+
+        preferred_language = "vi" if "vi" in segments_by_language else source_language
         return {
-            "video_id": vi_transcript.get("video_id") or original_transcript.get("video_id"),
-            "language": "vi",
-            "source_language": original_language,
-            "available_languages": sorted(segments_by_language.keys()),
-            "segments": vi_segments,
+            "video_id": source_transcript.get("video_id") or (translated_transcript or {}).get("video_id"),
+            "language": preferred_language,
+            "source_language": source_language,
+            "target_language": target_language,
+            "available_languages": [lang for lang in ("vi", "en") if lang in segments_by_language],
+            "translation_status": translation_status,
+            "segments": segments_by_language[preferred_language],
             "segments_by_language": segments_by_language,
         }
 
@@ -493,87 +541,33 @@ class AIService:
 
     @classmethod
     async def translate_transcript_to_vi(cls, transcript_data: dict) -> dict:
-        api_key = config.OPENAI_API_KEY
-        if not api_key:
-            return transcript_data
-
-        client = AsyncOpenAI(api_key=api_key)
-        segments = transcript_data.get('segments', [])
-        if not segments:
-            return transcript_data
-
-        logger.info(f'🌐 Đang dịch transcript của {transcript_data.get("video_id", "")} sang tiếng Việt...')
-        full_text = "\n".join([f"[{i}] {s['text']}" for i, s in enumerate(segments)])
-        
-        prompt = f"""
-        Bạn là một biên dịch viên chuyên nghiệp. Hãy dịch các câu hội thoại sau sang tiếng Việt tự nhiên, phù hợp với ngữ cảnh giáo dục.
-        Trả về ĐÚNG định dạng ban đầu, chỉ thay đổi phần văn bản thành tiếng Việt. Giữ nguyên các index.
-        
-        Văn bản gốc:
-        {full_text}
-        """
-
-        try:
-            response = await client.chat.completions.create(
-                model=config.DEFAULT_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-                max_completion_tokens=2000
-            )
-            
-            translated_text = response.choices[0].message.content
-            translated_dict = {}
-            for line in translated_text.split("\n"):
-                line = line.strip()
-                if line.startswith("[") and "]" in line:
-                    idx_str = line[1:line.find("]")]
-                    if idx_str.isdigit():
-                        translated_dict[int(idx_str)] = line[line.find("]")+1:].strip()
-            
-            translated_segments = []
-            for i, s in enumerate(segments):
-                new_s = s.copy()
-                if i in translated_dict:
-                    new_s['text'] = translated_dict[i]
-                translated_segments.append(new_s)
-                
-            new_transcript_data = transcript_data.copy()
-            new_transcript_data['segments'] = translated_segments
-            new_transcript_data['language'] = 'vi'
-            
-            video_id = transcript_data.get('video_id')
-            if video_id:
-                transcript_path = cls.TRANSCRIPT_DIR / f"{video_id}.json"
-                with open(transcript_path, 'w', encoding='utf-8') as f:
-                    json.dump(new_transcript_data, f, ensure_ascii=False, indent=2)
-            
-            logger.info('✅ Dịch xong transcript sang tiếng Việt.')
-            return new_transcript_data
-            
-        except Exception as e:
-            logger.error(f'❌ Lỗi khi dịch transcript: {e}')
-            return transcript_data
+        translated = await cls.translate_transcript_to_language_json(transcript_data, "vi")
+        return translated or transcript_data
 
     @classmethod
     async def translate_transcript_to_language_json(
         cls,
         transcript_data: dict,
         target_language: str,
-    ) -> dict:
+    ) -> dict | None:
         target = (target_language or "").strip().lower()
         if target not in {"vi", "en"}:
-            return transcript_data
+            return None
 
-        source = (transcript_data.get("language") or "").strip().lower()
+        source = cls.normalize_caption_language(transcript_data.get("language"))
         if source == target:
-            return transcript_data
+            result = transcript_data.copy()
+            result["language"] = target
+            result["segments"] = cls._normalize_segments(transcript_data.get("segments", []))
+            return result
 
         api_key = config.OPENAI_API_KEY
         if not api_key:
-            return transcript_data
+            return None
 
         segments = transcript_data.get("segments", [])
         if not segments:
-            return transcript_data
+            return None
 
         client = AsyncOpenAI(api_key=api_key)
         logger.info(
@@ -619,7 +613,8 @@ class AIService:
                                     "role": "user",
                                     "content": (
                                         f"{translator_user}\n"
-                                        "Do not merge or drop rows. Return exactly the same number of items as input.\n\n"
+                                        "Do not merge or drop rows. Return exactly the same number of items as input.\n"
+                                        "Each output item must include index, start, end, and text. Keep start/end unchanged.\n\n"
                                         f"Input JSON:\n{json.dumps(payload, ensure_ascii=False)}"
                                     ),
                                 },
@@ -638,11 +633,16 @@ class AIService:
                             got_index = int(item.get("index")) if item.get("index") is not None else None
                             if got_index != expected_index:
                                 raise ValueError(f"Index mismatch: expected {expected_index}, got {got_index}")
+                            if item.get("start") is None or item.get("end") is None:
+                                raise ValueError(f"Missing start/end at index {expected_index}")
+                            if float(item.get("start")) != float(seg.get("start")) or float(item.get("end")) != float(seg.get("end")):
+                                raise ValueError(f"Timeline mismatch at index {expected_index}")
                             translated_text = str(item.get("text", "")).strip()
                             if not translated_text:
                                 raise ValueError(f"Empty translation at index {expected_index}")
                             out.append(
                                 {
+                                    "index": expected_index,
                                     "start": seg.get("start"),
                                     "end": seg.get("end"),
                                     "text": translated_text,
@@ -651,6 +651,11 @@ class AIService:
                         return out
                     except Exception as ex:
                         last_error = ex
+                if len(chunk_segments) > 1:
+                    mid = len(chunk_segments) // 2
+                    left = await _translate_chunk(chunk_start, chunk_segments[:mid], max_retry=max_retry)
+                    right = await _translate_chunk(chunk_start + mid, chunk_segments[mid:], max_retry=max_retry)
+                    return left + right
                 raise RuntimeError(f"Chunk translation failed at start={chunk_start}: {last_error}")
 
             chunk_size = 20
@@ -666,7 +671,7 @@ class AIService:
             return result
         except Exception as e:
             logger.error("Translate transcript to %s failed: %s", target, e)
-            return transcript_data
+            return None
 
     @classmethod
     async def generate_handsign_from_text(cls, text: str) -> list:
@@ -721,4 +726,88 @@ class AIService:
             return processed
         except Exception as e:
             logger.error(f'❌ Lỗi khi sinh VSL Glosses từ text: {e}')
+            return []
+    @classmethod
+    async def identify_category(cls, transcript_summary: list, available_categories: list[str]) -> str:
+        """
+        Dự đoán danh mục phù hợp nhất dựa trên tóm tắt nội dung.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key or not available_categories:
+            return "Chung"
+
+        client = AsyncOpenAI(api_key=api_key)
+        summary_text = " ".join(transcript_summary)
+        
+        prompt = f"""
+        Dựa trên tóm tắt bài giảng sau, hãy chọn danh mục phù hợp nhất từ danh sách cho sẵn.
+        Danh sách danh mục: {", ".join(available_categories)}
+        
+        Tóm tắt:
+        {summary_text}
+        
+        Chỉ trả về tên danh mục duy nhất, không giải thích gì thêm. Nếu không khớp, trả về "Chung".
+        """
+
+        try:
+            response = await client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                max_completion_tokens=50
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"❌ Lỗi khi phân loại danh mục: {e}")
+            return "Chung"
+
+    @classmethod
+    async def generate_persistent_quizzes(cls, transcript_data: dict) -> list[dict]:
+        """
+        Tạo danh sách câu hỏi trắc nghiệm có cấu trúc để lưu vào database.
+        """
+        api_key = config.OPENAI_API_KEY
+        if not api_key:
+            return []
+
+        client = AsyncOpenAI(api_key=api_key)
+        full_text = " ".join([s["text"] for s in transcript_data["segments"]])
+        truncated_text = full_text[:6000]
+
+        prompt = f"""
+        Bạn là chuyên gia soạn thảo đề thi. Hãy tạo 5 câu hỏi trắc nghiệm khách quan từ nội dung sau.
+        Yêu cầu:
+        1. Mỗi câu hỏi có 4 lựa chọn (A, B, C, D).
+        2. Xác định đáp án đúng và giải thích ngắn gọn.
+        3. Phân loại độ khó (Dễ, Trung bình, Khó).
+        
+        Định dạng trả về JSON:
+        {{
+          "quizzes": [
+            {{
+              "question_text": "Nội dung câu hỏi?",
+              "options": {{"A": "...", "B": "...", "C": "...", "D": "..."}},
+              "correct_answer": "A",
+              "explanation": "Tại sao A đúng?",
+              "difficulty": "Trung bình"
+            }}
+          ]
+        }}
+        
+        Nội dung:
+        {truncated_text}
+        """
+
+        try:
+            response = await client.chat.completions.create(
+                model=config.DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": "Bạn CHỈ ĐƯỢC PHÉP trả lời bằng TIẾNG VIỆT."},
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={ "type": "json_object" }
+            )
+            result = json.loads(response.choices[0].message.content)
+            return result.get("quizzes", [])
+        except Exception as e:
+            logger.error(f"❌ Lỗi khi tạo quiz: {e}")
             return []

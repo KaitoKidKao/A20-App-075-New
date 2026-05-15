@@ -87,7 +87,7 @@ export function VideoPlayer({ src, captionText, className }: VideoPlayerProps) {
       {/* Caption Overlay */}
       {showCaptions && captionText && (
         <div className="absolute bottom-20 left-0 right-0 flex justify-center px-8 pointer-events-none mb-4">
-          <div className="bg-black/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-center max-w-[80%] border border-white/10 shadow-lg">
+          <div className="text-white px-4 py-2 text-center max-w-[80%]">
             <p className="text-xl md:text-2xl font-bold leading-tight">
               {captionText}
             </p>
