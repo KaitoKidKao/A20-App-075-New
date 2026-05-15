@@ -168,6 +168,7 @@ export default function VideoLessonPage() {
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastProgressSaveSecondRef = useRef(0);
   const hasRestoredProgressRef = useRef(false);
+  const lastScrolledIndexRef = useRef<number>(-1);
   const [rightPanelTab, setRightPanelTab] = useState('transcript');
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
   const [isFlashcardFlipped, setIsFlashcardFlipped] = useState(false);
@@ -643,26 +644,29 @@ export default function VideoLessonPage() {
 
   // Auto-scroll transcript when video plays
   useEffect(() => {
-    if (rightPanelTab === 'transcript' && !reducedMotion && segments.length > 0) {
+    if (rightPanelTab === 'transcript' && segments.length > 0) {
       const activeIndex = segments.findIndex(
         (s) => currentTime >= s.start && currentTime <= s.end
       );
-      if (activeIndex >= 0 && transcriptPanelRef.current && transcriptItemRefs.current[activeIndex]) {
+      
+      if (activeIndex >= 0 && activeIndex !== lastScrolledIndexRef.current) {
+        lastScrolledIndexRef.current = activeIndex;
         const container = transcriptPanelRef.current;
         const target = transcriptItemRefs.current[activeIndex];
         
-        // Use scrollTop instead of scrollIntoView to prevent the whole page from jumping
-        const targetOffset = target.offsetTop;
-        const containerHeight = container.offsetHeight;
-        const targetHeight = target.offsetHeight;
-        
-        container.scrollTo({
-          top: targetOffset - containerHeight / 2 + targetHeight / 2,
-          behavior: 'smooth'
-        });
+        if (container && target) {
+          const targetOffset = target.offsetTop;
+          const containerHeight = container.offsetHeight;
+          const targetHeight = target.offsetHeight;
+          
+          container.scrollTo({
+            top: targetOffset - containerHeight / 2 + targetHeight / 2,
+            behavior: 'smooth'
+          });
+        }
       }
     }
-  }, [currentTime, segments, rightPanelTab, reducedMotion]);
+  }, [currentTime, segments, rightPanelTab]);
 
   useEffect(() => {
     setCurrentFlashcardIndex(0);
@@ -1061,7 +1065,22 @@ export default function VideoLessonPage() {
                         )}
                         style={{ fontSize: captionSize, lineHeight: captionLineHeight }}
                       >
-                        {activeSegment.text}
+                        {activeSegment.text.split(' ').map((word, idx, arr) => {
+                          const duration = activeSegment.end - activeSegment.start;
+                          const wordStartTime = activeSegment.start + (idx / arr.length) * duration;
+                          const isWordActive = currentTime >= wordStartTime;
+                          return (
+                            <span 
+                              key={idx} 
+                              className={cn(
+                                "transition-all duration-300",
+                                isWordActive ? "text-white" : "text-white/25 blur-[0.5px]"
+                              )}
+                            >
+                              {word}{' '}
+                            </span>
+                          );
+                        })}
                       </p>
                     </div>
                   </div>
