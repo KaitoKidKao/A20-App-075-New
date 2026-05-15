@@ -251,18 +251,24 @@ export default function VideoLessonPage() {
           canvas.width = 200;
           canvas.height = 120;
           const ctx = canvas.getContext('2d');
+          
+          const videoDurationFormatted = formatDuration(video.duration);
+          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
+
           if (!ctx) {
             cleanup();
-            resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+            resolve({ duration: finalDuration, thumb: fallbackThumb });
             return;
           }
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const thumb = canvas.toDataURL('image/jpeg', 0.75);
           cleanup();
-          resolve({ duration: formatDuration(video.duration), thumb });
+          resolve({ duration: finalDuration, thumb });
         } catch {
           cleanup();
-          resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+          const videoDurationFormatted = formatDuration(video.duration);
+          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
+          resolve({ duration: finalDuration, thumb: fallbackThumb });
         }
       };
 
@@ -271,7 +277,9 @@ export default function VideoLessonPage() {
           video.currentTime = 0.05;
         } catch {
           cleanup();
-          resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+          const videoDurationFormatted = formatDuration(video.duration);
+          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
+          resolve({ duration: finalDuration, thumb: fallbackThumb });
         }
       };
 
@@ -361,7 +369,7 @@ export default function VideoLessonPage() {
         const sortedByTitle = [...lessons].sort((a, b) => a.title.localeCompare(b.title, 'vi', { sensitivity: 'base' }));
         const hydrated = await Promise.all(
           sortedByTitle.map(async (lesson) => {
-            const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? `${lesson.duration_minutes}m` : '--:--';
+            const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? formatDuration(lesson.duration_minutes * 60) : '--:--';
             const preview = await buildLessonPreview(lesson.id, durationFromDb);
             return {
               id: lesson.id,

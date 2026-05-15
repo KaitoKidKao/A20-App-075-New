@@ -25,7 +25,7 @@ export function AppSidebar() {
   const isAdminArea = pathname.startsWith('/admin');
 
   const sectionLabelClass = cn(
-    'font-heading mb-3 px-3 text-[11px] font-extrabold uppercase tracking-widest',
+    'font-heading mb-3 px-3 text-xs font-black uppercase tracking-widest',
     'text-[var(--app-text-muted)]'
   );
 
@@ -34,7 +34,7 @@ export function AppSidebar() {
       'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
       isActive
-        ? 'ring-primary/15 bg-primary/10 text-primary font-heading font-extrabold ring-1 shadow-sm'
+        ? 'ring-primary/15 bg-primary/10 text-primary font-heading font-black ring-1 shadow-sm'
         : 'text-[var(--app-text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-text)] font-heading font-bold'
     );
 
@@ -52,20 +52,20 @@ export function AppSidebar() {
   ];
 
   const adminLearningItems: SidebarItem[] = [
-    { icon: Grid, label: 'Tổng quan admin', href: '/admin' },
-    { icon: BookOpen, label: 'Quản lý khóa học', href: '/admin' },
-    { icon: MessageSquare, label: 'Nhật ký xử lý', href: '/admin' },
+    { icon: Grid, label: 'Tổng quan admin', href: '/admin#overview' },
+    { icon: BookOpen, label: 'Quản lý khóa học', href: '/admin#courses' },
+    { icon: MessageSquare, label: 'Nhật ký xử lý', href: '/admin#jobs' },
   ];
 
   const learningItems = isAdminArea ? adminLearningItems : studentLearningItems;
 
   const toolItems: SidebarItem[] = isAdminArea
-    ? [{ icon: Upload, label: 'Đăng tải bài giảng', href: '/admin' }]
+    ? [{ icon: Upload, label: 'Đăng tải bài giảng', href: '/admin#upload' }]
     : [{ icon: Upload, label: 'Tải video lên', href: '/student/upload' }];
 
   const accountItems: SidebarItem[] = isAdminArea
     ? [
-        { icon: Settings, label: 'Cài đặt hệ thống', href: '/admin' },
+        { icon: Settings, label: 'Cài đặt hệ thống', href: '/admin#settings' },
         { icon: LogOut, label: 'Đăng xuất', href: '/auth/login' },
       ]
     : [
@@ -73,7 +73,10 @@ export function AppSidebar() {
         { icon: LogOut, label: 'Đăng xuất', href: '/auth/login' },
       ];
 
-  const isItemActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isItemActive = (href: string) => {
+    const baseHref = href.split('#')[0];
+    return pathname === baseHref || pathname.startsWith(`${baseHref}/`);
+  };
 
   const renderSection = (title: string, items: SidebarItem[]) => (
     <div className="mt-8 first:mt-0">
