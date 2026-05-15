@@ -98,6 +98,37 @@ def _serialize_review(review: CourseReview, user: User | None):
         "updated_at": review.updated_at,
     }
 
+
+@router.get("/reviews/me")
+async def list_my_reviews(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    rows = session.exec(
+        select(CourseReview)
+        .where(CourseReview.user_id == current_user.id)
+        .order_by(CourseReview.updated_at.desc())
+    ).all()
+    if not rows:
+        return {"items": []}
+
+    course_ids = [r.course_id for r in rows]
+    courses = session.exec(select(Course).where(Course.id.in_(course_ids))).all()
+    course_map = {c.id: c for c in courses}
+    return {
+        "items": [
+            {
+                "id": str(r.id),
+                "course_id": str(r.course_id),
+                "course_title": course_map.get(r.course_id).title if course_map.get(r.course_id) else "Course",
+                "rating": r.rating,
+                "comment": r.comment,
+                "updated_at": r.updated_at,
+            }
+            for r in rows
+        ]
+    }
+
 # --- Enrollment ---
 @router.post("/enroll/{course_id}", response_model=Enrollment)
 async def enroll_in_course(course_id: uuid.UUID, current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):

@@ -18,7 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { StatusBadge, type Status } from '@/components/ui/StatusBadge';
-import { api, type AdminCourseWorkspace, type AdminDashboard, type AdminModelHealth, type AdminRecentJob, type AdminUser } from '@/lib/api';
+import { api, type AdminCourseWorkspace, type AdminDashboard, type AdminModelHealth, type AdminRecentJob, type AdminUser, type BatchUploadItem } from '@/lib/api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -68,7 +68,8 @@ export default function AdminDashboardPage() {
 
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
   const [courseTitle, setCourseTitle] = useState('');
-  const [selectedLectureFile, setSelectedLectureFile] = useState<File | null>(null);
+  const [selectedLectureFiles, setSelectedLectureFiles] = useState<File[]>([]);
+  const [batchResults, setBatchResults] = useState<BatchUploadItem[]>([]);
   const [publishMessage, setPublishMessage] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedModuleId, setSelectedModuleId] = useState('');
@@ -247,23 +248,25 @@ export default function AdminDashboardPage() {
   };
 
   const handleUpload = async () => {
-    if (!selectedLectureFile) {
+    if (selectedLectureFiles.length === 0) {
       setPublishMessage('Chọn video trước khi tải lên.');
       return;
     }
     setIsUploading(true);
     setPublishMessage('');
+    setBatchResults([]);
     setUploadProgress(15);
     try {
       const target = await resolveUploadTarget();
       setUploadProgress(50);
-      const upload = await api.videos.upload(selectedLectureFile, target.moduleId);
+      const upload = await api.videos.uploadBatch(selectedLectureFiles, target.moduleId);
       setUploadProgress(100);
-      setSelectedLectureFile(null);
+      setSelectedLectureFiles([]);
+      setBatchResults(upload.items || []);
       setCourseTitle('');
       setCreateNewModule(false);
       await loadAdminData(currentRole);
-      setPublishMessage(`${target.messagePrefix}. Mã video: ${upload.video_id}`);
+      setPublishMessage(`${target.messagePrefix}. Thanh cong ${upload.success_count}/${upload.total}, that bai ${upload.failed_count}.`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Không thể tải video lên.';
       setPublishMessage(message);
@@ -341,8 +344,9 @@ export default function AdminDashboardPage() {
                   type="file"
                   ref={fileInputRef}
                   className="hidden"
+                  multiple
                   accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska"
-                  onChange={(event) => setSelectedLectureFile(event.target.files?.[0] ?? null)}
+                  onChange={(event) => setSelectedLectureFiles(Array.from(event.target.files || []))}
                 />
                 {isUploading ? (
                   <div className="text-center space-y-4">
@@ -355,8 +359,8 @@ export default function AdminDashboardPage() {
                       <FileVideo size={32} />
                     </div>
                     <p className="text-sm font-bold text-slate-900">Kéo thả Video vào đây</p>
-                    {selectedLectureFile && (
-                      <p className="mt-2 max-w-[220px] truncate text-[11px] font-bold text-[#FF4F6E]">{selectedLectureFile.name}</p>
+                    {selectedLectureFiles.length > 0 && (
+                      <p className="mt-2 max-w-[220px] truncate text-[11px] font-bold text-[#FF4F6E]">{selectedLectureFiles.length} file da chon</p>
                     )}
                     <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Tối đa 1GB | MP4/MOV</p>
                   </>
@@ -455,12 +459,24 @@ export default function AdminDashboardPage() {
 
                 <button
                   onClick={handleUpload}
-                  disabled={isUploading || !selectedLectureFile}
+                  disabled={isUploading || selectedLectureFiles.length === 0}
                   className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-[#FF4F6E] hover:shadow-[#FF4F6E]/20 transition-all active:scale-95 disabled:opacity-50"
                 >
                   Tải lên khóa học
                 </button>
                 {publishMessage && <p className="text-xs font-bold text-slate-500">{publishMessage}</p>}
+                {batchResults.length > 0 && (
+                  <div className="max-h-44 overflow-auto rounded-xl border border-slate-100 bg-slate-50 p-3 space-y-2">
+                    {batchResults.map((item, idx) => (
+                      <div key={`${item.filename}-${idx}`} className="text-[11px] font-bold">
+                        <span className={item.ok ? 'text-emerald-600' : 'text-rose-600'}>{item.ok ? 'OK' : 'FAIL'}</span>
+                        <span className="text-slate-700"> - {item.filename}</span>
+                        {item.video_id && <span className="text-slate-400"> ({item.video_id})</span>}
+                        {item.error && <span className="text-rose-600">: {item.error}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

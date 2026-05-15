@@ -284,6 +284,15 @@ export interface CourseReview {
   updated_at: string;
 }
 
+export interface MyReviewItem {
+  id: string;
+  course_id: string;
+  course_title: string;
+  rating: number;
+  comment: string;
+  updated_at: string;
+}
+
 export interface AdminCourseWorkspace {
   id: string;
   title: string;
@@ -355,6 +364,24 @@ export interface MyVideo {
   video_url?: string | null;
   progress_percent: number;
   completion_status: string;
+}
+
+export interface BatchUploadItem {
+  ok: boolean;
+  filename: string;
+  video_id?: string;
+  status?: string;
+  queue_mode?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface BatchUploadResponse {
+  status: string;
+  total: number;
+  success_count: number;
+  failed_count: number;
+  items: BatchUploadItem[];
 }
 
 const buildHeaders = (isMultipart = false): HeadersInit => {
@@ -578,6 +605,23 @@ export const api = {
       }
       return res.json();
     },
+    async uploadBatch(files: File[], moduleId?: string): Promise<BatchUploadResponse> {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+      if (moduleId) formData.append("module_id", moduleId);
+      const res = await apiFetch("/api/videos/upload-batch", {
+        method: "POST",
+        headers: buildHeaders(true),
+        body: formData,
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Batch video upload failed.");
+      }
+      return res.json();
+    },
   },
 
   courses: {
@@ -693,6 +737,11 @@ export const api = {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Failed to save course review.");
+      return res.json();
+    },
+    async listMyReviews(): Promise<{ items: MyReviewItem[] }> {
+      const res = await apiFetch("/api/student/reviews/me", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch my reviews.");
       return res.json();
     },
     async reviewFlashcard(flashcardId: string, isCorrect: boolean) {

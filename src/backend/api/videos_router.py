@@ -164,6 +164,76 @@ def _ensure_teacher_module(module_id: str | None, current_user: User, session: S
         return module
     raise HTTPException(status_code=403, detail="Only course teacher/admin can upload lesson videos.")
 
+
+async def _create_lesson_and_enqueue(
+    *,
+    file: UploadFile,
+    module_id: str | None,
+    current_user: User,
+    session: Session,
+    background_tasks: BackgroundTasks,
+) -> dict:
+    lesson_uuid = uuid.uuid4()
+    lesson_id = str(lesson_uuid)
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in config.ALLOWED_VIDEO_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported file format for {file.filename}.")
+    content_type = (file.content_type or "").lower()
+    if content_type not in config.ALLOWED_VIDEO_MIME_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported video MIME type for {file.filename}.")
+
+    filename = f"{lesson_id}{ext}"
+    max_upload_size_bytes = config.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    video_path = await VideoService.save_video_stream(
+        upload_file=file,
+        filename=filename,
+        max_size_bytes=max_upload_size_bytes,
+    )
+    VideoService.validate_video_duration(video_path)
+
+    target_module = _ensure_teacher_module(module_id, current_user, session)
+    module = target_module or await get_or_create_default_hierarchy(session, current_user.id)
+
+    lesson = Lesson(
+        id=lesson_uuid,
+        module_id=module.id,
+        title=file.filename,
+        content_type="video",
+        status="queued",
+        duration_minutes=0,
+        sort_order=0
+    )
+    duration_seconds = VideoService.get_video_duration_seconds(video_path)
+    if duration_seconds:
+        lesson.duration_minutes = max(1, int(round(duration_seconds / 60)))
+    session.add(lesson)
+    session.commit()
+
+    if target_module is None and _role_name(current_user) == "student":
+        existing_enrollment = session.exec(
+            select(Enrollment).where(
+                Enrollment.user_id == current_user.id,
+                Enrollment.course_id == module.course_id,
+            )
+        ).first()
+        if not existing_enrollment:
+            session.add(Enrollment(user_id=current_user.id, course_id=module.course_id))
+            session.commit()
+
+    upsert_job_status(session, lesson_id=lesson_id, status="queued", progress=0)
+    mode = enqueue_pipeline_job(
+        video_id=lesson_id,
+        video_path=str(video_path),
+        fallback_task_adder=background_tasks.add_task,
+    )
+    return {
+        "video_id": lesson_id,
+        "status": "processing",
+        "queue_mode": mode,
+        "message": "Video uploaded and queued for processing.",
+        "filename": file.filename,
+    }
+
 @router.post("/upload")
 async def upload_video(
     background_tasks: BackgroundTasks,
@@ -173,67 +243,14 @@ async def upload_video(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    lesson_uuid = uuid.uuid4()
-    lesson_id = str(lesson_uuid)
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in config.ALLOWED_VIDEO_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Unsupported file format.")
-    content_type = (file.content_type or "").lower()
-    if content_type not in config.ALLOWED_VIDEO_MIME_TYPES:
-        raise HTTPException(status_code=400, detail="Unsupported video MIME type.")
-
-    filename = f"{lesson_id}{ext}"
-    max_upload_size_bytes = config.MAX_UPLOAD_SIZE_MB * 1024 * 1024
-
     try:
-        video_path = await VideoService.save_video_stream(
-            upload_file=file,
-            filename=filename,
-            max_size_bytes=max_upload_size_bytes,
+        return await _create_lesson_and_enqueue(
+            file=file,
+            module_id=module_id,
+            current_user=current_user,
+            session=session,
+            background_tasks=background_tasks,
         )
-        VideoService.validate_video_duration(video_path)
-        
-        target_module = _ensure_teacher_module(module_id, current_user, session)
-        module = target_module or await get_or_create_default_hierarchy(session, current_user.id)
-        
-        lesson = Lesson(
-            id=lesson_uuid,
-            module_id=module.id,
-            title=file.filename,
-            content_type="video",
-            status="queued",
-            duration_minutes=0,
-            sort_order=0
-        )
-        duration_seconds = VideoService.get_video_duration_seconds(video_path)
-        if duration_seconds:
-            lesson.duration_minutes = max(1, int(round(duration_seconds / 60)))
-        session.add(lesson)
-        session.commit()
-
-        if target_module is None and _role_name(current_user) == "student":
-            existing_enrollment = session.exec(
-                select(Enrollment).where(
-                    Enrollment.user_id == current_user.id,
-                    Enrollment.course_id == module.course_id,
-                )
-            ).first()
-            if not existing_enrollment:
-                session.add(Enrollment(user_id=current_user.id, course_id=module.course_id))
-                session.commit()
-        
-        upsert_job_status(session, lesson_id=lesson_id, status="queued", progress=0)
-        mode = enqueue_pipeline_job(
-            video_id=lesson_id,
-            video_path=str(video_path),
-            fallback_task_adder=background_tasks.add_task,
-        )
-        return {
-            "video_id": lesson_id,
-            "status": "processing",
-            "queue_mode": mode,
-            "message": "Video uploaded and queued for processing.",
-        }
     except ValueError as exc:
         message = str(exc)
         status_code = 413 if "size" in message.lower() or "large" in message.lower() else 400
@@ -243,6 +260,46 @@ async def upload_video(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/upload-batch")
+async def upload_videos_batch(
+    background_tasks: BackgroundTasks,
+    _: None = Depends(rate_limit("upload", config.UPLOAD_RATE_LIMIT)),
+    files: list[UploadFile] = File(...),
+    module_id: str | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided.")
+    if len(files) > 20:
+        raise HTTPException(status_code=400, detail="Maximum 20 files per batch.")
+
+    results: list[dict] = []
+    for file in files:
+        try:
+            res = await _create_lesson_and_enqueue(
+                file=file,
+                module_id=module_id,
+                current_user=current_user,
+                session=session,
+                background_tasks=background_tasks,
+            )
+            results.append({"ok": True, **res})
+        except HTTPException as exc:
+            results.append({"ok": False, "filename": file.filename, "error": exc.detail})
+        except Exception as exc:
+            results.append({"ok": False, "filename": file.filename, "error": str(exc)})
+
+    success_count = len([r for r in results if r.get("ok")])
+    return {
+        "status": "completed",
+        "total": len(files),
+        "success_count": success_count,
+        "failed_count": len(files) - success_count,
+        "items": results,
+    }
 
 
 @router.post("/process-url")
