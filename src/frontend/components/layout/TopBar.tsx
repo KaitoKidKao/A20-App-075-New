@@ -14,10 +14,36 @@ import { useRouter } from 'next/navigation';
 export function TopBar() {
   const { theme, setTheme, user, logout } = useAppStore();
   const router = useRouter();
+  const [notifOpen, setNotifOpen] = React.useState(false);
+  const [notifications, setNotifications] = React.useState<
+    Array<{ id: string; message: string; created_at: string; read: boolean }>
+  >([]);
+
+  const loadNotifications = React.useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const data = JSON.parse(window.localStorage.getItem('app_notifications') || '[]');
+    setNotifications(Array.isArray(data) ? data : []);
+  }, []);
+
+  React.useEffect(() => {
+    loadNotifications();
+    const handler = () => loadNotifications();
+    window.addEventListener('app-notification-updated', handler);
+    return () => window.removeEventListener('app-notification-updated', handler);
+  }, [loadNotifications]);
 
   const handleLogout = () => {
     logout();
     router.push('/auth/login');
+  };
+
+  const unreadCount = notifications.filter((item) => !item.read).length;
+
+  const markAllRead = () => {
+    if (typeof window === 'undefined') return;
+    const next = notifications.map((item) => ({ ...item, read: true }));
+    window.localStorage.setItem('app_notifications', JSON.stringify(next));
+    setNotifications(next);
   };
 
   return (
@@ -54,10 +80,51 @@ export function TopBar() {
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
 
-            <button className="p-2.5 text-slate-500 hover:bg-slate-50 hover:text-primary rounded-full transition-all relative">
-              <Bell size={20} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 border-2 border-white rounded-full" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  const next = !notifOpen;
+                  setNotifOpen(next);
+                  if (next) markAllRead();
+                }}
+                className="rounded-full p-2.5 text-slate-500 transition-all hover:bg-slate-50 hover:text-primary relative"
+                aria-label="Thông báo"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full border-2 border-white bg-red-500" />
+                )}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 mt-2 w-[320px] rounded-2xl border border-slate-100 bg-white p-3 shadow-xl z-50">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Thông báo</p>
+                    <button
+                      className="text-[11px] font-bold text-slate-500 hover:text-primary"
+                      onClick={markAllRead}
+                    >
+                      Đánh dấu đã đọc
+                    </button>
+                  </div>
+                  <div className="max-h-72 space-y-2 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <p className="rounded-xl bg-slate-50 px-3 py-4 text-xs font-bold text-slate-400">
+                        Chưa có thông báo.
+                      </p>
+                    ) : (
+                      notifications.map((item) => (
+                        <div key={item.id} className="rounded-xl border border-slate-100 px-3 py-2">
+                          <p className="text-xs font-bold text-slate-700">{item.message}</p>
+                          <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                            {new Date(item.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="h-8 w-px bg-slate-100" />

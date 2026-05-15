@@ -90,6 +90,29 @@ export default function AdminDashboardPage() {
   });
 
   const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  const lastJobStatusRef = useRef<Record<string, string>>({});
+
+  const appendNotification = useCallback((message: string) => {
+    if (typeof window === 'undefined') return;
+    const key = 'app_notifications';
+    const existing = JSON.parse(window.localStorage.getItem(key) || '[]') as Array<{
+      id: string;
+      message: string;
+      created_at: string;
+      read: boolean;
+    }>;
+    const next = [
+      {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        message,
+        created_at: new Date().toISOString(),
+        read: false,
+      },
+      ...existing,
+    ].slice(0, 30);
+    window.localStorage.setItem(key, JSON.stringify(next));
+    window.dispatchEvent(new Event('app-notification-updated'));
+  }, []);
 
 
   const loadAdminData = useCallback(async (role: 'admin' | 'teacher' | 'student') => {
@@ -147,6 +170,29 @@ export default function AdminDashboardPage() {
     };
     bootstrap();
   }, [router, loadAdminData]);
+
+  useEffect(() => {
+    if (!authorized) return;
+    const timer = window.setInterval(() => {
+      loadAdminData(currentRole);
+    }, 20000);
+    return () => window.clearInterval(timer);
+  }, [authorized, currentRole, loadAdminData]);
+
+  useEffect(() => {
+    if (!recentJobs.length) return;
+    const readyStates = new Set(['ready', 'completed']);
+    for (const job of recentJobs) {
+      const current = (job.status || '').toLowerCase();
+      const previous = (lastJobStatusRef.current[job.job_id] || '').toLowerCase();
+      if (readyStates.has(current) && !readyStates.has(previous)) {
+        const msg = `Video "${job.lesson_title}" đã xử lý xong.`;
+        setPublishMessage(msg);
+        appendNotification(msg);
+      }
+      lastJobStatusRef.current[job.job_id] = job.status || '';
+    }
+  }, [recentJobs, appendNotification]);
 
   const selectedCourse = useMemo(
     () => adminCourses.find((course) => course.id === selectedCourseId),
@@ -368,7 +414,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto px-4 sm:px-8">
       {/* Header */}
-      <div className="relative bg-[#14142B] rounded-[40px] p-10 overflow-hidden shadow-2xl group">
+      <div id="overview" className="scroll-mt-28 relative bg-[#14142B] rounded-[40px] p-10 overflow-hidden shadow-2xl group">
         <div className="absolute top-0 right-0 w-[500px] h-full bg-[#FF4F6E]/10 rounded-l-[100px] -z-0" />
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
           <div className="space-y-4">
@@ -403,7 +449,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Upload Section */}
-      <div className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-50">
+      <div id="upload" className="scroll-mt-28 bg-white rounded-[32px] p-8 shadow-sm border border-slate-50">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-[#FF4F6E]/10 flex items-center justify-center text-[#FF4F6E]">
             <UploadCloud size={20} />
@@ -533,7 +579,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Course Management Section */}
-      <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
+      <div id="courses" className="scroll-mt-28 bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-50 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
@@ -609,7 +655,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Role Management Toggle */}
-      <div className="bg-slate-900 rounded-[32px] p-8 text-white relative overflow-hidden">
+      <div id="settings" className="scroll-mt-28 bg-slate-900 rounded-[32px] p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF4F6E]/10 rounded-full blur-3xl -mr-32 -mt-32" />
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-5">
@@ -703,7 +749,7 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Sync Jobs Section */}
-      <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
+      <div id="jobs" className="scroll-mt-28 bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         <div className="p-8 flex items-center justify-between border-b border-slate-50">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">

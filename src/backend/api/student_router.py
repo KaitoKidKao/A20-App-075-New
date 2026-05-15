@@ -734,6 +734,10 @@ async def update_profile(
     if not profile:
         profile = Profile(user_id=current_user.id)
     
+    if "full_name" in data:
+        current_user.full_name = data["full_name"]
+        session.add(current_user)
+        
     for key, val in data.items():
         if hasattr(profile, key) and key != "id":
             setattr(profile, key, val)
@@ -741,7 +745,8 @@ async def update_profile(
     session.add(profile)
     session.commit()
     session.refresh(profile)
-    return profile
+    session.refresh(current_user)
+    return {"profile": profile, "user": current_user}
 
 @router.get("/courses/{course_id}/certificate")
 async def get_course_certificate(

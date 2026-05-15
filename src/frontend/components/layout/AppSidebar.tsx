@@ -52,20 +52,20 @@ export function AppSidebar() {
   ];
 
   const adminLearningItems: SidebarItem[] = [
-    { icon: Grid, label: 'Tổng quan admin', href: '/admin' },
-    { icon: BookOpen, label: 'Quản lý khóa học', href: '/admin' },
-    { icon: MessageSquare, label: 'Nhật ký xử lý', href: '/admin' },
+    { icon: Grid, label: 'Tổng quan admin', href: '/admin#overview' },
+    { icon: BookOpen, label: 'Quản lý khóa học', href: '/admin#courses' },
+    { icon: MessageSquare, label: 'Nhật ký xử lý', href: '/admin#jobs' },
   ];
 
   const learningItems = isAdminArea ? adminLearningItems : studentLearningItems;
 
   const toolItems: SidebarItem[] = isAdminArea
-    ? [{ icon: Upload, label: 'Đăng tải bài giảng', href: '/admin' }]
+    ? [{ icon: Upload, label: 'Đăng tải bài giảng', href: '/admin#upload' }]
     : [{ icon: Upload, label: 'Tải video lên', href: '/student/upload' }];
 
   const accountItems: SidebarItem[] = isAdminArea
     ? [
-        { icon: Settings, label: 'Cài đặt hệ thống', href: '/admin' },
+        { icon: Settings, label: 'Cài đặt hệ thống', href: '/admin#settings' },
         { icon: LogOut, label: 'Đăng xuất', href: '/auth/login' },
       ]
     : [
@@ -73,7 +73,10 @@ export function AppSidebar() {
         { icon: LogOut, label: 'Đăng xuất', href: '/auth/login' },
       ];
 
-  const isItemActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const isItemActive = (href: string) => {
+    const baseHref = href.split('#')[0];
+    return pathname === baseHref || pathname.startsWith(`${baseHref}/`);
+  };
 
   const renderSection = (title: string, items: SidebarItem[]) => (
     <div className="mt-8 first:mt-0">

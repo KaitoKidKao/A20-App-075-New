@@ -35,11 +35,16 @@ function SettingsPageContent() {
   const [profileData, setProfileData] = React.useState<StudentProfileData | null>(null);
   const [, setLoading] = React.useState(true);
 
+  const [editedBio, setEditedBio] = React.useState('');
+  const [editedGoals, setEditedGoals] = React.useState('');
+
   React.useEffect(() => {
     const fetchProfile = async () => {
       try {
         const data = await api.student.getProfile();
         setProfileData(data);
+        setEditedBio(data.profile.bio || '');
+        setEditedGoals(data.profile.learning_goals || '');
       } catch (err) {
         console.error("Failed to fetch profile", err);
       } finally {
@@ -57,7 +62,47 @@ function SettingsPageContent() {
     user 
   } = useAppStore();
 
+  const [isEditingProfile, setIsEditingProfile] = React.useState(false);
+  const [editedName, setEditedName] = React.useState(user?.name || '');
+  const [isSaving, setIsSaving] = React.useState(false);
 
+  React.useEffect(() => {
+    if (user?.name) setEditedName(user.name);
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    if (!editedName.trim()) return;
+    setIsSaving(true);
+    try {
+      await api.student.updateProfile({ 
+        full_name: editedName.trim(),
+        bio: editedBio.trim(),
+        learning_goals: editedGoals.trim()
+      } as any);
+      
+      if (user) {
+        useAppStore.getState().login({ ...user, name: editedName.trim() });
+      }
+
+      // Update local profile data too
+      if (profileData) {
+        setProfileData({
+          ...profileData,
+          profile: {
+            ...profileData.profile,
+            bio: editedBio.trim(),
+            learning_goals: editedGoals.trim()
+          }
+        });
+      }
+
+      setIsEditingProfile(false);
+    } catch (err) {
+      console.error("Save failed", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -164,7 +209,10 @@ function SettingsPageContent() {
               <div className="card-premium p-10 bg-white animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="flex items-center justify-between mb-8 pb-5 border-b border-slate-100">
                   <h2 className="text-xl font-extrabold tracking-tight text-slate-900">Thông tin cá nhân</h2>
-                  <button className="p-2 bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors border border-slate-200">
+                  <button 
+                    onClick={() => setIsEditingProfile(true)}
+                    className="p-2 bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors border border-slate-200"
+                  >
                     <Pencil size={16} />
                   </button>
                 </div>
@@ -172,7 +220,17 @@ function SettingsPageContent() {
                 <div className="grid md:grid-cols-2 gap-y-8 gap-x-10">
                   <div>
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tên hiển thị</p>
-                    <p className="text-[15px] font-bold text-slate-700">{user?.name}</p>
+                    {isEditingProfile ? (
+                      <input 
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-primary/40 focus:bg-white transition-all"
+                        placeholder="Nhập tên hiển thị mới"
+                        autoFocus
+                      />
+                    ) : (
+                      <p className="text-[15px] font-bold text-slate-700">{user?.name}</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Địa chỉ email</p>
@@ -182,17 +240,55 @@ function SettingsPageContent() {
 
                 <div className="mt-10 pt-8 border-t border-slate-100">
                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Giới thiệu</p>
-                  <p className="text-[15px] font-medium text-slate-600 leading-relaxed">
-                    {profileData?.profile.bio || "Bạn chưa có thông tin giới thiệu."}
-                  </p>
+                  {isEditingProfile ? (
+                    <textarea 
+                      value={editedBio}
+                      onChange={(e) => setEditedBio(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-primary/40 focus:bg-white transition-all resize-none"
+                      placeholder="Chia sẻ một chút về bản thân bạn..."
+                    />
+                  ) : (
+                    <p className="text-[15px] font-medium text-slate-600 leading-relaxed">
+                      {profileData?.profile.bio || "Bạn chưa có thông tin giới thiệu."}
+                    </p>
+                  )}
                 </div>
                 
                 <div className="mt-8">
                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Mục tiêu học tập</p>
-                  <p className="text-[15px] font-medium text-slate-600 leading-relaxed">
-                    {profileData?.profile.learning_goals || "Hãy đặt ra mục tiêu để có động lực hơn nhé!"}
-                  </p>
+                  {isEditingProfile ? (
+                    <textarea 
+                      value={editedGoals}
+                      onChange={(e) => setEditedGoals(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-primary/40 focus:bg-white transition-all resize-none"
+                      placeholder="Mục tiêu học tập của bạn là gì?"
+                    />
+                  ) : (
+                    <p className="text-[15px] font-medium text-slate-600 leading-relaxed">
+                      {profileData?.profile.learning_goals || "Hãy đặt ra mục tiêu để có động lực hơn nhé!"}
+                    </p>
+                  )}
                 </div>
+
+                {isEditingProfile && (
+                  <div className="mt-10 pt-8 border-t border-slate-100 flex justify-end gap-3">
+                    <button 
+                      onClick={() => setIsEditingProfile(false)}
+                      className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                    >
+                      Hủy
+                    </button>
+                    <button 
+                      onClick={handleSaveProfile}
+                      disabled={isSaving}
+                      className="px-8 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-50"
+                    >
+                      {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : activeTab === 'accessibility' ? (
               <div className="card-premium p-10 bg-white animate-in fade-in slide-in-from-right-4 duration-500">
@@ -201,31 +297,6 @@ function SettingsPageContent() {
                 </div>
 
                 <div className="space-y-10">
-                  {/* Font Size */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-slate-800">
-                      <Type size={18} className="text-primary" />
-                      <h3 className="font-bold">Cỡ chữ</h3>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {(['S', 'M', 'L', 'XL'] as const).map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => setFontSize(size)}
-                          className={cn(
-                            "px-6 py-3 rounded-xl font-black transition-all border-2",
-                            fontSize === size 
-                              ? "border-primary bg-primary/5 text-primary" 
-                              : "border-slate-100 text-slate-400 hover:border-slate-200"
-                          )}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-slate-400 font-medium italic">Điều chỉnh cỡ chữ cho phụ đề và tóm tắt để dễ đọc hơn.</p>
-                  </div>
-
                   {/* Theme Mode */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-slate-800">
@@ -262,49 +333,57 @@ function SettingsPageContent() {
                     </div>
                   </div>
 
-                  {/* Visual Preferences */}
+                  {/* Contrast Mode */}
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-slate-800">
-                      <Eye size={18} className="text-primary" />
-                      <h3 className="font-bold">Tùy chọn hiển thị</h3>
+                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary shadow-sm border border-slate-100">
+                          <Eye size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900">Độ tương phản cao</h3>
+                          <p className="text-xs text-slate-400 font-medium">Làm nổi bật các thành phần giao diện quan trọng.</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setHighContrast(!highContrast)}
+                        className={cn(
+                          "w-14 h-8 rounded-full transition-all relative p-1",
+                          highContrast ? "bg-primary" : "bg-slate-200"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-6 h-6 bg-white rounded-full shadow-md transition-all",
+                          highContrast ? "translate-x-6" : "translate-x-0"
+                        )} />
+                      </button>
                     </div>
-                    
-                    <div className="space-y-3">
-                       <button 
-                         onClick={() => setHighContrast(!highContrast)}
-                         className="w-full flex items-center justify-between p-4 bg-slate-50 rounded-2xl group hover:bg-slate-100 transition-all"
-                       >
-                          <div className="flex items-center gap-3">
-                             <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", highContrast ? "bg-primary text-white" : "bg-white text-slate-400 shadow-sm")}>
-                                <Check size={20} />
-                             </div>
-                             <div className="text-left">
-                                <p className="text-sm font-bold text-slate-700">Chế độ tương phản cao</p>
-                                <p className="text-xs text-slate-400 font-medium">Giúp chữ rõ nét và dễ đọc hơn.</p>
-                             </div>
-                          </div>
-                          <div className={cn("w-12 h-6 rounded-full transition-all relative", highContrast ? "bg-primary" : "bg-slate-200")}>
-                             <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", highContrast ? "right-1" : "left-1")} />
-                          </div>
-                       </button>
+                  </div>
 
-                       <button 
-                         onClick={() => setAutoScroll(!autoScroll)}
-                         className="w-full flex items-center justify-between p-4 bg-slate-50 rounded-2xl group hover:bg-slate-100 transition-all"
-                       >
-                          <div className="flex items-center gap-3">
-                             <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", autoScroll ? "bg-primary text-white" : "bg-white text-slate-400 shadow-sm")}>
-                                <ScrollText size={20} />
-                             </div>
-                             <div className="text-left">
-                                <p className="text-sm font-bold text-slate-700">Tự cuộn phụ đề</p>
-                                <p className="text-xs text-slate-400 font-medium">Tự động bám theo lời nói trong khi phát video.</p>
-                             </div>
-                          </div>
-                          <div className={cn("w-12 h-6 rounded-full transition-all relative", autoScroll ? "bg-primary" : "bg-slate-200")}>
-                             <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", autoScroll ? "right-1" : "left-1")} />
-                          </div>
-                       </button>
+                  {/* Auto Scroll */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary shadow-sm border border-slate-100">
+                          <ScrollText size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900">Tự động cuộn phụ đề</h3>
+                          <p className="text-xs text-slate-400 font-medium">Phụ đề sẽ tự động cuộn theo tiến trình video.</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setAutoScroll(!autoScroll)}
+                        className={cn(
+                          "w-14 h-8 rounded-full transition-all relative p-1",
+                          autoScroll ? "bg-primary" : "bg-slate-200"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-6 h-6 bg-white rounded-full shadow-md transition-all",
+                          autoScroll ? "translate-x-6" : "translate-x-0"
+                        )} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -319,7 +398,7 @@ function SettingsPageContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-transparent px-8 py-8 text-sm font-bold text-slate-500">Đang tải cài đặt...</div>}>
+    <Suspense fallback={<div className="p-8 text-center font-bold text-slate-400">Đang tải...</div>}>
       <SettingsPageContent />
     </Suspense>
   );
