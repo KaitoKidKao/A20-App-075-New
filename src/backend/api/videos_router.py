@@ -202,8 +202,12 @@ async def upload_video(
             title=file.filename,
             content_type="video",
             status="queued",
+            duration_minutes=0,
             sort_order=0
         )
+        duration_seconds = VideoService.get_video_duration_seconds(video_path)
+        if duration_seconds:
+            lesson.duration_minutes = max(1, int(round(duration_seconds / 60)))
         session.add(lesson)
         session.commit()
 

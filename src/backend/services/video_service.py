@@ -96,6 +96,27 @@ class VideoService:
             raise ValueError("Uploaded video exceeds allowed duration.")
 
     @classmethod
+    def get_video_duration_seconds(cls, video_path: Path) -> float | None:
+        if not video_path.exists():
+            return None
+        command = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(video_path),
+        ]
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            value = float((result.stdout or "0").strip() or 0)
+            return value if value > 0 else None
+        except Exception:
+            return None
+
+    @classmethod
     async def download_video(cls, url: str, video_id: str) -> Path:
         """
         Tải video từ URL sử dụng yt-dlp.
