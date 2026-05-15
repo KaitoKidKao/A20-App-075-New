@@ -130,8 +130,6 @@ Run API, worker, frontend, PostgreSQL and Redis:
 docker compose up --build
 ```
 
-Run database migrations inside the backend container:
-
 ```bash
 docker compose exec backend python -m alembic upgrade head
 ```
@@ -184,4 +182,23 @@ Optional script:
 
 ```bash
 python src/backend/tests/verify_ai_features.py
+```
+
+## QA / Release Checklist
+
+Phase 9 QA docs:
+
+- `docs/phase9_qa_release_checklist.md`
+- `docs/phase9_user_testing_script.md`
+
+Run smoke test against local API/frontend:
+
+```powershell
+.\scripts\qa_smoke.ps1
+```
+
+Run smoke test for API only:
+
+```powershell
+.\scripts\qa_smoke.ps1 -SkipFrontend
 ```
