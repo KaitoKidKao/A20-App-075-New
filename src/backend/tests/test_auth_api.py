@@ -27,11 +27,11 @@ def test_register_login_and_cookie_auth_flow():
     client = _build_test_client()
 
     register_payload = {
-        "email": "admin@example.com",
+        "email": "student@example.com",
         "password": "Password123",
         "confirm_password": "Password123",
-        "full_name": "Admin User",
-        "role": "admin",
+        "full_name": "Student User",
+        "role": "student",
     }
     register_res = client.post("/api/auth/register", json=register_payload)
     assert register_res.status_code == 200
@@ -39,11 +39,11 @@ def test_register_login_and_cookie_auth_flow():
 
     login_res = client.post(
         "/api/auth/login",
-        data={"username": "admin@example.com", "password": "Password123"},
+        data={"username": "student@example.com", "password": "Password123"},
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert login_res.status_code == 200
-    assert login_res.json()["role"] == "admin"
+    assert login_res.json()["role"] == "student"
     cookie_header = login_res.headers.get("set-cookie", "")
     assert "access_token=" in cookie_header
     assert "HttpOnly" in cookie_header

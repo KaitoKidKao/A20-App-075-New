@@ -1,173 +1,220 @@
 'use client';
 
-import React from 'react';
-import { 
-  BookOpen, 
-  Library, 
-  CheckCircle, 
-  Heart
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BookOpen, CheckCircle, Clock, Library, RotateCcw, Trophy } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { api, type Course, type StudentDashboard } from '@/lib/api';
 
-export default function StudentDashboard() {
-  const stats = [
-    { label: 'Khóa học đã đăng ký', value: '12', icon: Library, bg: 'bg-primary/10', text: 'text-primary' },
-    { label: 'Khóa học đang học', value: '03', icon: BookOpen, bg: 'bg-primary/10', text: 'text-primary' },
-    { label: 'Khóa học đã hoàn thành', value: '10', icon: CheckCircle, bg: 'bg-emerald-50', text: 'text-emerald-600' },
-  ];
+function formatHours(seconds: number) {
+  return `${Math.round((seconds / 3600) * 10) / 10}h`;
+}
 
-  const recentEnrolled = [
-    { 
-      id: 1, 
-      title: 'Information About UI/UX Design Degree', 
-      instructor: 'David Benitez', 
-      category: 'Design', 
-      thumbnail: 'https://images.unsplash.com/photo-1586717791821-3f44a563de4c?q=80&w=2070&auto=format&fit=crop' 
-    },
-    { 
-      id: 2, 
-      title: 'Wordpress for Beginners - Master Wordpress Quickly', 
-      instructor: 'Ana Reyes', 
-      category: 'Wordpress', 
-      thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop' 
-    },
-    { 
-      id: 3, 
-      title: 'Sketch from A to Z (2024): Become an app designer', 
-      instructor: 'Andrew Pirtle', 
-      category: 'Design', 
-      thumbnail: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?q=80&w=2070&auto=format&fit=crop' 
-    },
-  ];
+export default function StudentDashboardPage() {
+  const [dashboard, setDashboard] = useState<StudentDashboard | null>(null);
+  const [publicCourses, setPublicCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [dashboardData, coursesData] = await Promise.all([
+          api.student.getDashboard(),
+          api.courses.listCourses(),
+        ]);
+        setDashboard(dashboardData);
+        setPublicCourses(coursesData);
+      } catch (err) {
+        console.error('Failed to fetch student dashboard', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const stats = useMemo(() => {
+    const s = dashboard?.stats;
+    return [
+      { label: 'Khóa đang học', value: s?.active_courses ?? 0, icon: Library },
+      { label: 'Bài đã hoàn thành', value: s?.completed_lessons ?? 0, icon: CheckCircle },
+      { label: 'Thời lượng đã xem', value: formatHours(s?.total_watch_seconds ?? 0), icon: Clock },
+      { label: 'Điểm quiz TB', value: `${s?.average_quiz_score ?? 0}%`, icon: Trophy },
+    ];
+  }, [dashboard]);
+
+  const availableCourses = useMemo(() => {
+    const enrolledIds = new Set((dashboard?.courses ?? []).map((course) => course.course_id));
+    return publicCourses.filter((course) => !enrolledIds.has(course.id) && course.title !== 'Tu hoc ca nhan');
+  }, [dashboard, publicCourses]);
+
+  const fallbackCourseImage = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
 
   return (
     <div className="min-h-screen bg-bg-main">
-      <div className="px-6 md:px-10 py-10 max-w-7xl mx-auto space-y-10">
-
-        {/* Simple Quiz Banner */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between">
-           <div className="space-y-1">
-              <h3 className="text-sm font-black text-slate-900">Quiz: Build Responsive Real World</h3>
-              <p className="text-xs font-bold text-slate-400">Đã trả lời: 15/22</p>
-           </div>
-           <button className="bg-primary text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all">
-              Tiếp tục quiz
-           </button>
+      <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">Learning dashboard</p>
+          <h1 className="text-3xl font-black text-slate-900">Tiến độ học tập</h1>
+          <p className="max-w-2xl text-sm font-bold text-slate-500">
+            Theo dõi khóa đang học, bài chưa hoàn thành, thẻ ghi nhớ và kết quả quiz gần đây.
+          </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((stat, i) => (
-            <div key={i} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center gap-6">
-              <div className={`${stat.bg} ${stat.text} w-14 h-14 rounded-xl flex items-center justify-center shrink-0`}>
-                <stat.icon size={28} />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#FF4F6E]/10 text-[#FF4F6E]">
+                <stat.icon size={20} />
               </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
-                <h3 className="text-2xl font-black text-slate-900">{stat.value}</h3>
-              </div>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{stat.label}</p>
+              <p className="mt-1 text-2xl font-black text-slate-900">{stat.value}</p>
             </div>
           ))}
         </div>
 
-        {/* Recently Enrolled Courses */}
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-black text-slate-900">Khóa học mới đăng ký</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {recentEnrolled.map((course) => (
-              <div key={course.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group">
-                <div className="relative aspect-video">
-                  <Image 
-                    src={course.thumbnail} 
-                    alt={course.title} 
-                    fill 
-                    unoptimized={true}
-                    className="object-cover" 
-                  />
-                  <div className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-rose-500 shadow-sm cursor-pointer">
-                     <Heart size={14} />
-                  </div>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                       <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden relative">
-                          <Image src={`https://i.pravatar.cc/100?img=${course.id + 10}`} alt={course.instructor} fill className="object-cover" />
-                       </div>
-                       <span className="text-xs font-bold text-slate-400">{course.instructor}</span>
-                    </div>
-                    <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border border-slate-100 rounded">
-                      {course.category}
-                    </span>
-                  </div>
-                  <h4 className="font-black text-sm text-slate-900 leading-snug line-clamp-2 min-h-[40px]">
-                    {course.title}
-                  </h4>
-                  <Link 
-                    href={`/student/courses/${course.id}`}
-                    className="block w-full bg-slate-900 text-white text-[11px] font-black py-2.5 rounded-lg text-center uppercase tracking-widest hover:bg-primary transition-colors"
-                  >
-                    Xem khóa học
-                  </Link>
-                </div>
-              </div>
+        {loading ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-64 animate-pulse rounded-2xl border border-slate-100 bg-white" />
             ))}
           </div>
-        </section>
-
-        {/* Bottom Lists */}
-        <div className="grid lg:grid-cols-2 gap-8 pb-10">
-          {/* Recent Courses */}
-          <section className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-black text-slate-900 mb-8 border-b border-slate-50 pb-4">Khóa học gần đây</h3>
-            <div className="space-y-6">
-              {[
-                { name: 'Build Responsive Real World Websites..', sub: 'Information About UI/UX Design Degree', prog: 95 },
-                { name: 'Wordpress for Beginners', sub: 'Wordpress for Beginners - Master Wordpress Quickly', prog: 85 },
-                { name: 'Information About UI/UX Design Degree', sub: 'Information About UI/UX Design Degree', prog: 85 },
-                { name: 'Sketch from A to Z (2026)', sub: 'Wordpress for Beginners - Master Wordpress Quickly', prog: 95 },
-                { name: 'Become an app designer', sub: 'Information About UI/UX Design Degree', prog: 95 },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between gap-4 group cursor-pointer">
-                  <div className="min-w-0">
-                    <p className="font-black text-sm text-slate-900 truncate group-hover:text-primary transition-colors">{item.name}</p>
-                    <p className="text-[11px] text-slate-400 font-bold truncate mt-0.5">{item.sub}</p>
+        ) : !dashboard || dashboard.courses.length === 0 ? (
+          <div className="rounded-2xl border border-slate-100 bg-white p-12 text-center">
+            <p className="font-bold text-slate-400">Bạn chưa có khóa học nào.</p>
+            <Link href="/student/upload" className="mt-4 inline-block font-black text-[#FF4F6E] underline">
+              Tải video lên để bắt đầu
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-3">
+            <section className="space-y-5 lg:col-span-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-black text-slate-900">Khóa học của tôi</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {dashboard.courses.map((course) => (
+                  <div key={course.course_id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                    <div className="relative aspect-video">
+                      <Image
+                        src={course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop'}
+                        alt={course.title}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="space-y-4 p-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="line-clamp-2 text-sm font-black text-slate-900">{course.title}</h3>
+                        <span className="rounded-full bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          {course.enrollment_status}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="mb-2 flex justify-between text-xs font-bold text-slate-500">
+                          <span>{course.completed_lessons}/{course.total_lessons} bài</span>
+                          <span>{course.progress_percent}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-slate-100">
+                          <div className="h-full rounded-full bg-[#FF4F6E]" style={{ width: `${course.progress_percent}%` }} />
+                        </div>
+                      </div>
+                      <Link
+                        href={`/student/courses/${course.course_id}`}
+                        className="block rounded-xl bg-slate-900 py-3 text-center text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-[#FF4F6E]"
+                      >
+                        Xem khóa học
+                      </Link>
+                    </div>
                   </div>
-                  <div className="w-10 h-10 shrink-0 border-4 border-emerald-500 border-t-transparent rounded-full flex items-center justify-center text-[10px] font-black text-emerald-600">
-                    {item.prog}%
+                ))}
+              </div>
+            </section>
+
+            <aside className="space-y-6">
+              <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                <h2 className="mb-5 flex items-center gap-2 text-lg font-black text-slate-900">
+                  <RotateCcw size={18} className="text-[#FF4F6E]" />
+                  Học tiếp
+                </h2>
+                <div className="space-y-4">
+                  {dashboard.incomplete_lessons.length === 0 ? (
+                    <p className="text-sm font-bold text-slate-400">Không có bài đang dở.</p>
+                  ) : dashboard.incomplete_lessons.map((lesson) => (
+                    <Link key={lesson.lesson_id} href={`/student/videos/${lesson.lesson_id}`} className="block rounded-xl border border-slate-100 p-4 transition-colors hover:border-[#FF4F6E]/30 hover:bg-rose-50/40">
+                      <p className="line-clamp-1 text-sm font-black text-slate-900">{lesson.title}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        {lesson.progress_percent}% - tiếp tục tại {Math.round(lesson.last_position_seconds)}s
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                <h2 className="mb-5 flex items-center gap-2 text-lg font-black text-slate-900">
+                  <BookOpen size={18} className="text-[#FF4F6E]" />
+                  Quiz gần đây
+                </h2>
+                <div className="space-y-4">
+                  {dashboard.quiz_scores.length === 0 ? (
+                    <p className="text-sm font-bold text-slate-400">Chưa có kết quả quiz.</p>
+                  ) : dashboard.quiz_scores.map((quiz) => (
+                    <div key={`${quiz.quiz_id}-${quiz.created_at}`} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-slate-900">{quiz.title}</p>
+                        <p className="text-xs font-bold text-slate-500">{quiz.status}</p>
+                      </div>
+                      <span className="text-sm font-black text-[#FF4F6E]">{quiz.score}%</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </aside>
+          </div>
+        )}
+
+        {!loading && availableCourses.length > 0 && (
+          <section className="space-y-5">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">Course catalog</p>
+              <h2 className="text-xl font-black text-slate-900">Khóa học có thể đăng ký</h2>
+              <p className="text-sm font-bold text-slate-500">
+                Các khóa học được giáo viên hoặc admin xuất bản sẽ xuất hiện ở đây để học sinh đăng ký.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {availableCourses.map((course) => (
+                <div key={course.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                  <div className="relative aspect-video">
+                    <Image
+                      src={course.thumbnail_url || course.cover_image_url || course.thumb || fallbackCourseImage}
+                      alt={course.title}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="space-y-4 p-5">
+                    <div>
+                      <h3 className="line-clamp-2 text-sm font-black text-slate-900">{course.title}</h3>
+                      {course.description && (
+                        <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-slate-500">{course.description}</p>
+                      )}
+                    </div>
+                    <Link
+                      href={`/student/courses/${course.id}`}
+                      className="block rounded-xl bg-[#FF4F6E] py-3 text-center text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-slate-900"
+                    >
+                      Xem và đăng ký
+                    </Link>
                   </div>
                 </div>
               ))}
             </div>
           </section>
-
-          {/* Latest Quizzes */}
-          <section className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-black text-slate-900 mb-8 border-b border-slate-50 pb-4">Quiz mới nhất</h3>
-            <div className="space-y-6">
-              {[
-                { name: 'Sketch from A to Z (2024)', sub: 'Correct Answer : 15/22 • Date : 15 Jan 2025', prog: 95, color: 'text-emerald-500' },
-                { name: 'Build Responsive Real World', sub: 'Correct Answer : 18/22 • Date : 04 Jan 2025', prog: 98, color: 'text-emerald-500' },
-                { name: 'UI/UX Design Degree', sub: 'Correct Answer : 25/30 • Date : 26 Dec 2024', prog: 80, color: 'text-emerald-500' },
-                { name: 'Build Responsive Real World', sub: 'Correct Answer : 15/20 • Date : 10 Dec 2024', prog: 85, color: 'text-emerald-500' },
-                { name: 'Become an app designer', sub: 'Correct Answer : 12/20 • Date : 27 Nov 2024', prog: 20, color: 'text-rose-500' },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between gap-4 group cursor-pointer">
-                  <div className="min-w-0">
-                    <p className="font-black text-sm text-slate-900 truncate group-hover:text-primary transition-colors">{item.name}</p>
-                    <p className="text-[11px] text-slate-400 font-bold truncate mt-0.5">{item.sub}</p>
-                  </div>
-                  <div className={`w-10 h-10 shrink-0 border-4 border-current rounded-full flex items-center justify-center text-[10px] font-black ${item.color}`}>
-                    {item.prog}%
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+        )}
       </div>
     </div>
   );

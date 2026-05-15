@@ -7,7 +7,7 @@ from sqlmodel import SQLModel, Session, create_engine
 from src.backend.auth import create_access_token, get_password_hash
 from src.backend.database import get_session
 from src.backend.main import app
-from src.backend.models import User
+from src.backend.models import Role, User
 
 
 def _build_client():
@@ -25,12 +25,17 @@ def _build_client():
     app.dependency_overrides[get_session] = override_get_session
 
     with Session(engine) as session:
+        student_role = Role(name="student")
+        session.add(student_role)
+        session.commit()
+        session.refresh(student_role)
+
         session.add(
             User(
                 email="student@example.com",
                 password_hash=get_password_hash("Password123"),
                 full_name="Student",
-                role="student",
+                role_id=student_role.id,
             )
         )
         session.commit()
@@ -57,7 +62,7 @@ def test_upload_returns_queue_mode(monkeypatch):
         "/api/videos/upload",
         files={"file": ("lesson.mp4", b"dummy-bytes", "video/mp4")},
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     body = response.json()
     assert body["queue_mode"] == "background_tasks"
     assert body["status"] == "processing"

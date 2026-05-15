@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   UploadCloud, 
   FileVideo, 
@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { api } from '@/lib/api';
+import Link from 'next/link';
+import { api, type MyVideo } from '@/lib/api';
 
 export default function UploadVideo() {
   const router = useRouter();
@@ -20,6 +21,19 @@ export default function UploadVideo() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
+  const [myVideos, setMyVideos] = useState<MyVideo[]>([]);
+
+  const loadMyVideos = async () => {
+    try {
+      setMyVideos(await api.videos.listMyVideos());
+    } catch (err) {
+      console.error('Failed to load uploaded videos', err);
+    }
+  };
+
+  useEffect(() => {
+    loadMyVideos();
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -51,6 +65,7 @@ export default function UploadVideo() {
       clearInterval(progressInterval);
 
       if (data.video_id) {
+        await loadMyVideos();
         setUploadProgress(100);
         setTimeout(() => {
           router.push(`/student/videos/${data.video_id}/processing`);
@@ -208,6 +223,51 @@ export default function UploadVideo() {
 
           </div>
         </div>
+
+        <section className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Video tự học đã tải lên</h2>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                Truy xuất lại các video bạn đã upload để học tiếp
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={loadMyVideos}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+            >
+              Tải lại
+            </button>
+          </div>
+          {myVideos.length === 0 ? (
+            <div className="rounded-2xl bg-slate-50 p-8 text-center text-sm font-bold text-slate-400">
+              Chưa có video tự học nào.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {myVideos.map((video) => (
+                <Link
+                  key={video.id}
+                  href={video.status === 'completed' ? `/student/videos/${video.id}` : `/student/videos/${video.id}/processing`}
+                  className="rounded-2xl border border-slate-100 p-5 transition-colors hover:border-[#FF4F6E]/30 hover:bg-rose-50/40"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-slate-900">{video.title}</p>
+                      <p className="mt-1 text-xs font-bold text-slate-400">
+                        {video.completion_status} • {video.progress_percent}%
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      {video.status}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

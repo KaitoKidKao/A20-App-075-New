@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { User, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
@@ -18,6 +18,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student');
+  const [allowRoleRegistration, setAllowRoleRegistration] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     fullName?: string;
@@ -28,6 +30,14 @@ export default function RegisterPage() {
   }>({});
 
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  useEffect(() => {
+    const loadRegistrationConfig = async () => {
+      const config = await api.auth.getRegistrationConfig();
+      setAllowRoleRegistration(config.allow_role_registration);
+    };
+    loadRegistrationConfig();
+  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +72,7 @@ export default function RegisterPage() {
         email: trimmedEmail,
         password,
         confirm_password: confirmPassword,
+        role: allowRoleRegistration ? role : 'student',
       });
 
       setIsSuccess(true);
@@ -181,6 +192,24 @@ export default function RegisterPage() {
           </div>
           {fieldErrors.confirmPassword && <p className="text-xs font-bold text-red-600">{fieldErrors.confirmPassword}</p>}
         </div>
+
+        {allowRoleRegistration && (
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Vai trò dev/test</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'student' | 'teacher' | 'admin')}
+              className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#FF4F6E]/5 focus:bg-white focus:border-[#FF4F6E]/30 transition-all font-bold text-slate-700"
+            >
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+              <option value="admin">Admin</option>
+            </select>
+            <p className="text-[11px] font-bold text-amber-600">
+              Chỉ dùng cho môi trường dev/test. Production nên tắt đăng ký role công khai.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-4 pt-2">
           <div className="flex items-start gap-3">
