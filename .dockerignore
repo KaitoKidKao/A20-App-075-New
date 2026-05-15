@@ -1,0 +1,15 @@
+.git
+.github
+.ai-log
+.pytest_cache
+__pycache__
+*.pyc
+venv
+.venv
+src/frontend/node_modules
+src/frontend/.next
+data/uploads
+data/*.db
+backend.log
+next-dev.out.log
+next-dev.err.log

@@ -1,81 +1,247 @@
-# Starter Code App
+# A20-App-075
 
-A template for building AI Agents in Python.
+Backend + frontend system for video upload, transcription, and AI-generated learning artifacts.
 
-## Structure
+## Tech Stack
 
+- Backend: FastAPI (`src/backend/main.py`)
+- Frontend: Next.js (`src/frontend`)
+- Python requirement: `>=3.12` (from `pyproject.toml`)
+
+## Project Structure
+
+```text
+src/
+  backend/
+    main.py
+    config.py
+    auth.py
+    database.py
+    models/
+    schemas/
+    services/
+    tests/
+  frontend/
+requirements.txt
+pyproject.toml
+README.md
 ```
-├── src/
-│   ├── agent.py        # Main agent loop
-│   ├── tools.py        # Tool definitions
-│   └── config.py       # Configuration
-├── scripts/
-│   ├── setup_hooks.sh  # One-time hook installer
-│   ├── log_hook.py     # AI tool hook handler
-│   └── submit_log.py   # Submits logs on git push
-├── requirements.txt
-├── .env.example
-├── AGENTS.md           # Rules for using AI coding agents
-├── JOURNAL.md          # Weekly journal — product journey & learnings
-└── WORKLOG.md          # Technical decisions, task assignments, brainstorming
-```
 
-## Getting Started
+## Setup
 
-### 1. Clone and setup
+### 1. Environment Variables
+
+Copy `.env.example` to `.env` at repo root and fill in values as needed.
+
+Minimum for local dev:
 
 ```bash
-git clone <repo-url>
-cd <repo>
-
-# Install git pre-push hook (required, run once)
-bash scripts/setup_hooks.sh
+OPENAI_API_KEY=...
+SECRET_KEY=...
 ```
 
-### 2. Configure environment
+Recommended local defaults (SQLite + optional Redis queue) are already in `.env.example`:
+
+- `DATABASE_URL=sqlite:///data/lecture_platform.db`
+- `REDIS_URL=redis://localhost:6379/0`
+- `NEXT_PUBLIC_API_URL=http://localhost:8000`
+
+Generate a strong `SECRET_KEY`:
 
 ```bash
-cp .env.example .env
+python -c "import secrets; print(secrets.token_urlsafe(64))"
 ```
 
-Open `.env` and fill in your `ANTHROPIC_API_KEY`. The `AI_LOG_*` variables are pre-filled.
-
-### 3. Run
+### 2. Backend
 
 ```bash
 python -m venv venv
-source venv/bin/activate       # Linux/Mac
-# or: venv\Scripts\activate    # Windows
-
-pip install -r requirements.txt
-python -m src.agent
+# Windows PowerShell
+.\venv\Scripts\Activate.ps1
+python -m pip install -U pip
+python -m pip install -r requirements.txt
 ```
 
-## Weekly Journal
+Initialize database schema:
 
-Update **[JOURNAL.md](./JOURNAL.md)** at the end of every week to document your product-building journey:
+```bash
+python -m alembic upgrade head
+```
 
-- Features shipped
-- AI tools used and how they helped
-- Hardest problem of the week and how you solved it
-- What you'd do differently
-- Plan for next week
+### 3. Frontend
 
-> JOURNAL.md **must be updated** before each PR. It is your learning record for the course.
+```bash
+cd src/frontend
+npm install
+```
 
-## Worklog
+## Run
 
-Update **[WORKLOG.md](./WORKLOG.md)** whenever your team makes a technical decision or changes direction:
+### Backend API
 
-- **Technical decisions** — why did you choose this approach over alternatives?
-- **Task assignments** — who does what, by when
-- **Brainstorming** — options considered, pros/cons, conclusion
-- **Important bugs** — root cause and fix
+```bash
+python -m uvicorn src.backend.main:app --reload --host 0.0.0.0 --port 8000
+```
 
-See each file for the format and examples.
+Health check:
 
-## AI Logging
+```bash
+GET /api/health
+GET /api/health/deep
+GET /api/metrics
+```
 
-Prompts and tool calls are **automatically logged** when you use any supported AI tool (Claude Code, Cursor, Codex, Gemini, Copilot). No manual steps needed after running `setup_hooks.sh`.
+### Frontend
 
-See [AGENTS.md](./AGENTS.md) for details.
+```bash
+cd src/frontend
+npm run dev
+```
+
+Open:
+
+- Frontend: `http://localhost:3000`
+- Backend docs: `http://localhost:8000/docs`
+
+## Optional: Redis Queue Worker (Windows-friendly)
+
+If `REDIS_URL` is set, the backend will enqueue jobs to RQ. You must run Redis + a worker.
+
+Run Redis with Docker:
+
+```bash
+docker run -d --name a20-redis -p 6379:6379 redis:7-alpine
+```
+
+Run the RQ worker (in another terminal):
+
+```bash
+.\venv\Scripts\Activate.ps1
+python -m src.backend.scripts.run_worker
+```
+
+If Redis is unavailable, the backend falls back to FastAPI `BackgroundTasks` for local development.
+
+## Role Management (Production-safe)
+
+Do not toggle role registration by editing `.env` during daily operations.
+
+Use admin runtime settings + user role management instead:
+
+1. Public register default role:
+- Keep `ALLOW_PUBLIC_ROLE_REGISTRATION=false` in production `.env`.
+- Public users register as `student` by default.
+
+2. Runtime setting stored in database:
+- `GET /api/admin/settings`
+- `PATCH /api/admin/settings` with payload:
+
+```json
+{ "allow_public_role_registration": false }
+```
+
+3. Promote/Demote user roles from admin:
+- `GET /api/admin/users`
+- `PATCH /api/admin/users/{user_id}/role` with payload:
+
+```json
+{ "role": "teacher" }
+```
+
+or
+
+```json
+{ "role": "admin" }
+```
+
+Notes:
+- These endpoints are admin-only.
+- Admin self-demotion protection is enabled.
+- Frontend `/admin` now verifies role from `GET /api/auth/me` before rendering.
+
+Quick CLI (no manual SQL) to set a specific existing user as admin:
+
+```bash
+python -m src.backend.scripts.promote_user_role --email kaitokao1412@gmail.com --role admin
+```
+
+## Docker / Production-like Local Stack
+
+Run API, worker, frontend, PostgreSQL and Redis:
+
+```bash
+docker compose up --build
+```
+
+```bash
+docker compose exec backend python -m alembic upgrade head
+```
+
+Optional MinIO profile for local object storage experiments:
+
+```bash
+docker compose --profile storage up --build
+```
+
+Useful URLs:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+- Deep health: `http://localhost:8000/api/health/deep`
+- Metrics JSON: `http://localhost:8000/api/metrics`
+
+## Reprocess A Video
+
+Use this when an uploaded video exists but transcript/AI output must be regenerated:
+
+```bash
+POST /api/videos/{video_id}/reprocess
+```
+
+The pipeline uses these main statuses:
+
+```text
+queued -> extracting_audio -> transcribing -> translating -> ai_processing -> completed
+```
+
+## Tests
+
+Run backend tests from repository root:
+
+```bash
+python -m pytest -q src/backend/tests
+```
+
+Run frontend checks:
+
+```bash
+cd src/frontend
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Optional script:
+
+```bash
+python src/backend/tests/verify_ai_features.py
+```
+
+## QA / Release Checklist
+
+Phase 9 QA docs:
+
+- `docs/phase9_qa_release_checklist.md`
+- `docs/phase9_user_testing_script.md`
+
+Run smoke test against local API/frontend:
+
+```powershell
+.\scripts\qa_smoke.ps1
+```
+
+Run smoke test for API only:
+
+```powershell
+.\scripts\qa_smoke.ps1 -SkipFrontend
+```
