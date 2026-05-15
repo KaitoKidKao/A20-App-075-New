@@ -227,6 +227,7 @@ async def get_course_detail(
     progress_map = {row.lesson_id: row for row in progress_rows}
     completed_count = len([p for p in progress_rows if p.completion_status == "completed"])
     progress_percent = round((completed_count / len(lesson_ids)) * 100) if lesson_ids else 0
+    is_course_completed = bool(lesson_ids) and completed_count >= len(lesson_ids)
 
     first_lesson_id = str(lessons[0].id) if lessons else None
     next_lesson_id = None
@@ -260,6 +261,7 @@ async def get_course_detail(
             "enrollment_status": enrollment.enrollment_status if enrollment else "not_enrolled",
             "progress_percent": progress_percent,
             "completed_lessons": completed_count,
+            "is_course_completed": is_course_completed,
             "first_lesson_id": first_lesson_id,
             "next_lesson_id": next_lesson_id or first_lesson_id,
         },
@@ -277,6 +279,8 @@ async def get_course_detail(
                         "status": lesson.status,
                         "sort_order": lesson.sort_order,
                         "duration_minutes": lesson.duration_minutes,
+                        "progress_percent": int((progress_map.get(lesson.id).progress_percent if progress_map.get(lesson.id) else 0) or 0),
+                        "completion_status": (progress_map.get(lesson.id).completion_status if progress_map.get(lesson.id) else "not_started"),
                         "is_completed": bool(
                             progress_map.get(lesson.id)
                             and progress_map[lesson.id].completion_status == "completed"

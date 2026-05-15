@@ -226,6 +226,8 @@ export interface StudentCourseDetailLesson {
   status: string;
   sort_order: number;
   duration_minutes: number;
+  progress_percent: number;
+  completion_status: string;
   is_completed: boolean;
 }
 
@@ -259,6 +261,7 @@ export interface StudentCourseDetail {
     enrollment_status: string;
     progress_percent: number;
     completed_lessons: number;
+    is_course_completed: boolean;
     first_lesson_id?: string | null;
     next_lesson_id?: string | null;
   };

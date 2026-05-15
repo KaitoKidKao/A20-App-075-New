@@ -66,6 +66,24 @@ export default function CourseDetailPage() {
     return target ? `/student/videos/${target}` : '';
   }, [detail]);
 
+  const cta = useMemo(() => {
+    if (!detail) return { label: 'Enroll Now', href: '', enrolled: false };
+    if (!detail.user_context.is_enrolled) {
+      return { label: 'Enroll Now', href: '', enrolled: false };
+    }
+    if (detail.user_context.is_course_completed) {
+      return {
+        label: 'Review Course',
+        href: detail.user_context.first_lesson_id ? `/student/videos/${detail.user_context.first_lesson_id}` : '',
+        enrolled: true,
+      };
+    }
+    if (detail.user_context.progress_percent > 0) {
+      return { label: 'Continue Learning', href: nextLessonUrl, enrolled: true };
+    }
+    return { label: 'Start Learning', href: nextLessonUrl, enrolled: true };
+  }, [detail, nextLessonUrl]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-slate-400">Loading course...</div>;
   if (!detail) return <div className="min-h-screen flex items-center justify-center font-black text-rose-500">Course not found.</div>;
 
@@ -126,9 +144,11 @@ export default function CourseDetailPage() {
             </div>
 
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-black text-slate-900">Course content</h2>
-                <div className="text-sm font-bold text-slate-500">{stats.total_lessons} lectures • {formatDuration(stats.total_duration_minutes)}</div>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-black text-slate-900">Course content</h2>
+                <div className="text-sm font-bold text-slate-500">
+                  {stats.total_lessons} lectures • {formatDuration(stats.total_duration_minutes)} • {user_context.completed_lessons}/{stats.total_lessons} completed
+                </div>
               </div>
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 {modules.map((module) => (
@@ -156,7 +176,9 @@ export default function CourseDetailPage() {
                             <div className="flex items-center gap-4">
                               <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border border-slate-100 rounded">{lesson.content_type}</span>
                               <span className="text-xs font-bold text-slate-400">{lesson.duration_minutes || 0}m</span>
-                              <span className="text-xs font-bold text-slate-400">{lesson.is_completed ? 'completed' : lesson.status}</span>
+                              <span className="text-xs font-bold text-slate-400">
+                                {lesson.is_completed ? 'completed' : `${lesson.progress_percent || 0}%`}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -178,10 +200,10 @@ export default function CourseDetailPage() {
               </div>
 
               <div className="p-8 space-y-6">
-                {user_context.is_enrolled ? (
-                  nextLessonUrl ? (
-                    <Link href={nextLessonUrl} className="block w-full py-4 rounded-xl bg-emerald-500 text-white font-black text-sm text-center uppercase tracking-widest">
-                      Continue Learning
+                {cta.enrolled ? (
+                  cta.href ? (
+                    <Link href={cta.href} className="block w-full py-4 rounded-xl bg-emerald-500 text-white font-black text-sm text-center uppercase tracking-widest">
+                      {cta.label}
                     </Link>
                   ) : (
                     <div className="block w-full py-4 rounded-xl bg-slate-200 text-slate-500 font-black text-sm text-center uppercase tracking-widest">
@@ -222,4 +244,3 @@ export default function CourseDetailPage() {
     </div>
   );
 }
-
