@@ -180,7 +180,7 @@ async def _create_lesson_and_enqueue(
         raise HTTPException(status_code=400, detail=f"Unsupported file format for {file.filename}.")
     content_type = (file.content_type or "").lower()
     if content_type not in config.ALLOWED_VIDEO_MIME_TYPES:
-        raise HTTPException(status_code=400, detail=f"Unsupported video MIME type for {file.filename}.")
+        raise HTTPException(status_code=400, detail="Unsupported video MIME type.")
 
     filename = f"{lesson_id}{ext}"
     max_upload_size_bytes = config.MAX_UPLOAD_SIZE_MB * 1024 * 1024
@@ -251,6 +251,8 @@ async def upload_video(
             session=session,
             background_tasks=background_tasks,
         )
+    except HTTPException:
+        raise
     except ValueError as exc:
         message = str(exc)
         status_code = 413 if "size" in message.lower() or "large" in message.lower() else 400

@@ -6,7 +6,6 @@ import {
   User, 
   Settings as SettingsIcon, 
   Pencil, 
-  Type, 
   Sun, 
   Moon, 
   Eye, 
@@ -55,7 +54,6 @@ function SettingsPageContent() {
   }, []);
 
   const { 
-    fontSize, setFontSize, 
     theme, setTheme, 
     highContrast, setHighContrast, 
     autoScroll, setAutoScroll,
@@ -75,10 +73,11 @@ function SettingsPageContent() {
     setIsSaving(true);
     try {
       await api.student.updateProfile({ 
-        full_name: editedName.trim(),
         bio: editedBio.trim(),
-        learning_goals: editedGoals.trim()
-      } as any);
+        learning_goals: editedGoals.trim(),
+        // @ts-expect-error - full_name is handled by the same endpoint in backend
+        full_name: editedName.trim(),
+      } as Parameters<typeof api.student.updateProfile>[0]);
       
       if (user) {
         useAppStore.getState().login({ ...user, name: editedName.trim() });

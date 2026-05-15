@@ -196,6 +196,7 @@ export interface AdminDashboard {
     active_courses: number;
     lesson_count: number;
     failed_video_jobs: number;
+    processing_video_jobs: number;
     completion_rate: number;
   };
   failed_jobs: {
@@ -446,10 +447,22 @@ export const api = {
         throw new Error(error.detail || "Login failed.");
       }
       const data = await res.json();
+      let fullName = "";
+      try {
+        const meRes = await apiFetch("/api/auth/me", { headers: buildHeaders() });
+        if (meRes.ok) {
+          const me = (await meRes.json()) as SessionUser;
+          fullName = (me.full_name || "").trim();
+        }
+      } catch {
+        // ignore and fallback to email prefix
+      }
+
+      const fallbackName = credentials.email.split("@")[0] || "User";
       return {
         ...data,
         user: {
-          name: credentials.email.split("@")[0] || "User",
+          name: fullName || fallbackName,
           email: credentials.email,
           role: data.role || "student",
         },

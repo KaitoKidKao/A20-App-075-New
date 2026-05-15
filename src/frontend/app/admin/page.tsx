@@ -91,6 +91,7 @@ export default function AdminDashboardPage() {
 
   const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
   const lastJobStatusRef = useRef<Record<string, string>>({});
+  const READY_NOTIFIED_KEY = 'app_notified_ready_jobs';
 
   const appendNotification = useCallback((message: string) => {
     if (typeof window === 'undefined') return;
@@ -112,6 +113,30 @@ export default function AdminDashboardPage() {
     ].slice(0, 30);
     window.localStorage.setItem(key, JSON.stringify(next));
     window.dispatchEvent(new Event('app-notification-updated'));
+  }, []);
+
+  const hasReadyNotified = useCallback((jobId: string): boolean => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const raw = window.localStorage.getItem(READY_NOTIFIED_KEY);
+      const saved = raw ? (JSON.parse(raw) as string[]) : [];
+      return saved.includes(jobId);
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const markReadyNotified = useCallback((jobId: string) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(READY_NOTIFIED_KEY);
+      const saved = raw ? (JSON.parse(raw) as string[]) : [];
+      if (saved.includes(jobId)) return;
+      const next = [...saved, jobId].slice(-500);
+      window.localStorage.setItem(READY_NOTIFIED_KEY, JSON.stringify(next));
+    } catch {
+      // ignore storage issues
+    }
   }, []);
 
 
@@ -185,22 +210,25 @@ export default function AdminDashboardPage() {
     for (const job of recentJobs) {
       const current = (job.status || '').toLowerCase();
       const previous = (lastJobStatusRef.current[job.job_id] || '').toLowerCase();
-      if (readyStates.has(current) && !readyStates.has(previous)) {
+      const shouldNotifyTransition = readyStates.has(current) && !readyStates.has(previous);
+      const alreadyNotified = hasReadyNotified(job.job_id);
+      if (shouldNotifyTransition && !alreadyNotified) {
         const msg = `Video "${job.lesson_title}" đã xử lý xong.`;
         setPublishMessage(msg);
         appendNotification(msg);
+        markReadyNotified(job.job_id);
       }
       lastJobStatusRef.current[job.job_id] = job.status || '';
     }
-  }, [recentJobs, appendNotification]);
+  }, [recentJobs, appendNotification, hasReadyNotified, markReadyNotified]);
 
   const selectedCourse = useMemo(
     () => adminCourses.find((course) => course.id === selectedCourseId),
     [adminCourses, selectedCourseId]
   );
   const kpis = useMemo(() => {
-    const processingCount = recentJobs.filter((job) =>
-      ['pending', 'queued', 'processing', 'transcribing', 'extracting_audio', 'ai_processing', 'translating'].includes(job.status)
+    const processingCount = recentJobs.filter(
+      (job) => toBadgeStatus(job.status) === 'processing'
     ).length;
     const activeUsers = dashboard?.stats.student_count ?? 0;
     const failedJobs = dashboard?.stats.failed_video_jobs ?? 0;
@@ -418,12 +446,12 @@ export default function AdminDashboardPage() {
         <div className="absolute top-0 right-0 w-[500px] h-full bg-[#FF4F6E]/10 rounded-l-[100px] -z-0" />
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF4F6E]/20 text-[#FF4F6E] rounded-full text-[10px] font-bold uppercase tracking-widest">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF4F6E]/20 text-[#FF4F6E] rounded-full text-xs font-black uppercase tracking-widest">
               <ShieldCheck size={12} fill="currentColor" />
-              Quyền Quản trị viên
+              QUYỀN QUẢN TRỊ VIÊN
             </div>
-            <h1 className="text-4xl font-extrabold text-white leading-tight">
-              Quản trị <span className="text-[#FF4F6E] italic">Hệ thống</span>
+            <h1 className="text-4xl font-black text-white leading-tight uppercase">
+              QUẢN TRỊ <span className="text-[#FF4F6E]">HỆ THỐNG</span>
             </h1>
             <p className="text-white/50 font-bold max-w-md text-sm">
               Quản lý khóa học, người dùng và theo dõi tiến trình xử lý video.
@@ -442,8 +470,8 @@ export default function AdminDashboardPage() {
             <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3', kpi.bg, kpi.color)}>
               <kpi.icon size={22} />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{kpi.label}</p>
-            <p className="text-2xl font-extrabold text-slate-900 tracking-tight">{kpi.value}</p>
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">{kpi.label}</p>
+            <p className="text-2xl font-black text-slate-900 tracking-tight">{kpi.value}</p>
           </div>
         ))}
       </div>
@@ -455,7 +483,7 @@ export default function AdminDashboardPage() {
             <UploadCloud size={20} />
           </div>
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900">Đăng tải Bài giảng</h2>
+            <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">ĐĂNG TẢI BÀI GIẢNG</h2>
             <p className="text-xs font-bold text-slate-400">Thêm video mới vào hệ thống</p>
           </div>
         </div>
@@ -586,7 +614,7 @@ export default function AdminDashboardPage() {
                <Database size={20} />
              </div>
              <div>
-               <h2 className="text-xl font-extrabold text-slate-900">Quản lý Khóa học</h2>
+               <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">QUẢN LÝ KHÓA HỌC</h2>
                <p className="text-xs font-bold text-slate-400">Danh sách tất cả các khóa học trong hệ thống</p>
              </div>
           </div>
@@ -596,10 +624,10 @@ export default function AdminDashboardPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Khóa học</th>
-                <th className="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Thống kê</th>
-                <th className="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Trạng thái</th>
-                <th className="px-8 py-4 text-right text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Hành động</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Khóa học</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Thống kê</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Trạng thái</th>
+                <th className="px-8 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -619,7 +647,7 @@ export default function AdminDashboardPage() {
                       onClick={() => handleToggleCourseVisibility(course)}
                       disabled={updatingCourseId === course.id}
                       className={cn(
-                        "flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all",
+                        "flex items-center gap-2 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all",
                         course.is_published ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                       )}
                     >
@@ -663,7 +691,7 @@ export default function AdminDashboardPage() {
               <Settings size={28} />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold">Cài đặt Đăng ký Vai trò</h2>
+              <h2 className="text-xl font-black uppercase tracking-wide">CÀI ĐẶT ĐĂNG KÝ VAI TRÒ</h2>
               <p className="text-sm font-bold text-white/50">Cho phép người dùng chọn vai trò (Admin/Teacher) khi đăng ký</p>
             </div>
           </div>
@@ -689,7 +717,7 @@ export default function AdminDashboardPage() {
                <Users size={20} />
              </div>
              <div>
-               <h2 className="text-xl font-extrabold text-slate-900">Quản lý Người dùng</h2>
+               <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">QUẢN LÝ NGƯỜI DÙNG</h2>
                <p className="text-xs font-bold text-slate-400">Phân quyền và quản lý tài khoản người dùng</p>
              </div>
           </div>
@@ -697,9 +725,9 @@ export default function AdminDashboardPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Người dùng</th>
-                  <th className="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Vai trò</th>
-                  <th className="px-8 py-4 text-right text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Hành động</th>
+                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Người dùng</th>
+                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Vai trò</th>
+                  <th className="px-8 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -722,7 +750,7 @@ export default function AdminDashboardPage() {
                         disabled={updatingRoleUserId === user.id}
                         onChange={(e) => handleChangeUserRole(user.id, e.target.value as 'student' | 'teacher' | 'admin')}
                         className={cn(
-                          "rounded-xl border-none px-4 py-2 text-xs font-extrabold transition-all outline-none",
+                          "rounded-xl border-none px-4 py-2 text-xs font-black transition-all outline-none",
                           user.role === 'admin' ? "bg-rose-50 text-rose-600" : user.role === 'teacher' ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-600"
                         )}
                       >
@@ -756,7 +784,7 @@ export default function AdminDashboardPage() {
                <Clock size={20} />
              </div>
              <div>
-               <h2 className="text-xl font-extrabold text-slate-900">Nhật ký Xử lý Video</h2>
+               <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">NHẬT KÝ XỬ LÝ VIDEO</h2>
                <p className="text-xs font-bold text-slate-400">Trạng thái đồng bộ và xử lý AI của các video</p>
              </div>
           </div>
@@ -772,10 +800,10 @@ export default function AdminDashboardPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">ID</th>
-                <th className="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Video / Bài giảng</th>
-                <th className="px-8 py-4 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Trạng thái</th>
-                <th className="px-8 py-4 text-right text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Hành động</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">ID</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Video / Bài giảng</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Trạng thái</th>
+                <th className="px-8 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">

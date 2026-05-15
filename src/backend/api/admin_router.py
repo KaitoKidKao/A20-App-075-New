@@ -92,6 +92,23 @@ async def get_admin_dashboard(
     failed_jobs = session.exec(
         failed_job_statement.order_by(ProcessingJob.updated_at.desc()).limit(10)
     ).all()
+    total_failed_jobs = session.exec(failed_job_statement).all()
+
+    processing_statuses = {
+        "pending",
+        "queued",
+        "processing",
+        "transcribing",
+        "extracting_audio",
+        "ai_processing",
+        "translating",
+        "running",
+        "in_progress",
+    }
+    processing_job_statement = select(ProcessingJob).where(ProcessingJob.status.in_(processing_statuses))
+    if role_name != "admin":
+        processing_job_statement = processing_job_statement.where(ProcessingJob.lesson_id.in_(lesson_ids))
+    total_processing_jobs = len(session.exec(processing_job_statement).all())
 
     popular_rows = session.exec(
         select(UserProgress.lesson_id, func.count(UserProgress.id).label("views"))
@@ -110,7 +127,8 @@ async def get_admin_dashboard(
             "student_count": len({str(e.user_id) for e in enrollments}),
             "active_courses": len(courses),
             "lesson_count": len(lessons),
-            "failed_video_jobs": len(failed_jobs),
+            "failed_video_jobs": len(total_failed_jobs),
+            "processing_video_jobs": total_processing_jobs,
             "completion_rate": completion_rate,
         },
         "failed_jobs": [
