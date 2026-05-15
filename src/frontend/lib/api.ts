@@ -13,6 +13,13 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
+export interface SessionUser {
+  id: string;
+  email: string;
+  full_name?: string;
+  role: "student" | "admin" | "teacher";
+}
+
 export interface VSLInfo {
   mouth?: string;
   body?: string;
@@ -123,6 +130,7 @@ export interface Lesson {
   content_type: "video" | "article" | "quiz";
   status: string;
   sort_order: number;
+  duration_minutes?: number;
 }
 
 export interface Enrollment {
@@ -211,6 +219,79 @@ export interface AdminDashboard {
   }[];
 }
 
+export interface AdminCourseWorkspace {
+  id: string;
+  title: string;
+  description?: string | null;
+  is_published: boolean;
+  created_at: string;
+  modules: {
+    id: string;
+    title: string;
+    description?: string | null;
+    sort_order: number;
+    created_at: string;
+    lessons: {
+      id: string;
+      title: string;
+      status: string;
+      content_type: string;
+      sort_order: number;
+      created_at: string;
+    }[];
+  }[];
+}
+
+export interface AdminRecentJob {
+  job_id: string;
+  lesson_id: string;
+  lesson_title: string;
+  module_id?: string | null;
+  module_title?: string | null;
+  course_id?: string | null;
+  course_title?: string | null;
+  job_type: string;
+  status: string;
+  progress: number;
+  attempts: number;
+  error_message?: string | null;
+  updated_at: string;
+  created_at: string;
+}
+
+export interface AdminModelHealth {
+  window_hours: number;
+  estimated: boolean;
+  updated_at: string;
+  metrics: {
+    wer_vi_score: number;
+    wer_en_score: number;
+    asr_latency_ms: number;
+    queue_depth: number;
+    failure_rate_percent: number;
+    request_error_rate_percent: number;
+  };
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name?: string | null;
+  role: "student" | "teacher" | "admin";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MyVideo {
+  id: string;
+  title: string;
+  status: string;
+  created_at: string;
+  video_url?: string | null;
+  progress_percent: number;
+  completion_status: string;
+}
+
 const buildHeaders = (isMultipart = false): HeadersInit => {
   const headers: HeadersInit = {};
   if (!isMultipart) headers["Content-Type"] = "application/json";
@@ -227,6 +308,18 @@ async function apiFetch(path: string, init: RequestInit = {}) {
 
 export const api = {
   auth: {
+    async getRegistrationConfig(): Promise<{ allow_role_registration: boolean; roles: Array<"student" | "admin" | "teacher"> }> {
+      const res = await apiFetch("/api/auth/registration-config", { headers: buildHeaders() });
+      if (!res.ok) return { allow_role_registration: false, roles: ["student"] };
+      return res.json();
+    },
+
+    async me(): Promise<SessionUser> {
+      const res = await apiFetch("/api/auth/me", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Unauthenticated");
+      return res.json();
+    },
+
     async register(data: {
       email: string;
       password: string;
@@ -279,21 +372,6 @@ export const api = {
   },
 
   videos: {
-    async upload(file: File) {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await apiFetch("/api/videos/upload", {
-        method: "POST",
-        headers: buildHeaders(true),
-        body: formData,
-      });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.detail || "Video upload failed.");
-      }
-      return res.json();
-    },
-
     async processUrl(url: string) {
       const res = await apiFetch("/api/videos/process-url", {
         method: "POST",
@@ -407,11 +485,34 @@ export const api = {
       return res.json();
     },
 
-    async listMyVideos() {
+    async listMyVideos(): Promise<MyVideo[]> {
       const res = await apiFetch("/api/videos/me", { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch my videos.");
       return res.json();
-    }
+    },
+    async delete(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}`, {
+        method: "DELETE",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete video.");
+      return res.json();
+    },
+    async upload(file: File, moduleId?: string) {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (moduleId) formData.append("module_id", moduleId);
+      const res = await apiFetch("/api/videos/upload", {
+        method: "POST",
+        headers: buildHeaders(true),
+        body: formData,
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Video upload failed.");
+      }
+      return res.json();
+    },
   },
 
   courses: {
@@ -439,6 +540,29 @@ export const api = {
     async listLessons(moduleId: string): Promise<Lesson[]> {
       const res = await apiFetch(`/api/courses/modules/${moduleId}/lessons`, { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch lessons.");
+      return res.json();
+    },
+    async getLesson(lessonId: string): Promise<Lesson> {
+      const res = await apiFetch(`/api/courses/lessons/${lessonId}`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch lesson details.");
+      return res.json();
+    },
+    async createCourse(data: { title: string; description?: string; is_published?: boolean }) {
+      const res = await apiFetch("/api/courses/", {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create course.");
+      return res.json();
+    },
+    async createModule(courseId: string, data: { title: string; description?: string; sort_order?: number }) {
+      const res = await apiFetch(`/api/courses/${courseId}/modules`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create module.");
       return res.json();
     }
   },
@@ -531,13 +655,55 @@ export const api = {
       }
       return res.json();
     }
-  }
-  ,
+  },
 
   admin: {
     async getDashboard(): Promise<AdminDashboard> {
       const res = await apiFetch("/api/admin/dashboard", { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch admin dashboard.");
+      return res.json();
+    },
+    async listRecentJobs(limit = 10): Promise<AdminRecentJob[]> {
+      const res = await apiFetch(`/api/admin/jobs/recent?limit=${limit}`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch recent jobs.");
+      return res.json();
+    },
+    async getModelHealth(): Promise<AdminModelHealth> {
+      const res = await apiFetch("/api/admin/model-health", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch model health.");
+      return res.json();
+    },
+    async listCourses(): Promise<AdminCourseWorkspace[]> {
+      const res = await apiFetch("/api/admin/courses", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch admin courses.");
+      return res.json();
+    },
+    async listUsers(): Promise<AdminUser[]> {
+      const res = await apiFetch("/api/admin/users", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch users.");
+      return res.json();
+    },
+    async getSettings(): Promise<{ allow_public_role_registration: boolean }> {
+      const res = await apiFetch("/api/admin/settings", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch settings.");
+      return res.json();
+    },
+    async updateSettings(settings: { allow_public_role_registration: boolean }) {
+      const res = await apiFetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify(settings),
+      });
+      if (!res.ok) throw new Error("Failed to update settings.");
+      return res.json();
+    },
+    async updateUserRole(userId: string, role: "student" | "teacher" | "admin") {
+      const res = await apiFetch(`/api/admin/users/${userId}/role`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error("Failed to update user role.");
       return res.json();
     }
   }

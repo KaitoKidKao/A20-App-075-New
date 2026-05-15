@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BookOpen, CheckCircle, Clock, Library, RotateCcw, Trophy } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { api, type StudentDashboard } from '@/lib/api';
+import { api, type Course, type StudentDashboard } from '@/lib/api';
 
 function formatHours(seconds: number) {
   return `${Math.round((seconds / 3600) * 10) / 10}h`;
@@ -12,12 +12,18 @@ function formatHours(seconds: number) {
 
 export default function StudentDashboardPage() {
   const [dashboard, setDashboard] = useState<StudentDashboard | null>(null);
+  const [publicCourses, setPublicCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setDashboard(await api.student.getDashboard());
+        const [dashboardData, coursesData] = await Promise.all([
+          api.student.getDashboard(),
+          api.courses.listCourses(),
+        ]);
+        setDashboard(dashboardData);
+        setPublicCourses(coursesData);
       } catch (err) {
         console.error('Failed to fetch student dashboard', err);
       } finally {
@@ -36,6 +42,13 @@ export default function StudentDashboardPage() {
       { label: 'Điểm quiz TB', value: `${s?.average_quiz_score ?? 0}%`, icon: Trophy },
     ];
   }, [dashboard]);
+
+  const availableCourses = useMemo(() => {
+    const enrolledIds = new Set((dashboard?.courses ?? []).map((course) => course.course_id));
+    return publicCourses.filter((course) => !enrolledIds.has(course.id) && course.title !== 'Tu hoc ca nhan');
+  }, [dashboard, publicCourses]);
+
+  const fallbackCourseImage = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
 
   return (
     <div className="min-h-screen bg-bg-main">
@@ -160,6 +173,47 @@ export default function StudentDashboardPage() {
               </section>
             </aside>
           </div>
+        )}
+
+        {!loading && availableCourses.length > 0 && (
+          <section className="space-y-5">
+            <div className="flex flex-col gap-1">
+              <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">Course catalog</p>
+              <h2 className="text-xl font-black text-slate-900">Khóa học có thể đăng ký</h2>
+              <p className="text-sm font-bold text-slate-500">
+                Các khóa học được giáo viên hoặc admin xuất bản sẽ xuất hiện ở đây để học sinh đăng ký.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {availableCourses.map((course) => (
+                <div key={course.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                  <div className="relative aspect-video">
+                    <Image
+                      src={course.thumbnail_url || course.cover_image_url || course.thumb || fallbackCourseImage}
+                      alt={course.title}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="space-y-4 p-5">
+                    <div>
+                      <h3 className="line-clamp-2 text-sm font-black text-slate-900">{course.title}</h3>
+                      {course.description && (
+                        <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-slate-500">{course.description}</p>
+                      )}
+                    </div>
+                    <Link
+                      href={`/student/courses/${course.id}`}
+                      className="block rounded-xl bg-[#FF4F6E] py-3 text-center text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-slate-900"
+                    >
+                      Xem và đăng ký
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
       </div>
     </div>

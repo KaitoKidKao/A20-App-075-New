@@ -1,17 +1,17 @@
-"""Add educational hierarchy and persistent quizzes
+"""initial_fresh
 
-Revision ID: d1b32a19289c
-Revises: 0001_initial_schema
-Create Date: 2026-05-14 17:15:28.267161
+Revision ID: d85c29762d28
+Revises: 
+Create Date: 2026-05-15 16:14:24.794949
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 import sqlmodel
 
+
 # revision identifiers, used by Alembic.
-revision = 'd1b32a19289c'
-down_revision = '0001_initial_schema'
+revision = 'd85c29762d28'
+down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -72,7 +72,7 @@ def upgrade() -> None:
     sa.Column('avatar_url', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('bio', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('learning_goals', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('certifications', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('certifications', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
@@ -105,7 +105,8 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('module_id', sa.Uuid(), nullable=False),
     sa.Column('title', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('lesson_type', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('content_type', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('duration_minutes', sa.Integer(), nullable=False),
     sa.Column('is_preview', sa.Boolean(), nullable=False),
     sa.Column('sort_order', sa.Integer(), nullable=False),
@@ -121,7 +122,7 @@ def upgrade() -> None:
     sa.Column('attachment_url', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('avatar_video_url', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('handsign_manifest_url', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('ai_analysis', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('ai_analysis', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['lesson_id'], ['lessons.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -144,6 +145,8 @@ def upgrade() -> None:
     sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('progress', sa.Integer(), nullable=False),
     sa.Column('error_message', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('attempts', sa.Integer(), nullable=False),
+    sa.Column('last_failed_at', sa.DateTime(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['lesson_id'], ['lessons.id'], ),
@@ -165,6 +168,9 @@ def upgrade() -> None:
     sa.Column('lesson_id', sa.Uuid(), nullable=False),
     sa.Column('completion_status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('progress_percent', sa.Integer(), nullable=False),
+    sa.Column('watched_seconds', sa.Integer(), nullable=False),
+    sa.Column('last_position_seconds', sa.Integer(), nullable=False),
+    sa.Column('duration_seconds', sa.Integer(), nullable=False),
     sa.Column('last_accessed_at', sa.DateTime(), nullable=False),
     sa.Column('completed_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['lesson_id'], ['lessons.id'], ),
@@ -178,7 +184,7 @@ def upgrade() -> None:
     sa.Column('explanation', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('difficulty', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('question_type', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('question_data', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('question_data', sa.JSON(), nullable=True),
     sa.Column('score', sa.Integer(), nullable=False),
     sa.Column('sort_order', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['quiz_id'], ['quizzes.id'], ),
@@ -190,7 +196,7 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('score', sa.Numeric(), nullable=False),
     sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('answers_json', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('answers_json', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['quiz_id'], ['quizzes.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
@@ -201,6 +207,10 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('flashcard_id', sa.Uuid(), nullable=False),
     sa.Column('box_level', sa.Integer(), nullable=False),
+    sa.Column('review_count', sa.Integer(), nullable=False),
+    sa.Column('correct_count', sa.Integer(), nullable=False),
+    sa.Column('incorrect_count', sa.Integer(), nullable=False),
+    sa.Column('status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('next_review_at', sa.DateTime(), nullable=False),
     sa.Column('last_reviewed_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['flashcard_id'], ['flashcards.id'], ),
@@ -215,85 +225,11 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['question_id'], ['questions.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.drop_index(op.f('ix_processingjob_job_type'), table_name='processingjob')
-    op.drop_index(op.f('ix_processingjob_status'), table_name='processingjob')
-    op.drop_index(op.f('ix_processingjob_video_id'), table_name='processingjob')
-    op.drop_table('processingjob')
-    op.drop_table('lecturedata')
-    op.drop_index(op.f('ix_flashcard_video_id'), table_name='flashcard')
-    op.drop_table('flashcard')
-    op.drop_index(op.f('ix_video_user_id'), table_name='video')
-    op.drop_table('video')
-    op.drop_index(op.f('ix_user_email'), table_name='user')
-    op.drop_table('user')
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.create_table('user',
-    sa.Column('id', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('email', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('password_hash', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('full_name', sa.VARCHAR(), autoincrement=False, nullable=True),
-    sa.Column('role', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.PrimaryKeyConstraint('id', name=op.f('user_pkey'))
-    )
-    op.create_index(op.f('ix_user_email'), 'user', ['email'], unique=True)
-    op.create_table('processingjob',
-    sa.Column('id', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('video_id', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('job_type', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('status', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('progress', sa.INTEGER(), autoincrement=False, nullable=False),
-    sa.Column('error_message', sa.VARCHAR(), autoincrement=False, nullable=True),
-    sa.Column('attempts', sa.INTEGER(), autoincrement=False, nullable=False),
-    sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.Column('updated_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.ForeignKeyConstraint(['video_id'], ['video.id'], name=op.f('processingjob_video_id_fkey')),
-    sa.PrimaryKeyConstraint('id', name=op.f('processingjob_pkey'))
-    )
-    op.create_index(op.f('ix_processingjob_video_id'), 'processingjob', ['video_id'], unique=False)
-    op.create_index(op.f('ix_processingjob_status'), 'processingjob', ['status'], unique=False)
-    op.create_index(op.f('ix_processingjob_job_type'), 'processingjob', ['job_type'], unique=False)
-    op.create_table('video',
-    sa.Column('id', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('user_id', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('title', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('storage_path', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('status', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], name=op.f('video_user_id_fkey')),
-    sa.PrimaryKeyConstraint('id', name=op.f('video_pkey'))
-    )
-    op.create_index(op.f('ix_video_user_id'), 'video', ['user_id'], unique=False)
-    op.create_table('lecturedata',
-    sa.Column('video_id', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('transcript', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True),
-    sa.Column('summary', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True),
-    sa.Column('timeline', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True),
-    sa.Column('highlights', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True),
-    sa.Column('questions', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True),
-    sa.Column('briefing', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True),
-    sa.Column('visual_data', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True),
-    sa.Column('cover_image_url', sa.VARCHAR(), autoincrement=False, nullable=True),
-    sa.Column('handsign_data', postgresql.JSON(astext_type=sa.Text()), autoincrement=False, nullable=True),
-    sa.Column('updated_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.ForeignKeyConstraint(['video_id'], ['video.id'], name=op.f('lecturedata_video_id_fkey')),
-    sa.PrimaryKeyConstraint('video_id', name=op.f('lecturedata_pkey'))
-    )
-    op.create_table('flashcard',
-    sa.Column('id', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('video_id', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('front', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('back', sa.VARCHAR(), autoincrement=False, nullable=False),
-    sa.Column('hint', sa.VARCHAR(), autoincrement=False, nullable=True),
-    sa.Column('created_at', postgresql.TIMESTAMP(), autoincrement=False, nullable=False),
-    sa.ForeignKeyConstraint(['video_id'], ['video.id'], name=op.f('flashcard_video_id_fkey')),
-    sa.PrimaryKeyConstraint('id', name=op.f('flashcard_pkey'))
-    )
-    op.create_index(op.f('ix_flashcard_video_id'), 'flashcard', ['video_id'], unique=False)
     op.drop_table('question_options')
     op.drop_table('user_flashcard_progress')
     op.drop_table('quiz_attempts')

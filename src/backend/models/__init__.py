@@ -5,6 +5,7 @@ from .progress import Enrollment, UserProgress
 from .assessment import Quiz, Question, QuestionOption, QuizAttempt
 from .flashcard import Flashcard, UserFlashcardProgress
 from .job import ProcessingJob
+from .system_setting import SystemSetting
 
 __all__ = [
     "Role", "User", "Profile",
@@ -13,5 +14,6 @@ __all__ = [
     "Enrollment", "UserProgress",
     "Quiz", "Question", "QuestionOption", "QuizAttempt",
     "Flashcard", "UserFlashcardProgress",
-    "ProcessingJob"
+    "ProcessingJob",
+    "SystemSetting",
 ]

@@ -3,20 +3,34 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 
 from src.backend import config
-from src.backend.auth import create_access_token, get_password_hash, verify_password
+from src.backend.auth import create_access_token, get_current_user, get_password_hash, verify_password
 from src.backend.database import get_session
 from src.backend.models import User, Role, Profile
 from src.backend.schemas.auth import Token, UserCreate
 from src.backend.services.rate_limit_service import rate_limit
+from src.backend.services.settings_service import get_allow_public_role_registration
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 ALLOWED_ROLES = {"student", "teacher", "admin"}
 
 
+def _allow_public_role_registration(session: Session) -> bool:
+    return get_allow_public_role_registration(session)
+
+
+@router.get("/registration-config")
+async def registration_config(session: Session = Depends(get_session)):
+    allow_public_role_registration = _allow_public_role_registration(session)
+    return {
+        "allow_role_registration": allow_public_role_registration,
+        "roles": sorted(ALLOWED_ROLES) if allow_public_role_registration else ["student"],
+    }
+
+
 @router.post("/register", response_model=dict)
 async def register(user_data: UserCreate, session: Session = Depends(get_session)):
-    role_name = (user_data.role or "student").strip().lower()
+    role_name = (user_data.role or "student").strip().lower() if _allow_public_role_registration(session) else "student"
     if role_name not in ALLOWED_ROLES:
         raise HTTPException(status_code=400, detail="Invalid user role.")
 
@@ -89,3 +103,14 @@ async def logout(response: Response):
         samesite=config.AUTH_COOKIE_SAMESITE,
     )
     return {"message": "Logged out"}
+
+
+@router.get("/me")
+async def me(current_user: User = Depends(get_current_user)):
+    role_name = (current_user.role.name if current_user.role else "student").lower()
+    return {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "role": role_name,
+    }

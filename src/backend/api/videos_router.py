@@ -2,7 +2,8 @@ import os
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy import delete
 from sqlmodel import Session, select
 
 from src.backend import config
@@ -17,7 +18,14 @@ from src.backend.models import (
     Course,
     Lesson,
     ContentMetadata,
+    Quiz,
+    Question,
+    QuestionOption,
+    QuizAttempt,
+    UserFlashcardProgress,
     Module,
+    Enrollment,
+    UserProgress,
 )
 from src.backend.services.avatar_video_service import AvatarVideoService
 from src.backend.services.handsign_animation_service import (
@@ -82,6 +90,18 @@ def _ensure_handsign_editor(video_id: str, current_user: User, session: Session)
     raise HTTPException(status_code=403, detail="Only teacher/admin can review VSL gloss.")
 
 
+def _ensure_lesson_owner_or_admin(video_id: str, current_user: User, session: Session) -> Lesson:
+    lesson = check_video_access(video_id, current_user, session)
+    role_name = (current_user.role.name if current_user.role else "student").lower()
+    if role_name == "admin":
+        return lesson
+    if lesson.module:
+        course = session.get(Course, lesson.module.course_id)
+        if course and course.instructor_id == current_user.id:
+            return lesson
+    raise HTTPException(status_code=403, detail="Only course teacher/admin can delete lesson videos.")
+
+
 async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
     # Get or create "Chung" category
     category = session.exec(select(Category).where(Category.name == "Chung")).first()
@@ -93,7 +113,7 @@ async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
     # Get or create "Quick Uploads" course
     course = session.exec(
         select(Course).where(
-            Course.title == "Khoa hoc tai len nhanh",
+            Course.title == "Tu hoc ca nhan",
             Course.instructor_id == user_id,
         )
     ).first()
@@ -101,8 +121,9 @@ async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
         course = Course(
             category_id=category.id,
             instructor_id=user_id,
-            title="Khoa hoc tai len nhanh",
-            description="Khoa hoc chua cac video tai len nhanh",
+            title="Tu hoc ca nhan",
+            description="Khu tu hoc ca nhan cho video hoc sinh tu tai len",
+            is_published=False,
         )
         session.add(course)
         session.flush()
@@ -120,11 +141,35 @@ async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
     
     return module
 
+
+def _role_name(user: User) -> str:
+    return (user.role.name if user.role else "student").lower()
+
+
+def _ensure_teacher_module(module_id: str | None, current_user: User, session: Session) -> Module | None:
+    if not module_id:
+        return None
+    try:
+        module_uuid = uuid.UUID(str(module_id))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid module id.")
+
+    module = session.get(Module, module_uuid)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found.")
+
+    course = session.get(Course, module.course_id)
+    role_name = _role_name(current_user)
+    if role_name == "admin" or (course and course.instructor_id == current_user.id):
+        return module
+    raise HTTPException(status_code=403, detail="Only course teacher/admin can upload lesson videos.")
+
 @router.post("/upload")
 async def upload_video(
     background_tasks: BackgroundTasks,
     _: None = Depends(rate_limit("upload", config.UPLOAD_RATE_LIMIT)),
     file: UploadFile = File(...),
+    module_id: str | None = Form(default=None),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -148,7 +193,8 @@ async def upload_video(
         )
         VideoService.validate_video_duration(video_path)
         
-        module = await get_or_create_default_hierarchy(session, current_user.id)
+        target_module = _ensure_teacher_module(module_id, current_user, session)
+        module = target_module or await get_or_create_default_hierarchy(session, current_user.id)
         
         lesson = Lesson(
             id=lesson_uuid,
@@ -160,6 +206,17 @@ async def upload_video(
         )
         session.add(lesson)
         session.commit()
+
+        if target_module is None and _role_name(current_user) == "student":
+            existing_enrollment = session.exec(
+                select(Enrollment).where(
+                    Enrollment.user_id == current_user.id,
+                    Enrollment.course_id == module.course_id,
+                )
+            ).first()
+            if not existing_enrollment:
+                session.add(Enrollment(user_id=current_user.id, course_id=module.course_id))
+                session.commit()
         
         upsert_job_status(session, lesson_id=lesson_id, status="queued", progress=0)
         mode = enqueue_pipeline_job(
@@ -228,12 +285,31 @@ async def list_my_videos(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    # In the new schema, "my videos" could mean lessons in courses I teach
-    # or lessons in courses I am enrolled in.
-    # For now, let's just list all lessons in the "Quick Uploads" course for this user
     module = await get_or_create_default_hierarchy(session, current_user.id)
-    statement = select(Lesson).where(Lesson.module_id == module.id)
-    return session.exec(statement).all()
+    lessons = session.exec(
+        select(Lesson).where(Lesson.module_id == module.id).order_by(Lesson.created_at.desc())
+    ).all()
+    result = []
+    for lesson in lessons:
+        content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == lesson.id)).first()
+        progress = session.exec(
+            select(UserProgress).where(
+                UserProgress.user_id == current_user.id,
+                UserProgress.lesson_id == lesson.id,
+            )
+        ).first()
+        result.append(
+            {
+                "id": str(lesson.id),
+                "title": lesson.title,
+                "status": lesson.status,
+                "created_at": lesson.created_at,
+                "video_url": content.video_url if content else None,
+                "progress_percent": progress.progress_percent if progress else 0,
+                "completion_status": progress.completion_status if progress else "not_started",
+            }
+        )
+    return result
 
 
 @router.post("/{video_id}/reprocess")
@@ -555,3 +631,51 @@ async def get_handsign_export_manifest(
     raw = normalize_glosses(ai_analysis.get("handsign_data", []))
     segments = expand_handsign_segments(raw)
     return build_render_manifest(video_id, segments)
+
+
+@router.delete("/{video_id}")
+async def delete_video(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    lesson = _ensure_lesson_owner_or_admin(video_id, current_user, session)
+    lesson_uuid = lesson.id
+
+    # Best-effort filesystem cleanup
+    content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)).first()
+    candidate_paths: list[Path] = []
+    if content and content.video_url:
+        candidate_paths.append(Path(content.video_url))
+    candidate_paths.extend(VideoService.UPLOAD_DIR.glob(f"{video_id}.*"))
+    for file_path in candidate_paths:
+        try:
+            if file_path.exists() and file_path.is_file():
+                file_path.unlink()
+        except Exception:
+            # Ignore file cleanup failures; DB cleanup still proceeds.
+            pass
+
+    flashcards = session.exec(select(Flashcard).where(Flashcard.lesson_id == lesson_uuid)).all()
+    flashcard_ids = [flashcard.id for flashcard in flashcards]
+    if flashcard_ids:
+        session.exec(delete(UserFlashcardProgress).where(UserFlashcardProgress.flashcard_id.in_(flashcard_ids)))
+    session.exec(delete(Flashcard).where(Flashcard.lesson_id == lesson_uuid))
+
+    quizzes = session.exec(select(Quiz).where(Quiz.lesson_id == lesson_uuid)).all()
+    quiz_ids = [quiz.id for quiz in quizzes]
+    if quiz_ids:
+        question_ids = [question.id for question in session.exec(select(Question).where(Question.quiz_id.in_(quiz_ids))).all()]
+        if question_ids:
+            session.exec(delete(QuestionOption).where(QuestionOption.question_id.in_(question_ids)))
+        session.exec(delete(Question).where(Question.quiz_id.in_(quiz_ids)))
+        session.exec(delete(QuizAttempt).where(QuizAttempt.quiz_id.in_(quiz_ids)))
+        session.exec(delete(Quiz).where(Quiz.lesson_id == lesson_uuid))
+
+    session.exec(delete(UserProgress).where(UserProgress.lesson_id == lesson_uuid))
+    session.exec(delete(ProcessingJob).where(ProcessingJob.lesson_id == lesson_uuid))
+    session.exec(delete(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid))
+    session.delete(lesson)
+    session.commit()
+
+    return {"video_id": video_id, "deleted": True}
