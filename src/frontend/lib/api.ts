@@ -838,6 +838,31 @@ export const api = {
       });
       if (!res.ok) throw new Error("Failed to update user role.");
       return res.json();
+    },
+    async deleteUser(userId: string) {
+      const res = await apiFetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete user.");
+      return res.json();
+    },
+    async updateCourse(courseId: string, data: { title?: string; description?: string; is_published?: boolean }) {
+      const res = await apiFetch(`/api/admin/courses/${courseId}`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update course.");
+      return res.json();
+    },
+    async deleteCourse(courseId: string) {
+      const res = await apiFetch(`/api/admin/courses/${courseId}`, {
+        method: "DELETE",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete course.");
+      return res.json();
     }
   }
 };

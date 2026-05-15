@@ -59,6 +59,12 @@ class AdminRoleUpdatePayload(BaseModel):
     role: Literal["student", "teacher", "admin"]
 
 
+class AdminCourseUpdatePayload(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    is_published: bool | None = None
+
+
 @router.get("/dashboard")
 async def get_admin_dashboard(
     current_user: User = Depends(get_current_user),
@@ -412,3 +418,74 @@ async def update_user_role(
         "role": target_role_name,
         "updated_at": target_user.updated_at,
     }
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    _require_admin(current_user)
+    target_user = session.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    if str(target_user.id) == str(current_user.id):
+        raise HTTPException(status_code=400, detail="You cannot delete your own account.")
+
+    session.delete(target_user)
+    session.commit()
+    return {"ok": True, "message": f"User {user_id} deleted."}
+
+
+@router.patch("/courses/{course_id}")
+async def update_course(
+    course_id: uuid.UUID,
+    payload: AdminCourseUpdatePayload,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    _require_teacher_or_admin(current_user)
+    course = session.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found.")
+
+    # Authorization check for teachers
+    role_name = (current_user.role.name if current_user.role else "student").lower()
+    if role_name != "admin" and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this course.")
+
+    if payload.title is not None:
+        course.title = payload.title
+    if payload.description is not None:
+        course.description = payload.description
+    if payload.is_published is not None:
+        course.is_published = payload.is_published
+
+    course.updated_at = utc_now()
+    session.add(course)
+    session.commit()
+    session.refresh(course)
+    return course
+
+
+@router.delete("/courses/{course_id}")
+async def delete_course(
+    course_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    _require_teacher_or_admin(current_user)
+    course = session.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found.")
+
+    # Authorization check for teachers
+    role_name = (current_user.role.name if current_user.role else "student").lower()
+    if role_name != "admin" and course.instructor_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this course.")
+
+    session.delete(course)
+    session.commit()
+    return {"ok": True, "message": f"Course {course_id} and all related content deleted."}
