@@ -1,4 +1,4 @@
-import type { HandsSignGloss, HandsSignSegment } from '@/lib/api';
+import type { HandsSignGloss, HandsSignSegment, VSLInfo } from '@/lib/api';
 
 /**
  * Khớp logic backend `expand_handsign_segments`.

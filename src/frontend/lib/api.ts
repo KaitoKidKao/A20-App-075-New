@@ -30,6 +30,14 @@ export interface HandsSignGloss {
   vsl_info: VSLInfo | null;
 }
 
+export interface HandsSignSegment {
+  start: number;
+  end: number;
+  word: string;
+  vsl_info: VSLInfo | null;
+  hamnosys_hand: string | null;
+}
+
 export interface HandsSignResponse {
   video_id: string;
   handsign_data: HandsSignGloss[];
@@ -185,6 +193,12 @@ export const api = {
     async getHandsSign(videoId: string): Promise<HandsSignResponse> {
       const res = await apiFetch(`/api/videos/${videoId}/handsign`, { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch sign language data.");
+      return res.json();
+    },
+
+    async getHandsSignExport(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/handsign-export`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch handsign export data.");
       return res.json();
     },
 

@@ -7,6 +7,7 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     confirm_password: str
     full_name: Optional[str] = None
+    role: str = "student"
 
     @field_validator("password")
     @classmethod
