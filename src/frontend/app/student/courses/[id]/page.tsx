@@ -8,15 +8,17 @@ import {
   Clock,
   Globe,
   Layers,
+  MessageSquare,
   MonitorPlay,
   Play,
+  Star,
   User as UserIcon,
   Users,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { api, StudentCourseDetail } from '@/lib/api';
+import { api, CourseReview, StudentCourseDetail } from '@/lib/api';
 
 function formatDuration(minutes: number): string {
   const h = Math.floor(Math.max(minutes, 0) / 60);
@@ -32,12 +34,18 @@ export default function CourseDetailPage() {
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [reviews, setReviews] = useState<CourseReview[]>([]);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [savingReview, setSavingReview] = useState(false);
 
   useEffect(() => {
     const run = async () => {
       try {
         const data = await api.student.getCourseDetail(courseId);
         setDetail(data);
+        const reviewData = await api.student.listCourseReviews(courseId, 20, 0);
+        setReviews(reviewData.items || []);
         if (data.modules.length > 0) setActiveAccordion(data.modules[0].id);
       } catch (err) {
         console.error('Failed to fetch course detail', err);
@@ -53,6 +61,8 @@ export default function CourseDetailPage() {
       await api.student.enroll(courseId);
       const data = await api.student.getCourseDetail(courseId);
       setDetail(data);
+      const reviewData = await api.student.listCourseReviews(courseId, 20, 0);
+      setReviews(reviewData.items || []);
       setShowEnrollModal(true);
       setTimeout(() => setShowEnrollModal(false), 2500);
     } catch (err) {
@@ -89,6 +99,25 @@ export default function CourseDetailPage() {
 
   const { course, stats, user_context, modules } = detail;
   const courseImage = course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
+
+  const handleSubmitReview = async () => {
+    if (!user_context.is_enrolled) return;
+    try {
+      setSavingReview(true);
+      await api.student.saveCourseReview(courseId, { rating: reviewRating, comment: reviewComment });
+      const [latestDetail, latestReviews] = await Promise.all([
+        api.student.getCourseDetail(courseId),
+        api.student.listCourseReviews(courseId, 20, 0),
+      ]);
+      setDetail(latestDetail);
+      setReviews(latestReviews.items || []);
+      setReviewComment('');
+    } catch (err) {
+      console.error('Failed to submit review', err);
+    } finally {
+      setSavingReview(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-transparent relative">
@@ -186,6 +215,90 @@ export default function CourseDetailPage() {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="space-y-6 border-t border-slate-100 pt-10">
+              <h2 className="text-xl font-black text-slate-900">Student feedback</h2>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-4">
+                    <div className="text-4xl font-black text-primary">{stats.rating_avg.toFixed(1)}</div>
+                    <div>
+                      <div className="flex text-amber-400">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star key={i} size={16} fill={i <= Math.round(stats.rating_avg) ? 'currentColor' : 'none'} className={i <= Math.round(stats.rating_avg) ? '' : 'text-slate-300'} />
+                        ))}
+                      </div>
+                      <div className="text-xs font-bold text-slate-500">{stats.rating_count} đánh giá</div>
+                    </div>
+                  </div>
+                  <div className="text-sm font-bold text-slate-500">Đã đăng ký mới được đánh giá</div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = stats.rating_distribution?.[star] || 0;
+                    const percent = stats.rating_count > 0 ? Math.round((count / stats.rating_count) * 100) : 0;
+                    return (
+                      <div key={star} className="flex items-center gap-3">
+                        <div className="w-10 text-xs font-black text-slate-500">{star}★</div>
+                        <div className="flex-1 h-2 bg-white rounded-full overflow-hidden border border-slate-200">
+                          <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
+                        </div>
+                        <div className="w-14 text-xs font-bold text-slate-400 text-right">{percent}%</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {user_context.is_enrolled && (
+                <div className="border border-slate-100 rounded-2xl p-6 space-y-4">
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Gửi đánh giá của bạn</h3>
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button key={s} type="button" onClick={() => setReviewRating(s)} className="text-amber-400">
+                        <Star size={20} fill={s <= reviewRating ? 'currentColor' : 'none'} className={s <= reviewRating ? '' : 'text-slate-300'} />
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    maxLength={2000}
+                    placeholder="Nhận xét của bạn về khóa học..."
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 min-h-24"
+                  />
+                  <button
+                    onClick={handleSubmitReview}
+                    disabled={savingReview}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-wider disabled:opacity-60"
+                  >
+                    <MessageSquare size={14} />
+                    {savingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {reviews.length === 0 ? (
+                  <div className="text-sm font-bold text-slate-500">Chưa có đánh giá nào.</div>
+                ) : (
+                  reviews.map((review) => (
+                    <div key={review.id} className="border-b border-slate-100 pb-4 last:border-0">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-black text-slate-900">{review.user_name}</div>
+                        <div className="text-xs font-bold text-slate-400">{new Date(review.updated_at).toLocaleDateString('vi-VN')}</div>
+                      </div>
+                      <div className="flex items-center gap-1 text-amber-400 my-1">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star key={i} size={13} fill={i <= review.rating ? 'currentColor' : 'none'} className={i <= review.rating ? '' : 'text-slate-300'} />
+                        ))}
+                      </div>
+                      <p className="text-sm font-medium text-slate-600 whitespace-pre-wrap">{review.comment || 'Không có nhận xét.'}</p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

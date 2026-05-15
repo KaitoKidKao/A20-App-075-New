@@ -255,6 +255,9 @@ export interface StudentCourseDetail {
     total_modules: number;
     total_lessons: number;
     total_duration_minutes: number;
+    rating_avg: number;
+    rating_count: number;
+    rating_distribution: Record<number, number>;
   };
   user_context: {
     is_enrolled: boolean;
@@ -266,6 +269,17 @@ export interface StudentCourseDetail {
     next_lesson_id?: string | null;
   };
   modules: StudentCourseDetailModule[];
+}
+
+export interface CourseReview {
+  id: string;
+  course_id: string;
+  user_id: string;
+  user_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AdminCourseWorkspace {
@@ -663,6 +677,20 @@ export const api = {
     async getCourseDetail(courseId: string): Promise<StudentCourseDetail> {
       const res = await apiFetch(`/api/student/courses/${courseId}/detail`, { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch course detail.");
+      return res.json();
+    },
+    async listCourseReviews(courseId: string, limit = 20, offset = 0): Promise<{ items: CourseReview[]; limit: number; offset: number }> {
+      const res = await apiFetch(`/api/student/courses/${courseId}/reviews?limit=${limit}&offset=${offset}`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch course reviews.");
+      return res.json();
+    },
+    async saveCourseReview(courseId: string, payload: { rating: number; comment?: string }): Promise<CourseReview> {
+      const res = await apiFetch(`/api/student/courses/${courseId}/reviews`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to save course review.");
       return res.json();
     },
     async reviewFlashcard(flashcardId: string, isCorrect: boolean) {

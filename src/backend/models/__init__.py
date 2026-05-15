@@ -6,6 +6,7 @@ from .assessment import Quiz, Question, QuestionOption, QuizAttempt
 from .flashcard import Flashcard, UserFlashcardProgress
 from .job import ProcessingJob
 from .system_setting import SystemSetting
+from .review import CourseReview
 
 __all__ = [
     "Role", "User", "Profile",
@@ -16,4 +17,5 @@ __all__ = [
     "Flashcard", "UserFlashcardProgress",
     "ProcessingJob",
     "SystemSetting",
+    "CourseReview",
 ]

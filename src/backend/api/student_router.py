@@ -21,10 +21,24 @@ from src.backend.models import (
     Question,
     QuestionOption,
     QuizAttempt,
+    CourseReview,
 )
 from src.backend.utils.datetime_utils import utc_now
 
 router = APIRouter(prefix="/api/student", tags=["student"])
+
+
+def _serialize_review(review: CourseReview, user: User | None):
+    return {
+        "id": str(review.id),
+        "course_id": str(review.course_id),
+        "user_id": str(review.user_id),
+        "user_name": user.full_name if user and user.full_name else (user.email.split("@")[0] if user else "User"),
+        "rating": review.rating,
+        "comment": review.comment,
+        "created_at": review.created_at,
+        "updated_at": review.updated_at,
+    }
 
 # --- Enrollment ---
 @router.post("/enroll/{course_id}", response_model=Enrollment)
@@ -238,6 +252,15 @@ async def get_course_detail(
             break
 
     total_duration_minutes = sum(max(int(l.duration_minutes or 0), 0) for l in lessons)
+    reviews = session.exec(
+        select(CourseReview).where(CourseReview.course_id == course_id).order_by(CourseReview.updated_at.desc())
+    ).all()
+    rating_count = len(reviews)
+    avg_rating = round(sum(r.rating for r in reviews) / rating_count, 2) if rating_count else 0.0
+    dist = {i: 0 for i in range(1, 6)}
+    for r in reviews:
+        if r.rating in dist:
+            dist[r.rating] += 1
 
     return {
         "course": {
@@ -255,6 +278,9 @@ async def get_course_detail(
             "total_modules": len(modules),
             "total_lessons": len(lessons),
             "total_duration_minutes": total_duration_minutes,
+            "rating_avg": avg_rating,
+            "rating_count": rating_count,
+            "rating_distribution": dist,
         },
         "user_context": {
             "is_enrolled": bool(enrollment),
@@ -292,6 +318,84 @@ async def get_course_detail(
             for module in modules
         ],
     }
+
+
+@router.get("/courses/{course_id}/reviews")
+async def list_course_reviews(
+    course_id: uuid.UUID,
+    limit: int = 20,
+    offset: int = 0,
+    session: Session = Depends(get_session),
+):
+    safe_limit = max(1, min(limit, 100))
+    safe_offset = max(0, offset)
+    course = session.get(Course, course_id)
+    if not course or course.is_deleted:
+        raise HTTPException(status_code=404, detail="Course not found.")
+
+    rows = session.exec(
+        select(CourseReview)
+        .where(CourseReview.course_id == course_id)
+        .order_by(CourseReview.updated_at.desc())
+        .offset(safe_offset)
+        .limit(safe_limit)
+    ).all()
+    users = session.exec(select(User).where(User.id.in_([r.user_id for r in rows]))).all() if rows else []
+    user_map = {u.id: u for u in users}
+    return {
+        "items": [_serialize_review(r, user_map.get(r.user_id)) for r in rows],
+        "limit": safe_limit,
+        "offset": safe_offset,
+    }
+
+
+@router.post("/courses/{course_id}/reviews")
+async def create_or_update_course_review(
+    course_id: uuid.UUID,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    course = session.get(Course, course_id)
+    if not course or course.is_deleted:
+        raise HTTPException(status_code=404, detail="Course not found.")
+
+    rating_raw = data.get("rating")
+    comment = str(data.get("comment") or "").strip()
+    try:
+        rating = int(rating_raw)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="rating must be an integer from 1 to 5.")
+    if rating < 1 or rating > 5:
+        raise HTTPException(status_code=400, detail="rating must be in range 1..5.")
+    if len(comment) > 2000:
+        raise HTTPException(status_code=400, detail="comment is too long (max 2000 chars).")
+
+    existing = session.exec(
+        select(CourseReview).where(
+            CourseReview.course_id == course_id,
+            CourseReview.user_id == current_user.id,
+        )
+    ).first()
+    if existing:
+        existing.rating = rating
+        existing.comment = comment
+        existing.updated_at = utc_now()
+        session.add(existing)
+        session.commit()
+        session.refresh(existing)
+        return _serialize_review(existing, current_user)
+
+    review = CourseReview(
+        course_id=course_id,
+        user_id=current_user.id,
+        rating=rating,
+        comment=comment,
+    )
+    session.add(review)
+    session.commit()
+    session.refresh(review)
+    return _serialize_review(review, current_user)
 
 # --- SRS Flashcards ---
 @router.get("/flashcards/due", response_model=List[Flashcard])
