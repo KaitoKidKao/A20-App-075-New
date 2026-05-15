@@ -219,6 +219,52 @@ export interface AdminDashboard {
   }[];
 }
 
+export interface StudentCourseDetailLesson {
+  id: string;
+  title: string;
+  content_type: string;
+  status: string;
+  sort_order: number;
+  duration_minutes: number;
+  is_completed: boolean;
+}
+
+export interface StudentCourseDetailModule {
+  id: string;
+  title: string;
+  description?: string | null;
+  sort_order: number;
+  lessons: StudentCourseDetailLesson[];
+}
+
+export interface StudentCourseDetail {
+  course: {
+    id: string;
+    title: string;
+    description?: string | null;
+    thumbnail_url?: string | null;
+    language?: string | null;
+    level?: string | null;
+    is_published: boolean;
+    instructor_id?: string | null;
+  };
+  stats: {
+    students_enrolled: number;
+    total_modules: number;
+    total_lessons: number;
+    total_duration_minutes: number;
+  };
+  user_context: {
+    is_enrolled: boolean;
+    enrollment_status: string;
+    progress_percent: number;
+    completed_lessons: number;
+    first_lesson_id?: string | null;
+    next_lesson_id?: string | null;
+  };
+  modules: StudentCourseDetailModule[];
+}
+
 export interface AdminCourseWorkspace {
   id: string;
   title: string;
@@ -609,6 +655,11 @@ export const api = {
     async getDashboard(): Promise<StudentDashboard> {
       const res = await apiFetch("/api/student/dashboard", { headers: buildHeaders() });
       if (!res.ok) throw new Error("Failed to fetch student dashboard.");
+      return res.json();
+    },
+    async getCourseDetail(courseId: string): Promise<StudentCourseDetail> {
+      const res = await apiFetch(`/api/student/courses/${courseId}/detail`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch course detail.");
       return res.json();
     },
     async reviewFlashcard(flashcardId: string, isCorrect: boolean) {

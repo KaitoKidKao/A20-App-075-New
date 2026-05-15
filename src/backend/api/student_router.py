@@ -184,6 +184,111 @@ async def get_student_dashboard(
         ],
     }
 
+
+@router.get("/courses/{course_id}/detail")
+async def get_course_detail(
+    course_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    course = session.get(Course, course_id)
+    if not course or course.is_deleted:
+        raise HTTPException(status_code=404, detail="Course not found.")
+
+    modules = session.exec(
+        select(Module).where(Module.course_id == course_id).order_by(Module.sort_order, Module.created_at)
+    ).all()
+    module_ids = [m.id for m in modules]
+    lessons = session.exec(
+        select(Lesson).where(Lesson.module_id.in_(module_ids)).order_by(Lesson.sort_order, Lesson.created_at)
+    ).all() if module_ids else []
+
+    lesson_by_module: dict[uuid.UUID, list[Lesson]] = {}
+    for lesson in lessons:
+        lesson_by_module.setdefault(lesson.module_id, []).append(lesson)
+
+    enrollment = session.exec(
+        select(Enrollment).where(
+            Enrollment.user_id == current_user.id,
+            Enrollment.course_id == course_id,
+        )
+    ).first()
+    total_enrolled = session.exec(
+        select(func.count()).select_from(Enrollment).where(Enrollment.course_id == course_id)
+    ).one()
+
+    lesson_ids = [l.id for l in lessons]
+    progress_rows = session.exec(
+        select(UserProgress).where(
+            UserProgress.user_id == current_user.id,
+            UserProgress.lesson_id.in_(lesson_ids),
+        )
+    ).all() if lesson_ids else []
+    progress_map = {row.lesson_id: row for row in progress_rows}
+    completed_count = len([p for p in progress_rows if p.completion_status == "completed"])
+    progress_percent = round((completed_count / len(lesson_ids)) * 100) if lesson_ids else 0
+
+    first_lesson_id = str(lessons[0].id) if lessons else None
+    next_lesson_id = None
+    for lesson in lessons:
+        p = progress_map.get(lesson.id)
+        if not p or p.completion_status != "completed":
+            next_lesson_id = str(lesson.id)
+            break
+
+    total_duration_minutes = sum(max(int(l.duration_minutes or 0), 0) for l in lessons)
+
+    return {
+        "course": {
+            "id": str(course.id),
+            "title": course.title,
+            "description": course.description,
+            "thumbnail_url": course.thumbnail_url,
+            "language": course.language,
+            "level": course.level,
+            "is_published": course.is_published,
+            "instructor_id": str(course.instructor_id) if course.instructor_id else None,
+        },
+        "stats": {
+            "students_enrolled": int(total_enrolled or 0),
+            "total_modules": len(modules),
+            "total_lessons": len(lessons),
+            "total_duration_minutes": total_duration_minutes,
+        },
+        "user_context": {
+            "is_enrolled": bool(enrollment),
+            "enrollment_status": enrollment.enrollment_status if enrollment else "not_enrolled",
+            "progress_percent": progress_percent,
+            "completed_lessons": completed_count,
+            "first_lesson_id": first_lesson_id,
+            "next_lesson_id": next_lesson_id or first_lesson_id,
+        },
+        "modules": [
+            {
+                "id": str(module.id),
+                "title": module.title,
+                "description": module.description,
+                "sort_order": module.sort_order,
+                "lessons": [
+                    {
+                        "id": str(lesson.id),
+                        "title": lesson.title,
+                        "content_type": lesson.content_type,
+                        "status": lesson.status,
+                        "sort_order": lesson.sort_order,
+                        "duration_minutes": lesson.duration_minutes,
+                        "is_completed": bool(
+                            progress_map.get(lesson.id)
+                            and progress_map[lesson.id].completion_status == "completed"
+                        ),
+                    }
+                    for lesson in lesson_by_module.get(module.id, [])
+                ],
+            }
+            for module in modules
+        ],
+    }
+
 # --- SRS Flashcards ---
 @router.get("/flashcards/due", response_model=List[Flashcard])
 async def get_due_flashcards(current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
