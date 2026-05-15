@@ -1,4 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+import threading
+import time
+from collections import OrderedDict
+
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func
 from sqlmodel import Session, select
 from typing import List, Optional
@@ -26,6 +31,56 @@ from src.backend.models import (
 from src.backend.utils.datetime_utils import utc_now
 
 router = APIRouter(prefix="/api/student", tags=["student"])
+logger = logging.getLogger(__name__)
+
+_COURSE_DETAIL_CACHE_TTL_SECONDS = 60
+_COURSE_DETAIL_CACHE_MAX_KEYS = 500
+_course_detail_cache_lock = threading.Lock()
+_course_detail_cache: "OrderedDict[tuple[str, str], tuple[float, dict]]" = OrderedDict()
+_course_detail_cache_stats = {"hit": 0, "miss": 0, "invalidate": 0, "evict": 0}
+
+
+def _cache_key(course_id: uuid.UUID, user_id: uuid.UUID) -> tuple[str, str]:
+    return (str(course_id), str(user_id))
+
+
+def _cache_get(course_id: uuid.UUID, user_id: uuid.UUID) -> dict | None:
+    key = _cache_key(course_id, user_id)
+    now = time.time()
+    with _course_detail_cache_lock:
+        item = _course_detail_cache.get(key)
+        if not item:
+            _course_detail_cache_stats["miss"] += 1
+            return None
+        expires_at, payload = item
+        if expires_at < now:
+            _course_detail_cache.pop(key, None)
+            _course_detail_cache_stats["miss"] += 1
+            return None
+        _course_detail_cache.move_to_end(key)
+        _course_detail_cache_stats["hit"] += 1
+        return payload
+
+
+def _cache_set(course_id: uuid.UUID, user_id: uuid.UUID, payload: dict) -> None:
+    key = _cache_key(course_id, user_id)
+    expires_at = time.time() + _COURSE_DETAIL_CACHE_TTL_SECONDS
+    with _course_detail_cache_lock:
+        if key in _course_detail_cache:
+            _course_detail_cache.pop(key, None)
+        _course_detail_cache[key] = (expires_at, payload)
+        while len(_course_detail_cache) > _COURSE_DETAIL_CACHE_MAX_KEYS:
+            _course_detail_cache.popitem(last=False)
+            _course_detail_cache_stats["evict"] += 1
+
+
+def _invalidate_course_detail_cache_for_course(course_id: uuid.UUID) -> None:
+    prefix = str(course_id)
+    with _course_detail_cache_lock:
+        for key in list(_course_detail_cache.keys()):
+            if key[0] == prefix:
+                _course_detail_cache.pop(key, None)
+                _course_detail_cache_stats["invalidate"] += 1
 
 
 def _serialize_review(review: CourseReview, user: User | None):
@@ -52,6 +107,7 @@ async def enroll_in_course(course_id: uuid.UUID, current_user: User = Depends(ge
     session.add(enrollment)
     session.commit()
     session.refresh(enrollment)
+    _invalidate_course_detail_cache_for_course(course_id)
     return enrollment
 
 @router.get("/my-courses", response_model=List[Enrollment])
@@ -90,6 +146,11 @@ async def update_progress(
     session.add(progress)
     session.commit()
     session.refresh(progress)
+    lesson = session.get(Lesson, lesson_id)
+    if lesson:
+        module = session.get(Module, lesson.module_id)
+        if module:
+            _invalidate_course_detail_cache_for_course(module.course_id)
     return progress
 
 @router.get("/lessons/{lesson_id}/progress", response_model=Optional[UserProgress])
@@ -203,8 +264,15 @@ async def get_student_dashboard(
 async def get_course_detail(
     course_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
+    response: Response = None,
     session: Session = Depends(get_session),
 ):
+    cached = _cache_get(course_id, current_user.id)
+    if cached is not None:
+        if response is not None:
+            response.headers["X-Course-Detail-Cache"] = "HIT"
+        return cached
+
     course = session.get(Course, course_id)
     if not course or course.is_deleted:
         raise HTTPException(status_code=404, detail="Course not found.")
@@ -264,7 +332,7 @@ async def get_course_detail(
         if r.rating in dist:
             dist[r.rating] += 1
 
-    return {
+    payload = {
         "course": {
             "id": str(course.id),
             "title": course.title,
@@ -322,6 +390,10 @@ async def get_course_detail(
             for module in modules
         ],
     }
+    _cache_set(course_id, current_user.id, payload)
+    if response is not None:
+        response.headers["X-Course-Detail-Cache"] = "MISS"
+    return payload
 
 
 @router.get("/courses/{course_id}/reviews")
@@ -388,6 +460,7 @@ async def create_or_update_course_review(
         session.add(existing)
         session.commit()
         session.refresh(existing)
+        _invalidate_course_detail_cache_for_course(course_id)
         return _serialize_review(existing, current_user)
 
     review = CourseReview(
@@ -399,7 +472,21 @@ async def create_or_update_course_review(
     session.add(review)
     session.commit()
     session.refresh(review)
+    _invalidate_course_detail_cache_for_course(course_id)
     return _serialize_review(review, current_user)
+
+
+@router.get("/courses/detail-cache/stats")
+async def get_course_detail_cache_stats():
+    with _course_detail_cache_lock:
+        active_keys = len(_course_detail_cache)
+        stats = dict(_course_detail_cache_stats)
+    return {
+        "ttl_seconds": _COURSE_DETAIL_CACHE_TTL_SECONDS,
+        "max_keys": _COURSE_DETAIL_CACHE_MAX_KEYS,
+        "active_keys": active_keys,
+        "stats": stats,
+    }
 
 # --- SRS Flashcards ---
 @router.get("/flashcards/due", response_model=List[Flashcard])
