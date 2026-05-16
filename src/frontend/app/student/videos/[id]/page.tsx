@@ -206,8 +206,8 @@ export default function VideoLessonPage() {
   const [moduleLessons, setModuleLessons] = useState<ModuleLessonItem[]>([]);
   const [isLoadingModuleLessons, setIsLoadingModuleLessons] = useState(false);
 
-  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `/api/video/${videoId}`;
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/videos/${videoId}/stream`;
   const normalizedAvatarStatus = (avatarStatus || 'not_generated').toLowerCase();
   const isAvatarReady = normalizedAvatarStatus === 'ready' || normalizedAvatarStatus === 'generated' || normalizedAvatarStatus === 'completed';
   const isAvatarProcessing = normalizedAvatarStatus === 'processing' || normalizedAvatarStatus === 'queued' || normalizedAvatarStatus === 'running';
@@ -809,6 +809,13 @@ export default function VideoLessonPage() {
     const totalSeconds = m * 60 + s;
     if (videoRef.current) {
       videoRef.current.currentTime = totalSeconds;
+      videoRef.current.play();
+    }
+  };
+
+  const seekToSeconds = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = seconds;
       videoRef.current.play();
     }
   };

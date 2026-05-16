@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete
 from sqlmodel import Session, select
@@ -864,4 +865,23 @@ async def download_slides(filename: str):
         path=file_path,
         filename=filename,
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
+
+@router.get("/{video_id}/stream")
+async def stream_video(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Serve the video file directly with support for Range requests (seeking).
+    """
+    check_video_access(video_id, current_user, session)
+    video_path = _find_existing_video_path(video_id, session)
+    if not video_path:
+        raise HTTPException(status_code=404, detail="Video file not found.")
+    
+    return FileResponse(
+        path=str(video_path),
+        media_type="video/mp4",
     )

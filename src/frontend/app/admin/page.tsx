@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -604,7 +604,7 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="space-y-3">
                 <CustomSelect
-                  options={adminCourses}
+                  options={adminCourses as any}
                   value={selectedCourseId}
                   onChange={(next) => {
                     setSelectedCourseId(next);
@@ -616,7 +616,7 @@ export default function AdminDashboardPage() {
 
                 <div className="flex gap-3">
                   <CustomSelect
-                    options={selectedCourse?.modules || []}
+                    options={(selectedCourse?.modules || []) as any}
                     value={selectedModuleId}
                     onChange={(next) => setSelectedModuleId(next)}
                     disabled={!selectedCourseId || createNewModule}
