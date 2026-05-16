@@ -62,10 +62,17 @@ export default function StudentDashboardPage() {
   return (
     <div className="min-h-screen bg-bg-main">
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
-        <div className="flex flex-col gap-2">
+        <div className="hidden">
           <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">BẢNG ĐIỀU KHIỂN</p>
           <h1 className="text-3xl font-black text-slate-900">Tiến độ học tập</h1>
           <p className="max-w-2xl text-sm font-bold text-slate-500">
+            Theo dõi khóa đang học, bài chưa hoàn thành, thẻ ghi nhớ và kết quả quiz gần đây.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Tiến độ học tập</h1>
+          <p className="max-w-2xl text-sm font-semibold leading-6 text-slate-600">
             Theo dõi khóa đang học, bài chưa hoàn thành, thẻ ghi nhớ và kết quả quiz gần đây.
           </p>
         </div>

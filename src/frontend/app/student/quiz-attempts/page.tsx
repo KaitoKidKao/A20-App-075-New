@@ -27,9 +27,8 @@ export default function StudentQuizAttemptsPage() {
     <div className="min-h-screen bg-bg-main">
       <div className="mx-auto max-w-6xl space-y-6 px-6 py-10 md:px-10">
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">Quiz analytics</p>
-          <h1 className="text-3xl font-black text-slate-900">Lượt làm bài quiz</h1>
-          <p className="text-sm font-bold text-slate-500 mt-2">Theo dõi lịch sử quiz gần đây và điểm số đạt được.</p>
+          <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Lượt làm bài quiz</h1>
+          <p className="mt-2 text-sm font-semibold text-slate-600">Theo dõi lịch sử quiz gần đây và điểm số đạt được.</p>
         </div>
 
         {loading ? (
@@ -80,4 +79,3 @@ export default function StudentQuizAttemptsPage() {
     </div>
   );
 }
-
