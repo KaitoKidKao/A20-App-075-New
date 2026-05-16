@@ -38,7 +38,6 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
             {!isVideoProcessingPage && <AppSidebar />}
             <main id="app-main-scroll" className="min-w-0 flex-1 overflow-y-auto pb-12">
               {children}
-              {!isVideoProcessingPage && <Footer />}
             </main>
           </div>
         </div>

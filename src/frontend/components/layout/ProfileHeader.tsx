@@ -25,9 +25,9 @@ export function ProfileHeader() {
           <div className="text-white space-y-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Ronald Richard</h1>
-              <button className="p-1.5 hover:bg-white/20 rounded-full transition-colors">
+              <span className="p-1.5 rounded-full">
                 <Pencil size={16} />
-              </button>
+              </span>
             </div>
             <p className="text-sm md:text-base font-semibold opacity-90 uppercase tracking-widest">Student</p>
           </div>
