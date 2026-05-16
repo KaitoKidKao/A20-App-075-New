@@ -1686,7 +1686,7 @@ export default function VideoLessonPage() {
                                   <button
                                     key={`${g.time}-${g.word}-${i}`}
                                     type="button"
-                                    onClick={() => seekToSeconds(g.time)}
+                                    onClick={() => handleSeek(g.time)}
                                     className={cn(
                                       'text-xs font-bold px-3 py-2 rounded-2xl border transition-all',
                                       isGlossActive
