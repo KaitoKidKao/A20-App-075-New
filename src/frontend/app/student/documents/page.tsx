@@ -4,151 +4,212 @@ import React from 'react';
 import { Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { api, type Course, type StudentDashboard } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
+type CourseTab = 'enrolled' | 'active' | 'completed';
+
+type CourseCard = {
+  id: string;
+  title: string;
+  instructor: string;
+  category: string;
+  thumbnail: string;
+  progressPercent: number;
+  completedLessons: number;
+  totalLessons: number;
+  enrollmentStatus: string;
+};
+
+const PAGE_SIZE = 6;
+const FALLBACK_THUMBNAIL = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
+const DEFAULT_INSTRUCTOR = 'Giảng viên';
+const DEFAULT_CATEGORY = 'Course';
+
+function normalizeCourseCards(dashboard: StudentDashboard, courses: Course[]): CourseCard[] {
+  const byId = new Map(courses.map((item) => [item.id, item]));
+  return dashboard.courses.map((enrolled) => {
+    const detail = byId.get(enrolled.course_id);
+    return {
+      id: enrolled.course_id,
+      title: enrolled.title,
+      instructor: DEFAULT_INSTRUCTOR,
+      category: detail?.cat || DEFAULT_CATEGORY,
+      thumbnail: detail?.thumbnail_url || detail?.cover_image_url || detail?.thumb || enrolled.thumbnail_url || FALLBACK_THUMBNAIL,
+      progressPercent: enrolled.progress_percent,
+      completedLessons: enrolled.completed_lessons,
+      totalLessons: enrolled.total_lessons,
+      enrollmentStatus: enrolled.enrollment_status,
+    };
+  });
+}
+
 export default function EnrolledCourses() {
+  const [loading, setLoading] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState<CourseTab>('enrolled');
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [activeTab, setActiveTab] = React.useState('enrolled');
-  
-  interface Course {
-    id: number;
-    title: string;
-    instructor: string;
-    cat: string;
-    thumb: string;
-  }
+  const [cards, setCards] = React.useState<CourseCard[]>([]);
 
-  const allCourses: Record<number, Course[]> = {
-    1: [
-      { id: 1, title: 'Information About UI/UX Design Degree', instructor: 'David Benitez', cat: 'Design', thumb: 'https://picsum.photos/seed/uiux1/800/450' },
-      { id: 2, title: 'Wordpress for Beginners - Master Wordpress Quickly', instructor: 'Ana Reyes', cat: 'Wordpress', thumb: 'https://picsum.photos/seed/wp1/800/450' },
-      { id: 3, title: 'Sketch from A to Z (2024): Become an app designer', instructor: 'Andrew Pirtle', cat: 'Design', thumb: 'https://picsum.photos/seed/sketch1/800/450' },
-      { id: 4, title: 'Build Responsive Real World Websites with Crash Course', instructor: 'Christy Gamer', cat: 'Programming', thumb: 'https://picsum.photos/seed/web1/800/450' },
-      { id: 5, title: 'Learn JavaScript and Express to become a Expert', instructor: 'Justin Gregory', cat: 'Programming', thumb: 'https://picsum.photos/seed/js1/800/450' },
-      { id: 6, title: 'Introduction to Python Programming Basic to Master', instructor: 'Carolyn Hines', cat: 'Programming', thumb: 'https://picsum.photos/seed/py1/800/450' },
-    ],
-    // ... Page 2 and 3 omitted for brevity in this specific replacement block but I'll ensure they are maintained
-    2: [
-      { id: 7, title: 'Advanced Photoshop Techniques for Retouching', instructor: 'Nancy Duarte', cat: 'Design', thumb: 'https://picsum.photos/seed/ps1/800/450' },
-      { id: 8, title: 'Digital Painting Masterclass: From Sketch to Final', instructor: 'Marco Rossi', cat: 'Art', thumb: 'https://picsum.photos/seed/art1/800/450' },
-      { id: 9, title: 'Logo Design Mastery: Brand Identity from Scratch', instructor: 'Sarah Jenkins', cat: 'Design', thumb: 'https://picsum.photos/seed/logo1/800/450' },
-      { id: 10, title: 'Node.js Mastery: Building Scalable APIs', instructor: 'Liam Wilson', cat: 'Programming', thumb: 'https://picsum.photos/seed/node1/800/450' },
-      { id: 11, title: 'React Native for Mobile App Development', instructor: 'Elena Rodriguez', cat: 'Mobile', thumb: 'https://picsum.photos/seed/mobile1/800/450' },
-      { id: 12, title: 'Cybersecurity Fundamentals: Protecting Data', instructor: 'Kevin Smith', cat: 'IT', thumb: 'https://picsum.photos/seed/cyber1/800/450' },
-    ],
-    3: [
-      { id: 13, title: 'Mastering Excel for Data Analysis', instructor: 'Robert Chen', cat: 'Business', thumb: 'https://picsum.photos/seed/excel1/800/450' },
-      { id: 14, title: 'Public Speaking: Command the Room with Ease', instructor: 'Amanda Lee', cat: 'Soft Skills', thumb: 'https://picsum.photos/seed/speech1/800/450' },
-      { id: 15, title: 'Photography 101: Mastering Your DSLR', instructor: 'Jack Thompson', cat: 'Photography', thumb: 'https://picsum.photos/seed/photo1/800/450' },
-      { id: 16, title: 'Introduction to Artificial Intelligence', instructor: 'Dr. Emily Watson', cat: 'Tech', thumb: 'https://picsum.photos/seed/ai1/800/450' },
-      { id: 17, title: 'Video Editing with Adobe Premiere Pro', instructor: 'Chris Miller', cat: 'Media', thumb: 'https://picsum.photos/seed/video1/800/450' },
-      { id: 18, title: 'Blogging for Profit: Building a Sustainable Business', instructor: 'Jessica Brown', cat: 'Marketing', thumb: 'https://picsum.photos/seed/blog1/800/450' },
-    ]
-  };
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [dashboard, courses] = await Promise.all([
+          api.student.getDashboard(),
+          api.courses.listCourses(),
+        ]);
+        setCards(normalizeCourseCards(dashboard, courses));
+      } catch (error) {
+        console.error('Failed to load enrolled courses', error);
+        setCards([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  // Simulate filtering: For 'active' show only first 4, for 'completed' show only last 2
-  const getFilteredCourses = () => {
-    const pageCourses = allCourses[currentPage] || [];
-    if (activeTab === 'active') return pageCourses.slice(0, 4);
-    if (activeTab === 'completed') return pageCourses.slice(4, 6);
-    return pageCourses;
-  };
+  const filteredCards = React.useMemo(() => {
+    if (activeTab === 'active') {
+      return cards.filter((item) => item.progressPercent > 0 && item.progressPercent < 100);
+    }
+    if (activeTab === 'completed') {
+      return cards.filter((item) => item.progressPercent >= 100);
+    }
+    return cards;
+  }, [activeTab, cards]);
 
-  const courses = getFilteredCourses();
+  const tabCounts = React.useMemo(
+    () => ({
+      enrolled: cards.length,
+      active: cards.filter((item) => item.progressPercent > 0 && item.progressPercent < 100).length,
+      completed: cards.filter((item) => item.progressPercent >= 100).length,
+    }),
+    [cards]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredCards.length / PAGE_SIZE));
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const pagedCards = React.useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredCards.slice(start, start + PAGE_SIZE);
+  }, [filteredCards, currentPage]);
 
   return (
     <div className="min-h-screen bg-transparent">
-      <div className="px-6 md:px-10 py-10 max-w-7xl mx-auto space-y-8">
-        
-        {/* Simple Tabs Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6">
-           <h2 className="text-xl font-black text-slate-900 capitalize">{activeTab}</h2>
-           <div className="flex items-center gap-2">
-              {[
-                { id: 'enrolled', label: 'Đã đăng ký (09)' },
-                { id: 'active', label: 'Đang học (05)' },
-                { id: 'completed', label: 'Hoàn thành (03)' }
-              ].map((tab) => (
-                <button 
-                  key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setCurrentPage(1); // Reset to page 1 on filter change
-                  }}
-                  className={cn(
-                    "px-4 py-1.5 text-[11px] font-black uppercase tracking-widest rounded-full transition-all",
-                    activeTab === tab.id 
-                      ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                      : "bg-slate-100 text-slate-400 hover:bg-slate-200"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-           </div>
+      <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
+        <div className="flex flex-col gap-6 border-b border-slate-100 pb-6 md:flex-row md:items-center md:justify-between">
+          <h2 className="text-xl font-black capitalize text-slate-900">
+            {activeTab === 'enrolled' ? 'Đã đăng ký' : activeTab === 'active' ? 'Đang học' : 'Hoàn thành'}
+          </h2>
+          <div className="flex items-center gap-2">
+            {[
+              { id: 'enrolled' as const, label: `Đã đăng ký (${tabCounts.enrolled})` },
+              { id: 'active' as const, label: `Đang học (${tabCounts.active})` },
+              { id: 'completed' as const, label: `Hoàn thành (${tabCounts.completed})` },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all',
+                  activeTab === tab.id
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Course Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {courses.map((course) => (
-            <div key={course.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group">
-              <div className="relative aspect-video">
-                <Image 
-                  src={course.thumb} 
-                  alt={course.title} 
-                  fill 
-                  unoptimized={true}
-                  className="object-cover" 
-                />
-                <div className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-rose-500 shadow-sm cursor-pointer">
-                   <Heart size={14} />
-                </div>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                     <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden relative">
-                        <Image src={`https://i.pravatar.cc/100?img=${course.id + 15}`} alt={course.instructor} fill className="object-cover" />
-                     </div>
-                     <span className="text-xs font-bold text-slate-400">{course.instructor}</span>
+        {loading ? (
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div key={item} className="h-[360px] animate-pulse rounded-2xl border border-slate-100 bg-white" />
+            ))}
+          </div>
+        ) : filteredCards.length === 0 ? (
+          <div className="rounded-2xl border border-slate-100 bg-white p-12 text-center">
+            <p className="font-bold text-slate-400">Chưa có khóa học phù hợp trong mục này.</p>
+            <Link href="/student/library" className="mt-4 inline-block font-black text-[#FF4F6E] underline">
+              Đi tới thư viện khóa học
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {pagedCards.map((course) => (
+                <div key={course.id} className="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                  <div className="relative aspect-video">
+                    <Image src={course.thumbnail} alt={course.title} fill unoptimized className="object-cover" />
+                    <div className="absolute right-3 top-3 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/90 text-rose-500 shadow-sm backdrop-blur-sm">
+                      <Heart size={14} />
+                    </div>
                   </div>
-                  <span className="px-2 py-0.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400 border border-slate-100 rounded">
-                    {course.cat}
-                  </span>
+                  <div className="space-y-4 p-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-400">{course.instructor}</span>
+                      <span className="rounded border border-slate-100 bg-slate-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        {course.category}
+                      </span>
+                    </div>
+                    <h4 className="min-h-[40px] line-clamp-2 text-sm font-black leading-snug text-slate-900">{course.title}</h4>
+                    <div>
+                      <div className="mb-1 flex justify-between text-[11px] font-bold text-slate-500">
+                        <span>
+                          {course.completedLessons}/{course.totalLessons} bài
+                        </span>
+                        <span>{course.progressPercent}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-slate-100">
+                        <div className="h-full rounded-full bg-[#FF4F6E]" style={{ width: `${course.progressPercent}%` }} />
+                      </div>
+                    </div>
+                    <Link
+                      href={`/student/courses/${course.id}`}
+                      className="block w-full rounded-lg bg-slate-900 py-2.5 text-center text-[11px] font-black uppercase tracking-widest text-white transition-colors hover:bg-primary"
+                    >
+                      Xem khóa học
+                    </Link>
+                  </div>
                 </div>
-                <h4 className="font-black text-sm text-slate-900 leading-snug line-clamp-2 min-h-[40px]">
-                  {course.title}
-                </h4>
-                <Link 
-                  href={`/student/courses/${course.id}`}
-                  className="block w-full bg-slate-900 text-white text-[11px] font-black py-2.5 rounded-lg text-center uppercase tracking-widest hover:bg-primary transition-colors"
-                >
-                  Xem khóa học
-                </Link>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-50 pt-10">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                Trang {currentPage} / {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => setCurrentPage(num)}
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-full text-xs font-black transition-all',
+                      currentPage === num
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                    )}
+                  >
+                    {num}
+                  </button>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-        {/* Pagination placeholder */}
-        <div className="flex items-center justify-between pt-10 border-t border-slate-50">
-           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Trang {currentPage} / 3</p>
-           <div className="flex items-center gap-2">
-              {[1, 2, 3].map((num) => (
-                <button 
-                  key={num}
-                  onClick={() => setCurrentPage(num)}
-                  className={cn(
-                    "w-8 h-8 flex items-center justify-center rounded-full text-xs font-black transition-all",
-                    currentPage === num 
-                      ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                      : "bg-slate-100 text-slate-400 hover:bg-slate-200"
-                  )}
-                >
-                  {num}
-                </button>
-              ))}
-           </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

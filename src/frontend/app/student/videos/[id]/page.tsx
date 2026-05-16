@@ -13,6 +13,7 @@ import {
   Clock,
   Zap,
   HelpCircle,
+  ClipboardCheck,
   BookOpen,
   Target,
   List,
@@ -75,6 +76,25 @@ interface VisualData {
   infographic?: InfographicData;
   charts?: Record<string, unknown>;
   cover_image_url?: string | null;
+}
+
+interface QuizOptionItem {
+  id: string;
+  option_text: string;
+}
+
+interface QuizQuestionItem {
+  id: string;
+  question_text: string;
+  explanation?: string;
+  options: QuizOptionItem[];
+}
+
+interface LessonQuizItem {
+  id: string;
+  title: string;
+  passing_score: number;
+  questions: QuizQuestionItem[];
 }
 
 interface ModuleLessonItem {
@@ -150,6 +170,12 @@ export default function VideoLessonPage() {
   const [metadataError, setMetadataError] = useState('');
   const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
+  const [quizzes, setQuizzes] = useState<LessonQuizItem[]>([]);
+  const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
+  const [quizSubmitResult, setQuizSubmitResult] = useState<{ score: number; status: string; correct: number; total: number } | null>(null);
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   
   // Custom Video Controls State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -225,18 +251,24 @@ export default function VideoLessonPage() {
           canvas.width = 200;
           canvas.height = 120;
           const ctx = canvas.getContext('2d');
+          
+          const videoDurationFormatted = formatDuration(video.duration);
+          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
+
           if (!ctx) {
             cleanup();
-            resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+            resolve({ duration: finalDuration, thumb: fallbackThumb });
             return;
           }
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const thumb = canvas.toDataURL('image/jpeg', 0.75);
           cleanup();
-          resolve({ duration: formatDuration(video.duration), thumb });
+          resolve({ duration: finalDuration, thumb });
         } catch {
           cleanup();
-          resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+          const videoDurationFormatted = formatDuration(video.duration);
+          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
+          resolve({ duration: finalDuration, thumb: fallbackThumb });
         }
       };
 
@@ -245,7 +277,9 @@ export default function VideoLessonPage() {
           video.currentTime = 0.05;
         } catch {
           cleanup();
-          resolve({ duration: formatDuration(video.duration), thumb: fallbackThumb });
+          const videoDurationFormatted = formatDuration(video.duration);
+          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
+          resolve({ duration: finalDuration, thumb: fallbackThumb });
         }
       };
 
@@ -335,7 +369,7 @@ export default function VideoLessonPage() {
         const sortedByTitle = [...lessons].sort((a, b) => a.title.localeCompare(b.title, 'vi', { sensitivity: 'base' }));
         const hydrated = await Promise.all(
           sortedByTitle.map(async (lesson) => {
-            const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? `${lesson.duration_minutes}m` : '--:--';
+            const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? formatDuration(lesson.duration_minutes * 60) : '--:--';
             const preview = await buildLessonPreview(lesson.id, durationFromDb);
             return {
               id: lesson.id,
@@ -355,6 +389,26 @@ export default function VideoLessonPage() {
     };
     fetchModuleLessons();
   }, [videoId, buildLessonPreview]);
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      setIsLoadingQuizzes(true);
+      setQuizSubmitResult(null);
+      setQuizAnswers({});
+      try {
+        const data = await api.student.listLessonQuizzes(videoId);
+        const raw = Array.isArray(data?.quizzes) ? data.quizzes : [];
+        setQuizzes(raw as LessonQuizItem[]);
+        setSelectedQuizIdx(0);
+      } catch (err) {
+        console.error('Failed to fetch lesson quizzes', err);
+        setQuizzes([]);
+      } finally {
+        setIsLoadingQuizzes(false);
+      }
+    };
+    fetchQuizzes();
+  }, [videoId]);
 
   useEffect(() => {
     if (moduleLessons.length === 0) return;
@@ -780,6 +834,31 @@ export default function VideoLessonPage() {
     }
   };
 
+  const activeQuiz = quizzes[selectedQuizIdx] || null;
+
+  const handleSelectQuizAnswer = (questionId: string, optionId: string) => {
+    setQuizAnswers((prev) => ({ ...prev, [questionId]: optionId }));
+  };
+
+  const handleSubmitQuiz = async () => {
+    if (!activeQuiz) return;
+    if ((activeQuiz.questions || []).length === 0) return;
+    setIsSubmittingQuiz(true);
+    try {
+      const result = await api.student.submitQuiz(activeQuiz.id, quizAnswers);
+      setQuizSubmitResult({
+        score: Number(result?.score || 0),
+        status: String(result?.status || 'unknown'),
+        correct: Number(result?.correct || 0),
+        total: Number(result?.total || 0),
+      });
+    } catch (err) {
+      console.error('Failed to submit quiz', err);
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
+  };
+
   const handleDownloadHandsSignExport = useCallback(async () => {
     try {
       const manifest = await api.videos.getHandsSignExport(videoId);
@@ -1191,6 +1270,7 @@ export default function VideoLessonPage() {
                        { id: 'timeline', label: 'Cấu trúc thời gian', icon: Clock },
                        { id: 'highlights', label: 'Điểm nhấn chính', icon: Zap },
                        { id: 'questions', label: 'Làm rõ khái niệm', icon: HelpCircle },
+                       { id: 'quiz', label: 'Làm bài quiz', icon: ClipboardCheck },
                        { id: 'flashcards', label: 'Thẻ ghi nhớ', icon: BookOpen },
                        { id: 'visuals', label: 'Trực quan hóa', icon: Eye },
                        { id: 'handsign', label: 'Avatar VSL', icon: Hand },
@@ -1282,6 +1362,78 @@ export default function VideoLessonPage() {
                           ))}
                        </div>
                        )
+                     )}
+
+                     {activeTab === 'quiz' && (
+                       <div className="space-y-6">
+                          {isLoadingQuizzes && renderPanelState('Đang tải quiz...')}
+                          {!isLoadingQuizzes && quizzes.length === 0 && renderPanelState('Bài học này chưa có quiz.')}
+                          {!isLoadingQuizzes && quizzes.length > 0 && (
+                            <div className="space-y-6">
+                              <div className="flex flex-wrap gap-2">
+                                {quizzes.map((quiz, idx) => (
+                                  <button
+                                    key={quiz.id}
+                                    onClick={() => {
+                                      setSelectedQuizIdx(idx);
+                                      setQuizAnswers({});
+                                      setQuizSubmitResult(null);
+                                    }}
+                                    className={cn(
+                                      "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider border transition-all",
+                                      selectedQuizIdx === idx ? "bg-[#FF4F6E] text-white border-[#FF4F6E]" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                                    )}
+                                  >
+                                    Quiz {idx + 1}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {activeQuiz && (
+                                <div className="space-y-5">
+                                  <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5">
+                                    <p className="text-sm font-extrabold text-slate-900">{activeQuiz.title}</p>
+                                    <p className="text-xs font-bold text-slate-500 mt-1">Điểm đạt: {activeQuiz.passing_score}%</p>
+                                  </div>
+
+                                  {activeQuiz.questions.map((question, qIdx) => (
+                                    <div key={question.id} className="rounded-2xl border border-slate-100 p-5 bg-white">
+                                      <p className="text-sm font-extrabold text-slate-900 mb-4">{qIdx + 1}. {question.question_text}</p>
+                                      <div className="space-y-2">
+                                        {question.options.map((opt) => (
+                                          <label key={opt.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 hover:bg-slate-50 cursor-pointer">
+                                            <input
+                                              type="radio"
+                                              name={`quiz-${question.id}`}
+                                              checked={quizAnswers[question.id] === opt.id}
+                                              onChange={() => handleSelectQuizAnswer(question.id, opt.id)}
+                                            />
+                                            <span className="text-sm font-bold text-slate-600">{opt.option_text}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      onClick={handleSubmitQuiz}
+                                      disabled={isSubmittingQuiz}
+                                      className="px-6 py-3 rounded-xl bg-[#FF4F6E] text-white text-xs font-black uppercase tracking-wider disabled:opacity-60"
+                                    >
+                                      {isSubmittingQuiz ? 'Đang nộp...' : 'Nộp bài'}
+                                    </button>
+                                    {quizSubmitResult && (
+                                      <div className="text-sm font-extrabold text-slate-700">
+                                        Điểm: {quizSubmitResult.score}% • {quizSubmitResult.correct}/{quizSubmitResult.total} • {quizSubmitResult.status}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                       </div>
                      )}
 
                      {activeTab === 'flashcards' && (

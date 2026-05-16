@@ -66,15 +66,15 @@ export function Footer() {
             <div className="space-y-4 pt-2">
               <div className="flex items-start gap-3 text-slate-500">
                 <MapPin size={18} className="shrink-0 mt-0.5" />
-                <span className="text-[14px]">3556 Beech Street, San Francisco, California, CA 94108</span>
+                <span className="text-[14px]">Đại học VinUniversity, Gia Lâm, Hà Nội</span>
               </div>
               <div className="flex items-center gap-3 text-slate-500">
                 <Mail size={18} className="shrink-0" />
-                <span className="text-[14px]">dreamslms@example.com</span>
+                <span className="text-[14px]">kaitokao1412@gmail.com</span>
               </div>
               <div className="flex items-center gap-3 text-slate-500">
                 <Phone size={18} className="shrink-0" />
-                <span className="text-[14px]">+19 123-456-7890</span>
+                <span className="text-[14px]">0967899661</span>
               </div>
             </div>
           </div>
@@ -84,7 +84,7 @@ export function Footer() {
       {/* Bottom Bar */}
       <div className="border-t border-slate-100 bg-[#14142B] text-white/50 py-6">
         <div className="max-w-[1400px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-black uppercase tracking-widest">
-          <p>© 2026 Dreams. B?o luu m?i quy?n.</p>
+          <p>© 2026 Dreams. Bản quyền thuộc về VinUniversity.</p>
           <div className="flex gap-10">
             <span className="hover:text-white cursor-pointer transition-colors">Điều khoản & điều kiện</span>
             <span className="hover:text-white cursor-pointer transition-colors">Chính sách bảo mật</span>

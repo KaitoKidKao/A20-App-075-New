@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 from collections import OrderedDict
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func
@@ -27,8 +28,10 @@ from src.backend.models import (
     QuestionOption,
     QuizAttempt,
     CourseReview,
+    ContentMetadata,
 )
 from src.backend.utils.datetime_utils import utc_now
+from src.backend.services.video_service import VideoService
 
 router = APIRouter(prefix="/api/student", tags=["student"])
 logger = logging.getLogger(__name__)
@@ -93,6 +96,37 @@ def _serialize_review(review: CourseReview, user: User | None):
         "comment": review.comment,
         "created_at": review.created_at,
         "updated_at": review.updated_at,
+    }
+
+
+@router.get("/reviews/me")
+async def list_my_reviews(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    rows = session.exec(
+        select(CourseReview)
+        .where(CourseReview.user_id == current_user.id)
+        .order_by(CourseReview.updated_at.desc())
+    ).all()
+    if not rows:
+        return {"items": []}
+
+    course_ids = [r.course_id for r in rows]
+    courses = session.exec(select(Course).where(Course.id.in_(course_ids))).all()
+    course_map = {c.id: c for c in courses}
+    return {
+        "items": [
+            {
+                "id": str(r.id),
+                "course_id": str(r.course_id),
+                "course_title": course_map.get(r.course_id).title if course_map.get(r.course_id) else "Course",
+                "rating": r.rating,
+                "comment": r.comment,
+                "updated_at": r.updated_at,
+            }
+            for r in rows
+        ]
     }
 
 # --- Enrollment ---
@@ -288,6 +322,22 @@ async def get_course_detail(
     lesson_by_module: dict[uuid.UUID, list[Lesson]] = {}
     for lesson in lessons:
         lesson_by_module.setdefault(lesson.module_id, []).append(lesson)
+
+    # Backfill duration for legacy lessons that still have 0 minutes.
+    touched_duration = False
+    for lesson in lessons:
+        if (lesson.duration_minutes or 0) > 0:
+            continue
+        content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == lesson.id)).first()
+        if not content or not content.video_url:
+            continue
+        duration_seconds = VideoService.get_video_duration_seconds(Path(content.video_url))
+        if duration_seconds:
+            lesson.duration_minutes = max(1, int(round(duration_seconds / 60)))
+            session.add(lesson)
+            touched_duration = True
+    if touched_duration:
+        session.commit()
 
     enrollment = session.exec(
         select(Enrollment).where(
@@ -684,6 +734,10 @@ async def update_profile(
     if not profile:
         profile = Profile(user_id=current_user.id)
     
+    if "full_name" in data:
+        current_user.full_name = data["full_name"]
+        session.add(current_user)
+        
     for key, val in data.items():
         if hasattr(profile, key) and key != "id":
             setattr(profile, key, val)
@@ -691,7 +745,8 @@ async def update_profile(
     session.add(profile)
     session.commit()
     session.refresh(profile)
-    return profile
+    session.refresh(current_user)
+    return {"profile": profile, "user": current_user}
 
 @router.get("/courses/{course_id}/certificate")
 async def get_course_certificate(

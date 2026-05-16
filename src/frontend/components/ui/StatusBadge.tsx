@@ -15,7 +15,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export type Status = 'processing' | 'ready' | 'error' | 'live' | 'ended';
+export type Status = 'queued' | 'processing' | 'ready' | 'error' | 'live' | 'ended';
 
 interface StatusBadgeProps {
   status: Status;
@@ -23,6 +23,11 @@ interface StatusBadgeProps {
 }
 
 const statusConfig = {
+  queued: {
+    icon: <Loader2 className="h-3.5 w-3.5" />,
+    label: 'Chờ hàng đợi',
+    className: 'bg-slate-100 text-slate-700 border-slate-200'
+  },
   processing: {
     icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
     label: 'Đang xử lý',

@@ -113,6 +113,10 @@ async def run_video_pipeline(lesson_id: str, video_path: Path | str):
             
             # Find or Create Course/Module if lesson is loose
             lesson = session.get(Lesson, lesson_uuid)
+            if lesson and (lesson.duration_minutes or 0) <= 0:
+                duration_seconds = VideoService.get_video_duration_seconds(video_path)
+                if duration_seconds:
+                    lesson.duration_minutes = max(1, int(round(duration_seconds / 60)))
             if lesson and not lesson.module_id:
                 # Assign to a default "AI Auto-Generated" course in that category
                 target_cat = next((c for c in categories if c.name == best_cat_name), categories[0] if categories else None)

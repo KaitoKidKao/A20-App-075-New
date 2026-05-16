@@ -196,6 +196,7 @@ export interface AdminDashboard {
     active_courses: number;
     lesson_count: number;
     failed_video_jobs: number;
+    processing_video_jobs: number;
     completion_rate: number;
   };
   failed_jobs: {
@@ -284,6 +285,15 @@ export interface CourseReview {
   updated_at: string;
 }
 
+export interface MyReviewItem {
+  id: string;
+  course_id: string;
+  course_title: string;
+  rating: number;
+  comment: string;
+  updated_at: string;
+}
+
 export interface AdminCourseWorkspace {
   id: string;
   title: string;
@@ -357,6 +367,24 @@ export interface MyVideo {
   completion_status: string;
 }
 
+export interface BatchUploadItem {
+  ok: boolean;
+  filename: string;
+  video_id?: string;
+  status?: string;
+  queue_mode?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface BatchUploadResponse {
+  status: string;
+  total: number;
+  success_count: number;
+  failed_count: number;
+  items: BatchUploadItem[];
+}
+
 const buildHeaders = (isMultipart = false): HeadersInit => {
   const headers: HeadersInit = {};
   if (!isMultipart) headers["Content-Type"] = "application/json";
@@ -419,10 +447,22 @@ export const api = {
         throw new Error(error.detail || "Login failed.");
       }
       const data = await res.json();
+      let fullName = "";
+      try {
+        const meRes = await apiFetch("/api/auth/me", { headers: buildHeaders() });
+        if (meRes.ok) {
+          const me = (await meRes.json()) as SessionUser;
+          fullName = (me.full_name || "").trim();
+        }
+      } catch {
+        // ignore and fallback to email prefix
+      }
+
+      const fallbackName = credentials.email.split("@")[0] || "User";
       return {
         ...data,
         user: {
-          name: credentials.email.split("@")[0] || "User",
+          name: fullName || fallbackName,
           email: credentials.email,
           role: data.role || "student",
         },
@@ -563,10 +603,11 @@ export const api = {
       if (!res.ok) throw new Error("Failed to delete video.");
       return res.json();
     },
-    async upload(file: File, moduleId?: string) {
+    async upload(file: File, moduleId?: string, videoTitle?: string) {
       const formData = new FormData();
       formData.append("file", file);
       if (moduleId) formData.append("module_id", moduleId);
+      if (videoTitle && videoTitle.trim()) formData.append("video_title", videoTitle.trim());
       const res = await apiFetch("/api/videos/upload", {
         method: "POST",
         headers: buildHeaders(true),
@@ -575,6 +616,23 @@ export const api = {
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
         throw new Error(error.detail || "Video upload failed.");
+      }
+      return res.json();
+    },
+    async uploadBatch(files: File[], moduleId?: string): Promise<BatchUploadResponse> {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+      if (moduleId) formData.append("module_id", moduleId);
+      const res = await apiFetch("/api/videos/upload-batch", {
+        method: "POST",
+        headers: buildHeaders(true),
+        body: formData,
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Batch video upload failed.");
       }
       return res.json();
     },
@@ -695,6 +753,11 @@ export const api = {
       if (!res.ok) throw new Error("Failed to save course review.");
       return res.json();
     },
+    async listMyReviews(): Promise<{ items: MyReviewItem[] }> {
+      const res = await apiFetch("/api/student/reviews/me", { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch my reviews.");
+      return res.json();
+    },
     async reviewFlashcard(flashcardId: string, isCorrect: boolean) {
       const res = await apiFetch(`/api/student/flashcards/${flashcardId}/review?is_correct=${isCorrect}`, {
         method: "POST",
@@ -788,6 +851,31 @@ export const api = {
         body: JSON.stringify({ role }),
       });
       if (!res.ok) throw new Error("Failed to update user role.");
+      return res.json();
+    },
+    async deleteUser(userId: string) {
+      const res = await apiFetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete user.");
+      return res.json();
+    },
+    async updateCourse(courseId: string, data: { title?: string; description?: string; is_published?: boolean }) {
+      const res = await apiFetch(`/api/admin/courses/${courseId}`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update course.");
+      return res.json();
+    },
+    async deleteCourse(courseId: string) {
+      const res = await apiFetch(`/api/admin/courses/${courseId}`, {
+        method: "DELETE",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete course.");
       return res.json();
     }
   }
