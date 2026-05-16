@@ -599,7 +599,26 @@ export const api = {
 
     async getAvatar(videoId: string): Promise<AvatarState> {
       const res = await apiFetch(`/api/videos/${videoId}/avatar`, { headers: buildHeaders() });
-      if (!res.ok) throw new Error("Failed to fetch avatar video state.");
+      if (!res.ok) throw new Error("Failed to fetch avatar status.");
+      return res.json();
+    },
+
+    async generateSlides(videoId: string, templateId: string, numSlides: number) {
+      const res = await apiFetch(`/api/videos/${videoId}/generate-slides`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({ template_id: templateId, num_slides: numSlides }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to generate slides.");
+      }
+      return res.json();
+    },
+
+    async getMindmap(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/mindmap`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch mindmap.");
       return res.json();
     },
 

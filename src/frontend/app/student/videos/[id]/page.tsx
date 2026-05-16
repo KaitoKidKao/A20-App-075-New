@@ -26,6 +26,10 @@ import {
   Lightbulb,
   Rocket,
   Download,
+  Presentation,
+  Network,
+  Layout,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
@@ -167,6 +171,13 @@ export default function VideoLessonPage() {
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [metadataError, setMetadataError] = useState('');
   const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
+  const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
+  const [slideDownloadUrl, setSlideDownloadUrl] = useState<string | null>(null);
+  const [showSlideModal, setShowSlideModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('template_08');
+  const [numSlides, setNumSlides] = useState(15);
+  const [mindmapData, setMindmapData] = useState<any>(null);
+  const [isLoadingMindmap, setIsLoadingMindmap] = useState(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
   const [quizzes, setQuizzes] = useState<LessonQuizItem[]>([]);
@@ -827,11 +838,49 @@ export default function VideoLessonPage() {
       const data = await api.videos.getSummary(videoId);
       setSummaryPoints(data.summary || []);
     } catch (err) {
-      console.error('Summary fetch error:', err);
+      console.error(err);
     } finally {
       setIsLoadingSummary(false);
     }
   };
+
+  const handleGenerateSlides = async () => {
+    setIsGeneratingSlides(true);
+    setSlideDownloadUrl(null);
+    try {
+      const res = await api.videos.generateSlides(videoId, selectedTemplate, numSlides);
+      if (res.download_url) {
+        setSlideDownloadUrl(`${backendBaseUrl}${res.download_url}`);
+        setShowSlideModal(false);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi tạo slide. Vui lòng thử lại.");
+    } finally {
+      setIsGeneratingSlides(false);
+    }
+  };
+
+  const handleFetchMindmap = useCallback(async () => {
+    if (mindmapData) return;
+    setIsLoadingMindmap(true);
+    try {
+      const res = await api.videos.getMindmap(videoId);
+      if (res.mindmap) {
+        setMindmapData(res.mindmap);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingMindmap(false);
+    }
+  }, [videoId, mindmapData]);
+
+  useEffect(() => {
+    if (activeTab === 'mindmap') {
+      handleFetchMindmap();
+    }
+  }, [activeTab, handleFetchMindmap]);
 
   const activeQuiz = quizzes[selectedQuizIdx] || null;
 
@@ -1187,24 +1236,66 @@ export default function VideoLessonPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleGetSummary}
-                  disabled={isLoadingSummary}
-                  className="w-full md:w-auto px-10 py-5 bg-[#FF4F6E] text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-2xl shadow-[#FF4F6E]/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-                >
-                  {isLoadingSummary ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Đang phân tích...
-                    </>
-                  ) : (
-                    <>
-                      <Zap size={20} fill="currentColor" />
-                      TẠO TÓM TẮT BẰNG AI
-                    </>
-                  )}
-                </button>
+                <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                  <button
+                    onClick={handleGetSummary}
+                    disabled={isLoadingSummary}
+                    className="flex-1 md:flex-none px-8 py-5 bg-[#FF4F6E] text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-2xl shadow-[#FF4F6E]/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    {isLoadingSummary ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Đang phân tích...
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={20} fill="currentColor" />
+                        TẠO TÓM TẮT BẰNG AI
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setShowSlideModal(true)}
+                    disabled={isGeneratingSlides}
+                    className="flex-1 md:flex-none px-8 py-5 bg-slate-900 text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-2xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    {isGeneratingSlides ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Đang vẽ Slide...
+                      </>
+                    ) : (
+                      <>
+                        <Presentation size={20} />
+                        TẠO SLIDE PPTX
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
+
+              {slideDownloadUrl && (
+                <div className="mt-8 p-6 bg-emerald-50 rounded-[28px] border border-emerald-100 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
+                      <Layout size={20} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-emerald-900">Slide đã sẵn sàng!</p>
+                      <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest">Đã tối ưu hóa nội dung AI</p>
+                    </div>
+                  </div>
+                  <a
+                    href={slideDownloadUrl}
+                    download
+                    className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-extrabold text-xs uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2"
+                  >
+                    <Download size={16} />
+                    TẢI VỀ MÁY
+                  </a>
+                </div>
+              )}
 
               {summaryPoints.length > 0 && (
                 <div className="mt-10 grid md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
@@ -1254,6 +1345,7 @@ export default function VideoLessonPage() {
                 <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-b border-slate-100 mb-10 pb-2">
                   {[
                     { id: 'timeline', label: 'Cấu trúc thời gian', icon: Clock },
+                    { id: 'mindmap', label: 'Sơ đồ tư duy', icon: Network },
                     { id: 'highlights', label: 'Điểm nhấn chính', icon: Zap },
                     { id: 'questions', label: 'Làm rõ khái niệm', icon: HelpCircle },
                     { id: 'quiz', label: 'Làm bài quiz', icon: ClipboardCheck },
@@ -1292,6 +1384,56 @@ export default function VideoLessonPage() {
                             <span className="text-base font-extrabold text-slate-700 group-hover:text-slate-900 leading-snug pt-1">{item.title}</span>
                           </div>
                         ))}
+                      </div>
+                    )
+                  )}
+
+                  {activeTab === 'mindmap' && (
+                    isLoadingMindmap ? renderPanelState('Đang kiến tạo sơ đồ tư duy...') : !mindmapData ? renderPanelState('Chưa có sơ đồ tư duy cho video này.') : (
+                      <div className="space-y-12 py-6">
+                        {/* Root Node */}
+                        <div className="flex justify-center">
+                          <div className="relative p-1 bg-gradient-to-br from-[#FF4F6E] to-[#FF8E53] rounded-[32px] shadow-2xl shadow-[#FF4F6E]/20">
+                            <div className="bg-white rounded-[28px] px-12 py-8 flex flex-col items-center">
+                              <Brain size={40} className="text-[#FF4F6E] mb-4 animate-bounce" />
+                              <h4 className="text-2xl font-black text-slate-900 text-center tracking-tight">{mindmapData.topic}</h4>
+                              <p className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Chủ đề trung tâm</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Branches */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                          {mindmapData.branches?.map((branch: any, bi: number) => (
+                            <div key={bi} className="relative pt-8 animate-in zoom-in-95 duration-500" style={{ animationDelay: `${bi * 150}ms` }}>
+                              {/* Connector Line */}
+                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-8 bg-slate-100" />
+                              
+                              <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm hover:shadow-xl transition-all group border-t-4 border-t-[#FF4F6E]">
+                                <h5 className="text-lg font-extrabold text-slate-800 mb-6 group-hover:text-[#FF4F6E] transition-colors">{branch.name}</h5>
+                                
+                                <div className="space-y-3">
+                                  {branch.points?.map((point: any, pi: number) => (
+                                    <div 
+                                      key={pi}
+                                      onClick={() => point.timestamp && seekTo(point.timestamp)}
+                                      className={cn(
+                                        "flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-50 hover:bg-white hover:border-[#FF4F6E]/20 transition-all group/point",
+                                        point.timestamp && "cursor-pointer"
+                                      )}
+                                    >
+                                      <div className="w-2 h-2 rounded-full bg-[#FF4F6E] group-hover/point:scale-150 transition-transform" />
+                                      <p className="text-sm font-bold text-slate-600 group-hover/point:text-slate-900 flex-1">{point.text}</p>
+                                      {point.timestamp && (
+                                        <span className="text-[10px] font-black text-[#FF4F6E] px-2 py-1 bg-white rounded-lg shadow-sm">{point.timestamp}</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )
                   )}
@@ -1841,6 +1983,92 @@ export default function VideoLessonPage() {
 
         </div>
       </div>
+      {/* Slide Generation Modal */}
+      {showSlideModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowSlideModal(false)} />
+          <div className="relative bg-white rounded-[40px] w-full max-w-xl p-10 shadow-2xl border border-white/20 animate-in zoom-in-95 duration-300">
+            <button
+              onClick={() => setShowSlideModal(false)}
+              className="absolute top-8 right-8 p-3 hover:bg-slate-50 rounded-2xl transition-colors text-slate-400"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="flex items-center gap-6 mb-10">
+              <div className="w-16 h-16 bg-slate-900 rounded-[24px] flex items-center justify-center text-white shadow-xl">
+                <Presentation size={32} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Cấu hình Slide AI</h3>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Tùy chỉnh tệp trình chiếu của bạn</p>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <label className="text-xs font-black text-slate-500 uppercase tracking-widest block ml-1">Chọn Template thiết kế</label>
+                <div className="grid grid-cols-5 gap-3">
+                  {[...Array(10)].map((_, i) => {
+                    const id = `template_${(i + 1).toString().padStart(2, '0')}`;
+                    const isSelected = selectedTemplate === id;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => setSelectedTemplate(id)}
+                        className={cn(
+                          "aspect-video rounded-xl border-4 transition-all flex items-center justify-center font-black text-sm",
+                          isSelected ? "border-[#FF4F6E] bg-[#FF4F6E]/5 text-[#FF4F6E] scale-105" : "border-slate-50 bg-slate-50 text-slate-300 hover:border-slate-200"
+                        )}
+                      >
+                        {i + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest block ml-1">Số lượng slide mong muốn</label>
+                  <span className="text-lg font-black text-[#FF4F6E]">{numSlides}</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="30"
+                  step="1"
+                  value={numSlides}
+                  onChange={(e) => setNumSlides(parseInt(e.target.value))}
+                  className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#FF4F6E]"
+                />
+                <div className="flex justify-between text-[10px] font-bold text-slate-300">
+                  <span>5 SLIDES</span>
+                  <span>30 SLIDES</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleGenerateSlides}
+                disabled={isGeneratingSlides}
+                className="w-full py-6 bg-slate-900 text-white rounded-[24px] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-slate-900/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+              >
+                {isGeneratingSlides ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ĐANG XỬ LÝ DỮ LIỆU...
+                  </>
+                ) : (
+                  <>
+                    <Zap size={20} fill="currentColor" />
+                    BẮT ĐẦU TẠO PPTX
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
