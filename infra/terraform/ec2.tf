@@ -68,6 +68,12 @@ resource "aws_iam_instance_profile" "ec2" {
   role = aws_iam_role.ec2.name
 }
 
+# Allows EC2 to register with SSM so CI/CD can run commands without opening port 22
+resource "aws_iam_role_policy_attachment" "ec2_ssm_core" {
+  role       = aws_iam_role.ec2.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 # ── Latest Amazon Linux 2023 AMI ─────────────────────────────────────────────
 
 data "aws_ami" "al2023" {
