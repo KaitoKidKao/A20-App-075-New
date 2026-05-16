@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import text
 from sqlmodel import Session
 
@@ -17,6 +17,7 @@ from src.backend.api.videos_router import router as videos_router
 from src.backend.api.course_router import router as course_router
 from src.backend.api.student_router import router as student_router
 from src.backend.api.deps import check_video_access
+from src.backend.services.storage_service import generate_presigned_url, s3_object_exists
 from src.backend.auth import get_current_user
 from src.backend.database import create_db_and_tables, engine, get_session
 from src.backend.models import User
@@ -76,6 +77,12 @@ async def stream_video(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
+    for ext in (".mp4", ".mov", ".avi", ".mkv"):
+        s3_key = f"uploads/{video_id}{ext}"
+        if s3_object_exists(s3_key):
+            url = generate_presigned_url(s3_key, expires_in=7200)
+            if url:
+                return RedirectResponse(url=url, status_code=302)
     for ext in (".mp4", ".mov", ".avi", ".mkv"):
         candidate = VideoService.UPLOAD_DIR / f"{video_id}{ext}"
         if candidate.exists():
