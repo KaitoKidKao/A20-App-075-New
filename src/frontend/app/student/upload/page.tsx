@@ -22,6 +22,7 @@ export default function UploadVideo() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [myVideos, setMyVideos] = useState<MyVideo[]>([]);
+  const [videoTitle, setVideoTitle] = useState('');
 
   const loadMyVideos = async () => {
     try {
@@ -38,6 +39,10 @@ export default function UploadVideo() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      const filename = e.target.files[0].name.replace(/\.[^/.]+$/, '');
+      if (!videoTitle.trim()) {
+        setVideoTitle(filename);
+      }
       setErrorMsg('');
     }
   };
@@ -61,12 +66,14 @@ export default function UploadVideo() {
     }, 300);
 
     try {
-      const data = await api.videos.upload(selectedFile);
+      const data = await api.videos.upload(selectedFile, undefined, videoTitle);
       clearInterval(progressInterval);
 
       if (data.video_id) {
         await loadMyVideos();
         setUploadProgress(100);
+        setSelectedFile(null);
+        setVideoTitle('');
         setTimeout(() => {
           router.push(`/student/videos/${data.video_id}/processing`);
         }, 800);
@@ -118,31 +125,44 @@ export default function UploadVideo() {
               )}
 
               {!isUploading ? (
-                <div 
-                  onClick={handleUploadClick}
-                  className={`relative group border-4 border-dashed rounded-[32px] p-12 flex flex-col items-center justify-center transition-all cursor-pointer ${
-                    selectedFile 
-                      ? 'border-emerald-500 bg-emerald-50/30' 
-                      : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-[#FF4F6E]/30 hover:shadow-2xl hover:shadow-[#FF4F6E]/10'
-                  }`}
-                >
-                  <div className={`w-20 h-20 rounded-[24px] shadow-lg flex items-center justify-center mb-8 transition-all group-hover:scale-110 group-hover:rotate-3 ${
-                    selectedFile ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-white text-slate-300 group-hover:text-[#FF4F6E]'
-                  }`}>
-                    {selectedFile ? <CheckCircle2 size={40} /> : <UploadCloud size={40} />}
-                  </div>
-                  <h3 className="text-xl font-black text-slate-900 mb-2">
-                    {selectedFile ? 'Sẵn sàng xử lý!' : 'Kéo & thả video'}
-                  </h3>
-                  <p className="text-sm font-bold text-slate-400 text-center max-w-[240px]">
-                    {selectedFile ? selectedFile.name : 'Hỗ trợ MP4, MOV, AVI. Dung lượng tối đa 500MB.'}
-                  </p>
-                  
-                  {selectedFile && (
-                    <div className="mt-4 px-4 py-1.5 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-widest">
-                       {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Hợp lệ
+                <div className="space-y-4">
+                  <div
+                    onClick={handleUploadClick}
+                    className={`relative group border-4 border-dashed rounded-[32px] p-12 flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      selectedFile
+                        ? 'border-emerald-500 bg-emerald-50/30'
+                        : 'border-slate-100 bg-slate-50 hover:bg-white hover:border-[#FF4F6E]/30 hover:shadow-2xl hover:shadow-[#FF4F6E]/10'
+                    }`}
+                  >
+                    <div className={`w-20 h-20 rounded-[24px] shadow-lg flex items-center justify-center mb-8 transition-all group-hover:scale-110 group-hover:rotate-3 ${
+                      selectedFile ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-white text-slate-300 group-hover:text-[#FF4F6E]'
+                    }`}>
+                      {selectedFile ? <CheckCircle2 size={40} /> : <UploadCloud size={40} />}
                     </div>
-                  )}
+                    <h3 className="text-xl font-black text-slate-900 mb-2">
+                      {selectedFile ? 'Sẵn sàng xử lý!' : 'Kéo & thả video'}
+                    </h3>
+                    <p className="text-sm font-bold text-slate-400 text-center max-w-[240px]">
+                      {selectedFile ? selectedFile.name : 'Hỗ trợ MP4, MOV, AVI. Dung lượng tối đa 500MB.'}
+                    </p>
+
+                    {selectedFile && (
+                      <div className="mt-4 px-4 py-1.5 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-widest">
+                        {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Hợp lệ
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Tên video</label>
+                    <input
+                      type="text"
+                      value={videoTitle}
+                      onChange={(e) => setVideoTitle(e.target.value)}
+                      placeholder="Nhập tên video hiển thị"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:ring-2 focus:ring-[#FF4F6E]/10"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="border-4 border-slate-50 rounded-[32px] p-12 flex flex-col items-center justify-center bg-white shadow-inner">
@@ -173,7 +193,7 @@ export default function UploadVideo() {
               <div className="flex flex-col gap-4">
                  <button 
                    onClick={handleStartProcessing}
-                   disabled={isUploading || !selectedFile}
+                   disabled={isUploading || !selectedFile || !videoTitle.trim()}
                    className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
                      isUploading || !selectedFile 
                        ? 'bg-slate-100 text-slate-300 cursor-not-allowed' 

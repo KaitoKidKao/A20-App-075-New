@@ -603,10 +603,11 @@ export const api = {
       if (!res.ok) throw new Error("Failed to delete video.");
       return res.json();
     },
-    async upload(file: File, moduleId?: string) {
+    async upload(file: File, moduleId?: string, videoTitle?: string) {
       const formData = new FormData();
       formData.append("file", file);
       if (moduleId) formData.append("module_id", moduleId);
+      if (videoTitle && videoTitle.trim()) formData.append("video_title", videoTitle.trim());
       const res = await apiFetch("/api/videos/upload", {
         method: "POST",
         headers: buildHeaders(true),
