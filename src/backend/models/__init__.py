@@ -7,6 +7,7 @@ from .flashcard import Flashcard, UserFlashcardProgress
 from .job import ProcessingJob
 from .system_setting import SystemSetting
 from .review import CourseReview
+from .deletion_audit import DeletionAudit
 
 __all__ = [
     "Role", "User", "Profile",
@@ -18,4 +19,5 @@ __all__ = [
     "ProcessingJob",
     "SystemSetting",
     "CourseReview",
+    "DeletionAudit",
 ]

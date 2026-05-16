@@ -117,8 +117,8 @@ export default function UploadVideo() {
         
         {/* Header Title */}
         <div className="space-y-2">
-           <h1 className="text-4xl font-black text-slate-900 tracking-tight italic">
-             Chia sẻ <span className="text-[#FF4F6E]">bài giảng</span> của bạn
+           <h1 className="text-4xl font-black uppercase text-slate-900 tracking-tight">
+             CHIA SẺ <span className="text-[#FF4F6E]">BÀI GIẢNG</span> CỦA BẠN
            </h1>
            <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">
              Tải bài giảng để tạo phân tích AI và tính năng trợ năng
@@ -142,7 +142,7 @@ export default function UploadVideo() {
 
               {errorMsg && (
                 <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-black animate-in fade-in slide-in-from-top-2">
-                  âŒ {errorMsg}
+                  Lỗi: {errorMsg}
                 </div>
               )}
 

@@ -21,7 +21,7 @@ def _require_teacher_or_admin(user: User) -> None:
 
 def _ensure_course_owner_or_admin(course_id: uuid.UUID, user: User, session: Session) -> Course:
     course = session.get(Course, course_id)
-    if not course:
+    if not course or course.is_deleted:
         raise HTTPException(status_code=404, detail="Course not found")
     if _role_name(user) == "admin" or course.instructor_id == user.id:
         return course
@@ -45,7 +45,7 @@ def _can_view_course(course: Course, user: User, session: Session) -> bool:
 
 def _ensure_course_view_access(course_id: uuid.UUID, user: User, session: Session) -> Course:
     course = session.get(Course, course_id)
-    if not course:
+    if not course or course.is_deleted:
         raise HTTPException(status_code=404, detail="Course not found")
     if course.is_published and _role_name(user) in {"student", "teacher", "admin"}:
         return course
@@ -96,7 +96,7 @@ async def create_category(category: Category, current_user: User = Depends(get_c
 # --- Courses ---
 @router.get("/", response_model=List[Course])
 async def list_courses(category_id: uuid.UUID = None, session: Session = Depends(get_session)):
-    statement = select(Course).where(Course.is_published == True)
+    statement = select(Course).where(Course.is_published == True, Course.is_deleted == False)  # noqa: E712
     if category_id:
         statement = statement.where(Course.category_id == category_id)
     return session.exec(statement).all()

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -18,11 +18,14 @@ import {
   EyeOff,
   Settings,
   UserX,
-  AlertCircle
+  AlertCircle,
+  History,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { StatusBadge, type Status } from '@/components/ui/StatusBadge';
 import { CustomSelect } from '@/components/ui/Select';
-import { api, type AdminCourseWorkspace, type AdminDashboard, type AdminRecentJob, type AdminUser } from '@/lib/api';
+import { api, type AdminCourseWorkspace, type AdminDashboard, type AdminRecentJob, type AdminUser, type AdminDeletionAudit } from '@/lib/api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -37,6 +40,15 @@ function toBadgeStatus(status: string): Status {
   if (normalized === 'live') return 'live';
   if (normalized === 'ended') return 'ended';
   return 'processing';
+}
+
+function normalizeCourseDescription(description?: string | null): string {
+  const raw = (description || '').trim();
+  if (!raw) return 'Chưa có mô tả';
+  if (raw.toLowerCase().includes('khu tự học cá nhân cho video học sinh tự tải lên')) {
+    return 'Không gian tự học cá nhân cho các video bạn tự tải lên.';
+  }
+  return raw;
 }
 
 export default function AdminDashboardPage() {
@@ -60,6 +72,7 @@ export default function AdminDashboardPage() {
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
   const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null);
   const [updatingCourseId, setUpdatingCourseId] = useState<string | null>(null);
+  const [deletionAudits, setDeletionAudits] = useState<AdminDeletionAudit[]>([]);
 
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
   const [courseTitle, setCourseTitle] = useState('');
@@ -69,6 +82,14 @@ export default function AdminDashboardPage() {
   const [selectedModuleId, setSelectedModuleId] = useState('');
   const [createNewModule, setCreateNewModule] = useState(false);
   const [moduleTitle, setModuleTitle] = useState('');
+  const [expandedSections, setExpandedSections] = useState({
+    upload: true,
+    courses: false,
+    settings: false,
+    users: false,
+    jobs: true,
+    deletionHistory: false,
+  });
 
   // Course Edit Modal State
   const [isEditCourseModalOpen, setIsEditCourseModalOpen] = useState(false);
@@ -78,19 +99,23 @@ export default function AdminDashboardPage() {
     isOpen: boolean;
     title: string;
     message: string;
-    onConfirm: () => void;
+    onConfirm: (reason: string) => void;
     confirmText?: string;
     type?: 'danger' | 'info';
   }>({
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {},
+    onConfirm: () => { },
     confirmText: 'Xác nhận',
     type: 'danger'
   });
 
-  const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  const closeConfirmModal = () => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    setDeleteReason('');
+  };
+  const [deleteReason, setDeleteReason] = useState('');
   const lastJobStatusRef = useRef<Record<string, string>>({});
   const READY_NOTIFIED_KEY = 'app_notified_ready_jobs';
 
@@ -143,15 +168,17 @@ export default function AdminDashboardPage() {
 
   const loadAdminData = useCallback(async (role: 'admin' | 'teacher' | 'student') => {
     try {
-      const [dashboardData, jobsData, coursesData] = await Promise.all([
+      const [dashboardData, jobsData, coursesData, auditsData] = await Promise.all([
         api.admin.getDashboard(),
         api.admin.listRecentJobs(20),
         api.admin.listCourses(),
+        api.admin.listDeletionAudits(30),
       ]);
       setDashboard(dashboardData);
       setRecentJobs(jobsData);
       setAdminCourses(coursesData);
-      
+      setDeletionAudits(auditsData);
+
       if (role === 'admin') {
         const [settingsData, usersData] = await Promise.all([
           api.admin.getSettings(),
@@ -163,7 +190,7 @@ export default function AdminDashboardPage() {
         setAllowPublicRoleRegistration(false);
         setAdminUsers([]);
       }
-      
+
       if (coursesData.length > 0) {
         setSelectedCourseId((prev) => prev || coursesData[0].id);
         const currentSelectedCourse = coursesData.find(c => c.id === (selectedCourseId || coursesData[0].id));
@@ -265,7 +292,7 @@ export default function AdminDashboardPage() {
     try {
       await api.admin.updateUserRole(userId, nextRole);
       setAdminUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, role: nextRole } : user)));
-      setPublishMessage(`Đã cập nhật vai trò người dùng.`);
+      setPublishMessage('Đã cập nhật vai trò người dùng.');
     } catch {
       setPublishMessage('Lỗi khi cập nhật vai trò.');
     } finally {
@@ -277,21 +304,23 @@ export default function AdminDashboardPage() {
     setConfirmModal({
       isOpen: true,
       title: 'Xóa Người Dùng',
-      message: `Bạn có chắc muốn XÓA người dùng ${email}? Mọi dữ liệu liên quan sẽ bị mất.`,
-      onConfirm: async () => {
-        closeConfirmModal();
+      message: `Bạn có chắc muốn XÓA người dùng ${email}?\nMọi dữ liệu liên quan sẽ bị mất.`,
+      onConfirm: async (reason: string) => {
+        const finalReason = reason.trim();
+        if (!finalReason) return;
         setDeletingUserId(userId);
         try {
-          await api.admin.deleteUser(userId);
+          await api.admin.deleteUser(userId, finalReason);
           setAdminUsers((prev) => prev.filter(u => u.id !== userId));
           setPublishMessage(`Đã xóa người dùng ${email}.`);
+          closeConfirmModal();
         } catch {
           setPublishMessage('Lỗi khi xóa người dùng.');
         } finally {
           setDeletingUserId(null);
         }
       },
-      confirmText: 'Xóa ngay',
+      confirmText: 'Xóa',
       type: 'danger'
     });
   };
@@ -301,13 +330,15 @@ export default function AdminDashboardPage() {
       isOpen: true,
       title: 'Xóa Khóa Học',
       message: `CẢNH BÁO: Bạn có chắc chắn muốn XÓA khóa học "${title}"? Toàn bộ video và bài giảng bên trong sẽ bị xóa vĩnh viễn.`,
-      onConfirm: async () => {
-        closeConfirmModal();
+      onConfirm: async (reason: string) => {
+        const finalReason = reason.trim();
+        if (!finalReason) return;
         setDeletingCourseId(courseId);
         try {
-          await api.admin.deleteCourse(courseId);
+          await api.admin.deleteCourse(courseId, finalReason);
           setAdminCourses((prev) => prev.filter(c => c.id !== courseId));
           if (selectedCourseId === courseId) setSelectedCourseId('');
+          closeConfirmModal();
           setPublishMessage(`Đã xóa khóa học "${title}".`);
         } catch {
           setPublishMessage('Lỗi khi xóa khóa học.');
@@ -315,7 +346,7 @@ export default function AdminDashboardPage() {
           setDeletingCourseId(null);
         }
       },
-      confirmText: 'Xóa vĩnh viễn',
+      confirmText: 'Xóa',
       type: 'danger'
     });
   };
@@ -343,9 +374,9 @@ export default function AdminDashboardPage() {
         description: editingCourse.description,
         is_published: editingCourse.is_published
       });
-      setAdminCourses((prev) => prev.map(c => c.id === editingCourse.id ? { 
-        ...c, 
-        title: editingCourse.title, 
+      setAdminCourses((prev) => prev.map(c => c.id === editingCourse.id ? {
+        ...c,
+        title: editingCourse.title,
         description: editingCourse.description,
         is_published: editingCourse.is_published
       } : c));
@@ -363,13 +394,15 @@ export default function AdminDashboardPage() {
       isOpen: true,
       title: 'Xóa Video',
       message: `Bạn có chắc muốn xóa video "${lessonTitle}"?`,
-      onConfirm: async () => {
-        closeConfirmModal();
+      onConfirm: async (reason: string) => {
+        const finalReason = reason.trim();
+        if (!finalReason) return;
         setDeletingVideoId(videoId);
         try {
-          await api.videos.delete(videoId);
+          await api.videos.delete(videoId, finalReason);
           await loadAdminData(currentRole);
-          setPublishMessage(`Đã xóa video.`);
+          closeConfirmModal();
+          setPublishMessage('Đã xóa video.');
         } catch {
           setPublishMessage('Lỗi khi xóa video.');
         } finally {
@@ -435,6 +468,10 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const toggleSection = (key: keyof typeof expandedSections) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Đang tải bảng điều khiển...</div>;
   }
@@ -443,7 +480,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-10 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-7xl mx-auto px-4 sm:px-8">
       {/* Header */}
-      <div id="overview" className="scroll-mt-28 relative bg-[#14142B] rounded-[40px] p-10 overflow-hidden shadow-2xl group">
+      <div id="overview" className="scroll-mt-20 relative bg-[#14142B] rounded-[40px] p-10 overflow-hidden shadow-2xl group">
         <div className="absolute top-0 right-0 w-[500px] h-full bg-[#FF4F6E]/10 rounded-l-[100px] -z-0" />
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
           <div className="space-y-4">
@@ -478,8 +515,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Upload Section */}
-      <div id="upload" className="scroll-mt-28 bg-white rounded-[32px] p-8 shadow-sm border border-slate-50">
-        <div className="flex items-center gap-3 mb-8">
+      <div id="upload" className="scroll-mt-20 bg-white rounded-[32px] p-8 shadow-sm border border-slate-50">
+        <div className="flex items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#FF4F6E]/10 flex items-center justify-center text-[#FF4F6E]">
             <UploadCloud size={20} />
           </div>
@@ -487,9 +525,17 @@ export default function AdminDashboardPage() {
             <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">ĐĂNG TẢI BÀI GIẢNG</h2>
             <p className="text-xs font-bold text-slate-400">Thêm video mới vào hệ thống</p>
           </div>
+          </div>
+          <button
+            onClick={() => toggleSection('upload')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+          >
+            {expandedSections.upload ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expandedSections.upload ? 'Thu gọn' : 'Mở rộng'}
+          </button>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-10">
+        {expandedSections.upload && <div className="grid lg:grid-cols-2 gap-10">
           <div
             onClick={() => !isUploading && fileInputRef.current?.click()}
             className={cn(
@@ -517,7 +563,12 @@ export default function AdminDashboardPage() {
                 </div>
                 <p className="text-sm font-bold text-slate-900">Chọn hoặc Kéo thả Video</p>
                 {selectedLectureFiles.length > 0 && (
-                  <p className="mt-2 text-[11px] font-bold text-[#FF4F6E]">{selectedLectureFiles.length} file đã chọn</p>
+                  <div className="mt-4 px-4 py-2 bg-[#FF4F6E]/10 border border-[#FF4F6E]/20 rounded-full flex items-center gap-2 animate-in zoom-in-95 duration-300">
+                    <div className="w-2 h-2 rounded-full bg-[#FF4F6E] animate-pulse" />
+                    <p className="text-[12px] font-black text-[#FF4F6E] uppercase tracking-widest">
+                      {selectedLectureFiles.length} file đã chọn
+                    </p>
+                  </div>
                 )}
               </>
             )}
@@ -572,7 +623,7 @@ export default function AdminDashboardPage() {
                     placeholder="Chọn chương"
                     className="flex-1"
                   />
-                  <button 
+                  <button
                     onClick={() => setCreateNewModule(!createNewModule)}
                     className={cn("px-4 h-[54px] rounded-2xl border transition-all flex items-center justify-center", createNewModule ? "bg-[#FF4F6E] border-[#FF4F6E] text-white" : "bg-slate-50 border-slate-100 text-slate-400")}
                   >
@@ -600,24 +651,31 @@ export default function AdminDashboardPage() {
             </button>
             {publishMessage && <p className="text-center text-xs font-bold text-[#FF4F6E]">{publishMessage}</p>}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Course Management Section */}
-      <div id="courses" className="scroll-mt-28 bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
+      <div id="courses" className="scroll-mt-20 bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-50 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-               <Database size={20} />
-             </div>
-             <div>
-               <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">QUẢN LÝ KHÓA HỌC</h2>
-               <p className="text-xs font-bold text-slate-400">Danh sách tất cả các khóa học trong hệ thống</p>
-             </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <Database size={20} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">QUẢN LÝ KHÓA HỌC</h2>
+              <p className="text-xs font-bold text-slate-400">Danh sách tất cả các khóa học trong hệ thống</p>
+            </div>
           </div>
+          <button
+            onClick={() => toggleSection('courses')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+          >
+            {expandedSections.courses ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expandedSections.courses ? 'Thu gọn' : 'Mở rộng'}
+          </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {expandedSections.courses && <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
@@ -632,7 +690,7 @@ export default function AdminDashboardPage() {
                 <tr key={course.id} className="hover:bg-slate-50/30 transition-colors group">
                   <td className="px-8 py-6">
                     <p className="text-sm font-bold text-slate-900 group-hover:text-[#FF4F6E] transition-colors">{course.title}</p>
-                    <p className="text-xs font-bold text-slate-400 truncate max-w-xs">{course.description || "Chưa có mô tả"}</p>
+                    <p className="text-xs font-bold text-slate-400 truncate max-w-xs">{normalizeCourseDescription(course.description)}</p>
                   </td>
                   <td className="px-8 py-6">
                     <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
@@ -640,7 +698,7 @@ export default function AdminDashboardPage() {
                     </span>
                   </td>
                   <td className="px-8 py-6">
-                    <button 
+                    <button
                       onClick={() => handleToggleCourseVisibility(course)}
                       disabled={updatingCourseId === course.id}
                       className={cn(
@@ -654,7 +712,7 @@ export default function AdminDashboardPage() {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex items-center justify-end gap-3">
-                      <button 
+                      <button
                         onClick={() => {
                           setEditingCourse({ id: course.id, title: course.title, description: course.description || '', is_published: course.is_published });
                           setIsEditCourseModalOpen(true);
@@ -663,7 +721,7 @@ export default function AdminDashboardPage() {
                       >
                         <Edit2 size={18} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteCourse(course.id, course.title)}
                         disabled={deletingCourseId === course.id}
                         className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
@@ -676,11 +734,11 @@ export default function AdminDashboardPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </div>}
       </div>
 
       {/* Role Management Toggle */}
-      <div id="settings" className="scroll-mt-28 bg-slate-900 rounded-[32px] p-8 text-white relative overflow-hidden">
+      <div id="settings-top" className="hidden scroll-mt-20 bg-slate-900 rounded-[32px] p-8 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF4F6E]/10 rounded-full blur-3xl -mr-32 -mt-32" />
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-5">
@@ -692,8 +750,8 @@ export default function AdminDashboardPage() {
               <p className="text-sm font-bold text-white/50">Cho phép người dùng chọn vai trò (Admin/Teacher) khi đăng ký</p>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => handleTogglePublicRoleRegistration(!allowPublicRoleRegistration)}
             disabled={savingSettings}
             className={cn(
@@ -701,7 +759,7 @@ export default function AdminDashboardPage() {
               allowPublicRoleRegistration ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-white/10 text-white/50 border border-white/10"
             )}
           >
-            {savingSettings ? 'Đang lưu...' : allowPublicRoleRegistration ? 'Đang MỞ' : 'Đang ĐÓNG'}
+            {savingSettings ? 'Đang lưu...' : allowPublicRoleRegistration ? 'Đang Mở' : 'Đang Đóng'}
             <div className={cn("absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full", allowPublicRoleRegistration ? "bg-white animate-pulse" : "bg-white/20")} />
           </button>
         </div>
@@ -709,16 +767,25 @@ export default function AdminDashboardPage() {
 
       {currentRole === 'admin' && (
         <div className="bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-slate-50 flex items-center gap-3">
-             <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
-               <Users size={20} />
-             </div>
-             <div>
-               <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">QUẢN LÝ NGƯỜI DÙNG</h2>
-               <p className="text-xs font-bold text-slate-400">Phân quyền và quản lý tài khoản người dùng</p>
-             </div>
+          <div className="p-8 border-b border-slate-50 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
+              <Users size={20} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">QUẢN LÝ NGƯỜI DÙNG</h2>
+              <p className="text-xs font-bold text-slate-400">Phân quyền và quản lý tài khoản người dùng</p>
+            </div>
+            </div>
+            <button
+              onClick={() => toggleSection('users')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+            >
+              {expandedSections.users ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              {expandedSections.users ? 'Thu gọn' : 'Mở rộng'}
+            </button>
           </div>
-          <div className="overflow-x-auto">
+          {expandedSections.users && <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50/50">
@@ -732,13 +799,13 @@ export default function AdminDashboardPage() {
                   <tr key={user.id} className="hover:bg-slate-50/30 transition-colors">
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold uppercase">
-                           {user.full_name?.[0] || user.email[0]}
-                         </div>
-                         <div>
-                           <p className="text-sm font-bold text-slate-900">{user.full_name || 'Học viên mới'}</p>
-                           <p className="text-xs font-bold text-slate-400">{user.email}</p>
-                         </div>
+                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold uppercase">
+                          {user.full_name?.[0] || user.email[0]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{user.full_name || 'Học viên mới'}</p>
+                          <p className="text-xs font-bold text-slate-400">{user.email}</p>
+                        </div>
                       </div>
                     </td>
                     <td className="px-8 py-6">
@@ -755,7 +822,7 @@ export default function AdminDashboardPage() {
                       />
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <button 
+                      <button
                         onClick={() => handleDeleteUser(user.id, user.email)}
                         disabled={deletingUserId === user.id}
                         className="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all"
@@ -767,31 +834,31 @@ export default function AdminDashboardPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>}
         </div>
       )}
 
       {/* Sync Jobs Section */}
-      <div id="jobs" className="scroll-mt-28 bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
+      <div id="jobs" className="scroll-mt-20 bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
         <div className="p-8 flex items-center justify-between border-b border-slate-50">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-               <Clock size={20} />
-             </div>
-             <div>
-               <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">NHẬT KÝ XỬ LÝ VIDEO</h2>
-               <p className="text-xs font-bold text-slate-400">Trạng thái đồng bộ và xử lý AI của các video</p>
-             </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+              <Clock size={20} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">TIẾN ĐỘ XỬ LÝ VIDEO</h2>
+              <p className="text-xs font-bold text-slate-400">Trạng thái xử lý AI của các bài giảng video</p>
+            </div>
           </div>
-          <button 
-            onClick={() => loadAdminData(currentRole)}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-50 text-slate-900 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-slate-100 transition-all"
+          <button
+            onClick={() => toggleSection('jobs')}
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
           >
-            <Activity size={16} />
-            Làm mới
+            {expandedSections.jobs ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expandedSections.jobs ? 'Thu gọn' : 'Mở rộng'}
           </button>
         </div>
-        <div className="overflow-x-auto">
+        {expandedSections.jobs && <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
@@ -830,71 +897,164 @@ export default function AdminDashboardPage() {
                       disabled={deletingVideoId === job.lesson_id}
                       className="text-[10px] font-extrabold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50"
                     >
-                      {deletingVideoId === job.lesson_id ? 'Đang xóa...' : 'Xóa Log'}
+                      {deletingVideoId === job.lesson_id ? 'Đang xóa...' : 'Xóa'}
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>}
+      </div>
+
+      {/* Deletion History Section */}
+      <div id="deletion-history" className="scroll-mt-20 bg-white rounded-[32px] border border-slate-50 shadow-sm overflow-hidden">
+        <div className="p-8 flex items-center justify-between border-b border-slate-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
+              <History size={20} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">NHẬT KÝ XÓA DỮ LIỆU</h2>
+              <p className="text-xs font-bold text-slate-400">Lịch sử và lý do thực hiện các thao tác xóa</p>
+            </div>
+          </div>
+          <button
+            onClick={() => toggleSection('deletionHistory')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+          >
+            {expandedSections.deletionHistory ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {expandedSections.deletionHistory ? 'Thu gọn' : 'Mở rộng'}
+          </button>
+        </div>
+        {expandedSections.deletionHistory && <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50">
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Thời gian</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Đối tượng</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Người xóa</th>
+                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Lý do</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {deletionAudits.map((audit) => (
+                <tr key={audit.id} className="hover:bg-slate-50/30 transition-colors">
+                  <td className="px-8 py-6 whitespace-nowrap">
+                    <p className="text-xs font-bold text-slate-900">{new Date(audit.created_at).toLocaleString('vi-VN')}</p>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter",
+                        audit.entity_type === 'user' ? "bg-purple-100 text-purple-600" :
+                          audit.entity_type === 'course' ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"
+                      )}>
+                        {audit.entity_type === 'user' ? 'Người dùng' : audit.entity_type === 'course' ? 'Khóa học' : 'Video'}
+                      </span>
+                      <p className="text-sm font-bold text-slate-700">{audit.entity_display_name}</p>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <p className="text-xs font-bold text-slate-600">{audit.deleted_by_email}</p>
+                  </td>
+                  <td className="px-8 py-6">
+                    <p className="text-xs font-medium text-slate-500 italic">&quot;{audit.reason}&quot;</p>
+                  </td>
+                </tr>
+              ))}
+              {deletionAudits.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-8 py-10 text-center text-sm font-bold text-slate-400">Chưa có dữ liệu xóa nào.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>}
+      </div>
+
+      {/* Role Management Toggle */}
+      <div id="settings" className="scroll-mt-20 bg-slate-900 rounded-[32px] p-8 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#FF4F6E]/10 rounded-full blur-3xl -mr-32 -mt-32" />
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-[#FF4F6E] border border-white/10">
+              <Settings size={28} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black uppercase tracking-wide">CÀI ĐẶT ĐĂNG KÝ VAI TRÒ</h2>
+              <p className="text-sm font-bold text-white/50">Cho phép người dùng chọn vai trò (Admin/Teacher) khi đăng ký</p>
+            </div>
+          </div>
+          <button
+            onClick={() => handleTogglePublicRoleRegistration(!allowPublicRoleRegistration)}
+            disabled={savingSettings}
+            className={cn(
+              "relative w-48 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl",
+              allowPublicRoleRegistration ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-white/10 text-white/50 border border-white/10"
+            )}
+          >
+            {savingSettings ? 'Đang lưu...' : allowPublicRoleRegistration ? 'ĐANG MỞ' : 'ĐANG ĐÓNG'}
+            <div className={cn("absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full", allowPublicRoleRegistration ? "bg-white animate-pulse" : "bg-white/20")} />
+          </button>
         </div>
       </div>
 
       {/* Edit Course Modal */}
       {isEditCourseModalOpen && editingCourse && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-           <div className="bg-white rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-              <div className="bg-slate-900 p-8 text-white">
-                 <h3 className="text-2xl font-extrabold">Chỉnh sửa Khóa học</h3>
-                 <p className="text-sm font-bold text-white/50">Cập nhật thông tin cơ bản của khóa học</p>
+          <div className="bg-white rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="bg-slate-900 p-8 text-white">
+              <h3 className="text-2xl font-extrabold">Chỉnh sửa Khóa học</h3>
+              <p className="text-sm font-bold text-white/50">Cập nhật thông tin cơ bản của khóa học</p>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Tên khóa học</label>
+                <input
+                  value={editingCourse.title}
+                  onChange={(e) => setEditingCourse({ ...editingCourse, title: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white transition-all"
+                />
               </div>
-              <div className="p-8 space-y-6">
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Tên khóa học</label>
-                    <input 
-                      value={editingCourse.title}
-                      onChange={(e) => setEditingCourse({...editingCourse, title: e.target.value})}
-                      className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white transition-all"
-                    />
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Mô tả</label>
-                    <textarea 
-                      rows={4}
-                      value={editingCourse.description}
-                      onChange={(e) => setEditingCourse({...editingCourse, description: e.target.value})}
-                      className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white transition-all resize-none"
-                    />
-                 </div>
-                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
-                    <span className="text-xs font-bold text-slate-700">Trạng thái công khai</span>
-                    <button 
-                      onClick={() => setEditingCourse({...editingCourse, is_published: !editingCourse.is_published})}
-                      className={cn(
-                        "w-12 h-6 rounded-full transition-all relative",
-                        editingCourse.is_published ? "bg-emerald-500" : "bg-slate-300"
-                      )}
-                    >
-                      <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", editingCourse.is_published ? "right-1" : "left-1")} />
-                    </button>
-                 </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Mô tả</label>
+                <textarea
+                  rows={4}
+                  value={editingCourse.description}
+                  onChange={(e) => setEditingCourse({ ...editingCourse, description: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white transition-all resize-none"
+                />
               </div>
-              <div className="p-8 pt-0 flex gap-4">
-                 <button 
-                   onClick={() => setIsEditCourseModalOpen(false)}
-                   className="flex-1 py-4 rounded-2xl border border-slate-100 font-extrabold text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all"
-                 >
-                   Hủy
-                 </button>
-                 <button 
-                   onClick={handleSaveCourseEdit}
-                   disabled={updatingCourseId === editingCourse.id}
-                   className="flex-1 py-4 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all"
-                 >
-                   {updatingCourseId === editingCourse.id ? 'Đang lưu...' : 'Lưu thay đổi'}
-                 </button>
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                <span className="text-xs font-bold text-slate-700">Trạng thái công khai</span>
+                <button
+                  onClick={() => setEditingCourse({ ...editingCourse, is_published: !editingCourse.is_published })}
+                  className={cn(
+                    "w-12 h-6 rounded-full transition-all relative",
+                    editingCourse.is_published ? "bg-emerald-500" : "bg-slate-300"
+                  )}
+                >
+                  <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all", editingCourse.is_published ? "right-1" : "left-1")} />
+                </button>
               </div>
-           </div>
+            </div>
+            <div className="p-8 pt-0 flex gap-4">
+              <button
+                onClick={() => setIsEditCourseModalOpen(false)}
+                className="flex-1 py-4 rounded-2xl border border-slate-100 font-extrabold text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSaveCourseEdit}
+                disabled={updatingCourseId === editingCourse.id}
+                className="flex-1 py-4 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all"
+              >
+                {updatingCourseId === editingCourse.id ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -911,24 +1071,37 @@ export default function AdminDashboardPage() {
               </div>
               <div className="space-y-2">
                 <h3 className="text-2xl font-extrabold text-slate-900">{confirmModal.title}</h3>
-                <p className="text-sm font-bold text-slate-500 leading-relaxed">
+                <p className="whitespace-pre-line text-center text-sm font-bold text-slate-500 leading-relaxed">
                   {confirmModal.message}
                 </p>
               </div>
             </div>
+            <div className="px-8 pb-4">
+              <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
+                Lý do xóa
+              </label>
+              <textarea
+                rows={3}
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Nhập lý do để truy xuất sau này..."
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white"
+              />
+            </div>
             <div className="p-8 pt-0 flex gap-4">
-              <button 
+              <button
                 onClick={closeConfirmModal}
                 className="flex-1 py-4 rounded-2xl border border-slate-100 font-extrabold text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all"
               >
                 Hủy
               </button>
-              <button 
-                onClick={confirmModal.onConfirm}
+              <button
+                onClick={() => confirmModal.onConfirm(deleteReason)}
+                disabled={!deleteReason.trim()}
                 className={cn(
-                  "flex-1 py-4 text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl transition-all",
-                  confirmModal.type === 'danger' 
-                    ? "bg-rose-600 shadow-rose-200 hover:bg-rose-700" 
+                  "flex-1 py-4 text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                  confirmModal.type === 'danger'
+                    ? "bg-rose-600 shadow-rose-200 hover:bg-rose-700"
                     : "bg-blue-600 shadow-blue-200 hover:bg-blue-700"
                 )}
               >
@@ -950,3 +1123,4 @@ function LoaderIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+

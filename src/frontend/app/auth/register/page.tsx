@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { User, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -234,12 +233,6 @@ export default function RegisterPage() {
           {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Đăng ký'}
         </button>
 
-        <div className="pt-4">
-          <button type="button" className="w-full flex items-center justify-center gap-3 py-3.5 bg-white border border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
-            <Image src="https://www.google.com/favicon.ico" alt="Google" width={20} height={20} unoptimized className="opacity-80" />
-            Đăng ký với Google
-          </button>
-        </div>
       </form>
     </div>
   );

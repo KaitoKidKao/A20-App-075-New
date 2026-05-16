@@ -357,6 +357,17 @@ export interface AdminUser {
   updated_at: string;
 }
 
+export interface AdminDeletionAudit {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  entity_display_name: string | null;
+  deleted_by_user_id: string | null;
+  deleted_by_email: string;
+  reason: string;
+  created_at: string;
+}
+
 export interface MyVideo {
   id: string;
   title: string;
@@ -595,8 +606,9 @@ export const api = {
       if (!res.ok) throw new Error("Failed to fetch my videos.");
       return res.json();
     },
-    async delete(videoId: string) {
-      const res = await apiFetch(`/api/videos/${videoId}`, {
+    async delete(videoId: string, reason: string) {
+      const q = encodeURIComponent(reason.trim());
+      const res = await apiFetch(`/api/videos/${videoId}?reason=${q}`, {
         method: "DELETE",
         headers: buildHeaders(),
       });
@@ -884,8 +896,14 @@ export const api = {
       if (!res.ok) throw new Error("Failed to update user role.");
       return res.json();
     },
-    async deleteUser(userId: string) {
-      const res = await apiFetch(`/api/admin/users/${userId}`, {
+    async listDeletionAudits(limit = 50): Promise<AdminDeletionAudit[]> {
+      const res = await apiFetch(`/api/admin/deletion-audits?limit=${limit}`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch deletion audits.");
+      return res.json();
+    },
+    async deleteUser(userId: string, reason: string) {
+      const q = encodeURIComponent(reason.trim());
+      const res = await apiFetch(`/api/admin/users/${userId}?reason=${q}`, {
         method: "DELETE",
         headers: buildHeaders(),
       });
@@ -901,8 +919,9 @@ export const api = {
       if (!res.ok) throw new Error("Failed to update course.");
       return res.json();
     },
-    async deleteCourse(courseId: string) {
-      const res = await apiFetch(`/api/admin/courses/${courseId}`, {
+    async deleteCourse(courseId: string, reason: string) {
+      const q = encodeURIComponent(reason.trim());
+      const res = await apiFetch(`/api/admin/courses/${courseId}?reason=${q}`, {
         method: "DELETE",
         headers: buildHeaders(),
       });

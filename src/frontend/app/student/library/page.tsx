@@ -6,6 +6,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { api, type Course, type StudentDashboard } from '@/lib/api';
 
+function normalizeCourseDescription(description?: string | null): string {
+  const raw = (description || '').trim();
+  if (!raw) return '';
+  if (raw.toLowerCase().includes('khu tự học cá nhân cho video học sinh tự tải lên')) {
+    return 'Không gian tự học cá nhân cho các video bạn tự tải lên.';
+  }
+  return raw;
+}
+
 function formatHours(seconds: number) {
   return `${Math.round((seconds / 3600) * 10) / 10}h`;
 }
@@ -53,10 +62,17 @@ export default function StudentDashboardPage() {
   return (
     <div className="min-h-screen bg-bg-main">
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">Learning dashboard</p>
+        <div className="hidden">
+          <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">BẢNG ĐIỀU KHIỂN</p>
           <h1 className="text-3xl font-black text-slate-900">Tiến độ học tập</h1>
           <p className="max-w-2xl text-sm font-bold text-slate-500">
+            Theo dõi khóa đang học, bài chưa hoàn thành, thẻ ghi nhớ và kết quả quiz gần đây.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Tiến độ học tập</h1>
+          <p className="max-w-2xl text-sm font-semibold leading-6 text-slate-600">
             Theo dõi khóa đang học, bài chưa hoàn thành, thẻ ghi nhớ và kết quả quiz gần đây.
           </p>
         </div>
@@ -178,7 +194,7 @@ export default function StudentDashboardPage() {
         {!loading && availableCourses.length > 0 && (
           <section className="space-y-5">
             <div className="flex flex-col gap-1">
-              <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">Course catalog</p>
+              <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">DANH MỤC KHÓA HỌC</p>
               <h2 className="text-xl font-black text-slate-900">Khóa học có thể đăng ký</h2>
               <p className="text-sm font-bold text-slate-500">
                 Các khóa học được giáo viên hoặc admin xuất bản sẽ xuất hiện ở đây để học sinh đăng ký.
@@ -200,7 +216,7 @@ export default function StudentDashboardPage() {
                     <div>
                       <h3 className="line-clamp-2 text-sm font-black text-slate-900">{course.title}</h3>
                       {course.description && (
-                        <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-slate-500">{course.description}</p>
+                        <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-slate-500">{normalizeCourseDescription(course.description)}</p>
                       )}
                     </div>
                     <Link
