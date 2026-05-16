@@ -27,9 +27,8 @@ export default function StudentReviewsPage() {
     <div className="min-h-screen bg-bg-main">
       <div className="mx-auto max-w-6xl space-y-6 px-6 py-10 md:px-10">
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-[#FF4F6E]">Learning feedback</p>
-          <h1 className="text-3xl font-black text-slate-900">Đánh giá của tôi</h1>
-          <p className="text-sm font-bold text-slate-500 mt-2">Danh sách đánh giá bạn đã gửi cho các khóa học.</p>
+          <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Đánh giá của tôi</h1>
+          <p className="mt-2 text-sm font-semibold text-slate-600">Danh sách đánh giá bạn đã gửi cho các khóa học.</p>
         </div>
 
         {loading ? (
@@ -63,4 +62,3 @@ export default function StudentReviewsPage() {
     </div>
   );
 }
-

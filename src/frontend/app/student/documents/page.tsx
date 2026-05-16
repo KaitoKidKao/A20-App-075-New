@@ -22,7 +22,8 @@ type CourseCard = {
 };
 
 const PAGE_SIZE = 6;
-const FALLBACK_THUMBNAIL = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
+const FALLBACK_THUMBNAIL =
+  'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
 const DEFAULT_INSTRUCTOR = 'Giảng viên';
 const DEFAULT_CATEGORY = 'Course';
 
@@ -35,7 +36,12 @@ function normalizeCourseCards(dashboard: StudentDashboard, courses: Course[]): C
       title: enrolled.title,
       instructor: DEFAULT_INSTRUCTOR,
       category: detail?.cat || DEFAULT_CATEGORY,
-      thumbnail: detail?.thumbnail_url || detail?.cover_image_url || detail?.thumb || enrolled.thumbnail_url || FALLBACK_THUMBNAIL,
+      thumbnail:
+        detail?.thumbnail_url ||
+        detail?.cover_image_url ||
+        detail?.thumb ||
+        enrolled.thumbnail_url ||
+        FALLBACK_THUMBNAIL,
       progressPercent: enrolled.progress_percent,
       completedLessons: enrolled.completed_lessons,
       totalLessons: enrolled.total_lessons,
@@ -45,18 +51,20 @@ function normalizeCourseCards(dashboard: StudentDashboard, courses: Course[]): C
 }
 
 export default function EnrolledCourses() {
+  const [mounted, setMounted] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<CourseTab>('enrolled');
   const [currentPage, setCurrentPage] = React.useState(1);
   const [cards, setCards] = React.useState<CourseCard[]>([]);
 
   React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [dashboard, courses] = await Promise.all([
-          api.student.getDashboard(),
-          api.courses.listCourses(),
-        ]);
+        const [dashboard, courses] = await Promise.all([api.student.getDashboard(), api.courses.listCourses()]);
         setCards(normalizeCourseCards(dashboard, courses));
       } catch (error) {
         console.error('Failed to load enrolled courses', error);
@@ -104,13 +112,28 @@ export default function EnrolledCourses() {
     return filteredCards.slice(start, start + PAGE_SIZE);
   }, [filteredCards, currentPage]);
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-transparent">
+        <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
+          <div className="h-10 w-56 animate-pulse rounded-xl bg-slate-100" />
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-[320px] animate-pulse rounded-2xl border border-slate-100 bg-white" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-transparent">
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-10 md:px-10">
         <div className="flex flex-col gap-6 border-b border-slate-100 pb-6 md:flex-row md:items-center md:justify-between">
-          <h2 className="text-xl font-black capitalize text-slate-900">
+          <h1 className="text-2xl font-black text-slate-900 md:text-3xl">
             {activeTab === 'enrolled' ? 'Đã đăng ký' : activeTab === 'active' ? 'Đang học' : 'Hoàn thành'}
-          </h2>
+          </h1>
           <div className="flex items-center gap-2">
             {[
               { id: 'enrolled' as const, label: `Đã đăng ký (${tabCounts.enrolled})` },

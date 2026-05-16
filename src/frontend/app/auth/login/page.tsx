@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Eye, EyeOff, Loader2 } from 'lucide-react';
-import Image from 'next/image';
 import { useAppStore } from '@/store/useAppStore';
 import { api } from '@/lib/api';
 
@@ -92,9 +91,13 @@ export default function LoginPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-300 text-[#FF4F6E] focus:ring-[#FF4F6E]" />
-            <label htmlFor="remember" className="text-sm font-bold text-slate-500 cursor-pointer">Ghi nhớ đăng nhập</label>
+            <label htmlFor="remember" className="text-sm font-bold text-slate-500 cursor-pointer">
+              Ghi nhớ đăng nhập
+            </label>
           </div>
-          <Link href="/auth/forgot-password" className="text-sm font-bold text-[#FF4F6E]/80 hover:text-[#FF4F6E] hover:underline">Quên mật khẩu?</Link>
+          <Link href="/auth/forgot-password" className="text-sm font-bold text-[#FF4F6E]/80 hover:text-[#FF4F6E] hover:underline">
+            Quên mật khẩu?
+          </Link>
         </div>
 
         <button
@@ -104,46 +107,13 @@ export default function LoginPage() {
           {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Đăng nhập'}
         </button>
 
-        <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-100" />
-          </div>
-          <div className="relative flex justify-center text-xs font-bold text-slate-400">
-            <span className="bg-[#FFF9FA] px-4 uppercase tracking-widest">Hoặc</span>
-          </div>
-        </div>
-
-        <div className="flex gap-4">
-          <button type="button" className="flex-1 flex items-center justify-center gap-3 py-3.5 bg-[#E9ECEF] rounded-full font-bold text-slate-600 hover:bg-slate-200 transition-all">
-            <Image src="https://www.google.com/favicon.ico" alt="Google" width={16} height={16} unoptimized className="opacity-70" />
-            Google
-          </button>
-          <button type="button" className="flex-1 flex items-center justify-center gap-3 py-3.5 bg-[#E9ECEF] rounded-full font-bold text-slate-600 hover:bg-slate-200 transition-all">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-blue-600">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-            </svg>
-            Facebook
-          </button>
-        </div>
-
         <div className="text-center pt-4 space-y-4">
           <p className="text-sm font-medium text-slate-500">
             Chưa có tài khoản?
-            <Link href="/auth/register" className="text-[#FF4F6E] font-bold hover:underline ml-1">Đăng ký</Link>
+            <Link href="/auth/register" className="text-[#FF4F6E] font-bold hover:underline ml-1">
+              Đăng ký
+            </Link>
           </p>
-
-          {process.env.NODE_ENV === 'development' && (
-            <button
-              type="button"
-              onClick={() => {
-                login({ name: 'Dev User', email: 'dev@dreams.com', role: 'student' }, 'mock-token');
-                router.push('/student/library');
-              }}
-              className="w-full py-3 border-2 border-dashed border-[#FF4F6E]/30 text-[#FF4F6E] font-black rounded-2xl hover:bg-[#FF4F6E]/5 transition-all text-[10px] uppercase tracking-[0.2em] animate-pulse"
-            >
-              Bỏ qua đăng nhập (chỉ dành cho Dev)
-            </button>
-          )}
         </div>
       </form>
     </div>

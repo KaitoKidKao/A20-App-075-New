@@ -21,6 +21,32 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (!nodes.length) return;
+
+    nodes.forEach((node, idx) => {
+      const delay = node.dataset.delay ?? `${idx * 80}`;
+      node.style.setProperty('--reveal-delay', `${delay}ms`);
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+          } else {
+            entry.target.classList.remove('is-visible');
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+    );
+
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, []);
+
   const handleStart = () => {
     router.push('/auth/login');
   };
@@ -59,7 +85,7 @@ export default function LandingPage() {
           <div className="absolute top-20 right-0 w-[600px] h-[600px] bg-[#FF4F6E]/5 rounded-full blur-[120px] -z-10" />
 
           {/* Left Content */}
-          <div className="lg:w-[55%] space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
+          <div data-reveal data-delay="0" className="scroll-reveal lg:w-[55%] space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
 
             <div className="space-y-8">
               <h1 className="text-5xl md:text-[72px] font-black text-slate-900 leading-[1.1] tracking-tight max-w-4xl">
@@ -87,7 +113,7 @@ export default function LandingPage() {
           </div>
 
           {/* Right Hero Image */}
-          <div className="lg:w-[45%] relative animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
+          <div data-reveal data-delay="120" className="scroll-reveal lg:w-[45%] relative animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
              <div className="relative z-10 rounded-[60px] overflow-hidden shadow-2xl border-[16px] border-white bg-white aspect-square">
                 <Image 
                   src="/assets/images/hero-final-v2.png" 
@@ -102,13 +128,13 @@ export default function LandingPage() {
         {/* FEATURES GRID SECTION */}
         <section id="features" className="py-32 bg-slate-50/50">
           <div className="max-w-[1440px] mx-auto px-8 md:px-20">
-             <div className="text-center max-w-3xl mx-auto mb-24 space-y-4">
+             <div data-reveal data-delay="0" className="scroll-reveal text-center max-w-3xl mx-auto mb-24 space-y-4">
                 <h2 className="text-4xl md:text-6xl font-black tracking-tight">Công nghệ đột phá cho <span className="text-[#FF4F6E]">Giáo dục hòa nhập</span></h2>
                 <p className="text-lg text-slate-500 font-medium">Giải pháp tối ưu được thiết kế riêng cho nhu cầu của người học khiếm thính.</p>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-                <div className="bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
+                <div data-reveal data-delay="0" className="scroll-reveal bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <Eye size={32} />
                    </div>
@@ -118,7 +144,7 @@ export default function LandingPage() {
                    </p>
                 </div>
 
-                <div className="bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
+                <div data-reveal data-delay="140" className="scroll-reveal bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <Zap size={32} fill="currentColor" />
                    </div>
@@ -128,7 +154,7 @@ export default function LandingPage() {
                    </p>
                 </div>
 
-                <div className="bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
+                <div data-reveal data-delay="280" className="scroll-reveal bg-white p-10 rounded-[40px] shadow-sm hover:shadow-xl transition-all border border-white hover:border-[#FF4F6E]/10 group">
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <MessageSquare size={32} />
                    </div>
@@ -145,7 +171,7 @@ export default function LandingPage() {
         <section id="mission" className="py-32">
           <div className="max-w-[1440px] mx-auto px-8 md:px-20">
              <div className="flex flex-col lg:flex-row items-center gap-24">
-                <div className="lg:w-1/2 relative">
+                <div data-reveal data-delay="0" className="scroll-reveal lg:w-1/2 relative">
                    <div className="rounded-[60px] overflow-hidden shadow-2xl aspect-square relative">
                       <Image 
                         src="/assets/images/mission-final-v2.png" 
@@ -155,7 +181,7 @@ export default function LandingPage() {
                       />
                    </div>
                 </div>
-                <div className="lg:w-1/2 space-y-10">
+                <div data-reveal data-delay="140" className="scroll-reveal lg:w-1/2 space-y-10">
                    <span className="text-[#FF4F6E] font-black uppercase tracking-[0.3em] text-xs">Giá trị cốt lõi</span>
                                        <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl">Bình đẳng giáo dục là <span className="text-[#FF4F6E]">Nền tảng</span> bền vững.</h2>
 
@@ -185,7 +211,7 @@ export default function LandingPage() {
         {/* FINAL CTA */}
         <section className="py-32 bg-[#1A1A1A] text-white relative overflow-hidden">
            <div className="max-w-[1440px] mx-auto px-8 md:px-20 relative z-10 flex flex-col lg:flex-row items-center gap-20">
-              <div className="lg:w-1/2 space-y-10">
+              <div data-reveal data-delay="0" className="scroll-reveal lg:w-1/2 space-y-10">
                  <h2 className="text-4xl md:text-6xl font-black leading-tight max-w-2xl">Chinh phục ước mơ cùng <span className="text-[#FF4F6E]">Dreams</span></h2>
                  <p className="text-xl text-slate-400 font-medium">Gia nhập cộng đồng học tập không rào cản, nơi mọi thanh âm đều được thấu hiểu bằng đôi mắt.</p>
                  <div className="flex flex-col sm:flex-row gap-6">
@@ -200,7 +226,7 @@ export default function LandingPage() {
                     </button>
                  </div>
               </div>
-              <div className="lg:w-1/2">
+              <div data-reveal data-delay="160" className="scroll-reveal lg:w-1/2">
                  <div className="relative group">
                     <div className="absolute inset-0 bg-[#FF4F6E] rounded-[60px] blur-3xl opacity-20 group-hover:opacity-40 transition-opacity" />
                     <Image 

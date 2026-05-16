@@ -31,7 +31,6 @@ import { cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { api, type HandsSignGloss, type UserProgress } from '@/lib/api';
-import SignAvatar2D from '@/components/SignAvatar2D';
 import { InfographicViewer, type InfographicData } from '@/components/infographic/InfographicViewer';
 
 interface TranscriptSegment {
@@ -163,7 +162,6 @@ export default function VideoLessonPage() {
   const [avatarVideoUrl, setAvatarVideoUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState('');
   const [avatarStatus, setAvatarStatus] = useState('not_generated');
-  const [avatarDisclaimer, setAvatarDisclaimer] = useState('');
 
   const [isLoadingTranscript, setIsLoadingTranscript] = useState(true);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
@@ -210,6 +208,15 @@ export default function VideoLessonPage() {
 
   const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `/api/video/${videoId}`;
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const normalizedAvatarStatus = (avatarStatus || 'not_generated').toLowerCase();
+  const isAvatarReady = normalizedAvatarStatus === 'ready' || normalizedAvatarStatus === 'generated' || normalizedAvatarStatus === 'completed';
+  const isAvatarProcessing = normalizedAvatarStatus === 'processing' || normalizedAvatarStatus === 'queued' || normalizedAvatarStatus === 'running';
+  const avatarStatusLabel = isAvatarReady ? 'Đã tạo' : isAvatarProcessing ? 'Đang tạo' : 'Chưa tạo';
+  const avatarStatusClass = isAvatarReady
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : isAvatarProcessing
+      ? 'bg-amber-50 text-amber-700 border-amber-200'
+      : 'bg-rose-50 text-rose-700 border-rose-200';
 
   const buildLessonPreview = useCallback(async (lessonId: string, initialDuration?: string): Promise<{ duration: string; thumb: string }> => {
     const fallbackThumb = `https://picsum.photos/seed/${lessonId}/200/120`;
@@ -658,7 +665,6 @@ export default function VideoLessonPage() {
       setHandsSignGlosses(
         [...raw].sort((a, b) => (Number(a.time) || 0) - (Number(b.time) || 0))
       );
-      setAvatarDisclaimer(handsignRes.disclaimer || handsignRes.avatar?.disclaimer || '');
       if (handsignRes.avatar?.status) {
         setAvatarStatus(handsignRes.avatar.status);
       }
@@ -671,9 +677,6 @@ export default function VideoLessonPage() {
       const avatarRes = await api.videos.getAvatar(videoId);
       const rawUrl = avatarRes?.avatar_video_url;
       setAvatarStatus(avatarRes?.status || 'not_generated');
-      if (avatarRes?.disclaimer) {
-        setAvatarDisclaimer(avatarRes.disclaimer);
-      }
       if (avatarRes?.error) {
         setAvatarError(avatarRes.error);
       }
@@ -733,7 +736,6 @@ export default function VideoLessonPage() {
     setAvatarVideoUrl(null);
     setAvatarError('');
     setAvatarStatus('not_generated');
-    setAvatarDisclaimer('');
     setIsGeneratingAvatar(false);
   }, [videoId]);
 
@@ -743,9 +745,6 @@ export default function VideoLessonPage() {
     try {
       const result = await api.videos.generateAvatar(videoId);
       setAvatarStatus(result?.status || 'not_generated');
-      if (result?.disclaimer) {
-        setAvatarDisclaimer(result.disclaimer);
-      }
       if (result?.status === 'failed') {
         setAvatarVideoUrl(null);
         setAvatarError(result.error || 'Khong the tao video avatar.');
@@ -767,13 +766,6 @@ export default function VideoLessonPage() {
       setAvatarError(message);
     } finally {
       setIsGeneratingAvatar(false);
-    }
-  };
-
-  const seekToSeconds = (seconds: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = seconds;
-      videoRef.current.play();
     }
   };
 
@@ -860,21 +852,6 @@ export default function VideoLessonPage() {
       setIsSubmittingQuiz(false);
     }
   };
-
-  const handleDownloadHandsSignExport = useCallback(async () => {
-    try {
-      const manifest = await api.videos.getHandsSignExport(videoId);
-      const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `handsign-export-${videoId}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Hands sign export download error:', err);
-    }
-  }, [videoId]);
 
   const activeSegment = useMemo(
     () => segments.find((s) => currentTime >= s.start && currentTime <= s.end),
@@ -1631,12 +1608,27 @@ export default function VideoLessonPage() {
                           <div className="rounded-3xl border border-slate-200 bg-white p-5">
                             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                               <div>
-                                <p className="text-sm font-extrabold text-slate-900">Generate Video</p>
-                                <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                                  Trang thai: {avatarStatus.replace(/_/g, ' ')}
-                                </p>
+                                <p className="text-sm font-extrabold text-slate-900">Tạo Video VSL</p>
+                                <div className="mt-2 flex items-center gap-2">
+                                  <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Trạng thái:</span>
+                                  <span
+                                    className={cn(
+                                      'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide',
+                                      avatarStatusClass
+                                    )}
+                                  >
+                                    {avatarStatusLabel}
+                                  </span>
+                                </div>
                                 <p className="text-xs font-bold text-slate-500">
-                                  Tạo video avatar từ dữ liệu VSL của bài học này.
+                                  Tính năng đang trong giai đoạn phát triển.
+                                </p>
+                                <p className="mt-1 text-xs font-bold text-slate-500">
+                                  Mục tiêu tiếp theo: tạo video 3D Avatar trực quan và tự nhiên hơn.
+                                </p>
+                                <p className="mt-1 text-xs font-bold text-slate-500">
+                                  Hiện nay công nghệ này trên thế giới vẫn còn hạn chế về chất lượng tạo video và độ phủ từ điển
+                                  ngôn ngữ ký hiệu (handsign).
                                 </p>
                               </div>
                               <button
@@ -1650,16 +1642,11 @@ export default function VideoLessonPage() {
                                     : 'bg-[#FF4F6E] text-white hover:bg-[#e64663]'
                                 )}
                               >
-                                {isGeneratingAvatar ? 'Generating...' : 'Generate Video'}
+                                {isGeneratingAvatar ? 'Đang tạo...' : 'Tạo video'}
                               </button>
                             </div>
                             {avatarError && (
                               <p className="mt-3 text-sm font-bold text-red-600">{avatarError}</p>
-                            )}
-                            {avatarDisclaimer && (
-                              <p className="mt-3 text-xs font-semibold leading-relaxed text-slate-500">
-                                {avatarDisclaimer}
-                              </p>
                             )}
                           </div>
 
@@ -1676,21 +1663,20 @@ export default function VideoLessonPage() {
                             </div>
                           )}
 
-                          <div className="flex flex-col items-center gap-4">
+                          <div className="hidden flex-col items-center gap-4">
                             <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-extrabold text-center">
                               Đồng bộ theo thời gian phát video
                             </p>
-                            <SignAvatar2D vslData={handsignGlosses} currentTime={currentTime} />
                             <button
                               type="button"
-                              onClick={handleDownloadHandsSignExport}
+                              onClick={() => {}}
                               className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white text-xs font-extrabold text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
                             >
                               <Download size={14} />
                               Tải manifest render (JSON)
                             </button>
                           </div>
-                          <div>
+                          <div className="hidden">
                             <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Chuỗi gloss</p>
                             <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1">
                               {handsignGlosses.map((g, i) => {
