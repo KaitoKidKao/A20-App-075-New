@@ -3,6 +3,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy import delete
 from sqlmodel import Session, select
 
@@ -38,6 +39,12 @@ from src.backend.services.job_service import upsert_job_status
 from src.backend.services.queue_service import enqueue_download_and_pipeline, enqueue_pipeline_job
 from src.backend.services.rate_limit_service import rate_limit
 from src.backend.services.video_service import VideoService
+from src.backend.services.slide_service import SlideService
+from src.backend.services.mindmap_service import MindmapService
+
+class SlideGenerateRequest(BaseModel):
+    template_id: str = Field(default="template_01", description="ID của template slide (template_01 -> template_10)")
+    num_slides: int = Field(default=10, ge=1, le=20, description="Số lượng slide muốn tạo")
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
@@ -679,3 +686,67 @@ async def delete_video(
     session.commit()
 
     return {"video_id": video_id, "deleted": True}
+
+
+@router.post("/{video_id}/generate-mindmap")
+async def generate_mindmap_endpoint(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    try:
+        mindmap = await MindmapService.generate_mindmap(session, video_id)
+        return {"video_id": video_id, "mindmap": mindmap}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{video_id}/mindmap")
+async def get_mindmap(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "mindmap" not in ai_analysis:
+        return {"video_id": video_id, "mindmap": None, "message": "Mindmap chua duoc tao."}
+    return {"video_id": video_id, "mindmap": ai_analysis["mindmap"]}
+
+
+@router.post("/{video_id}/generate-slides")
+async def generate_slides_endpoint(
+    video_id: str,
+    request: SlideGenerateRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    template_id = request.template_id
+    num_slides = request.num_slides
+    
+    try:
+        result = await SlideService.generate_slides(session, video_id, template_id, num_slides)
+        # Tra ve thong tin file (FE se dung link nay de download qua mot endpoint static khac)
+        return {
+            "video_id": video_id,
+            "status": "completed",
+            "download_url": f"/api/videos/slides/download/{result['filename']}",
+            "num_slides": result["num_slides"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/slides/download/{filename}")
+async def download_slides(filename: str):
+    file_path = SlideService.OUTPUT_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File không tồn tại.")
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
