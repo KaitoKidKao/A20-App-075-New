@@ -22,6 +22,7 @@ def _s3():
     return boto3.client(
         "s3",
         region_name=config.AWS_REGION,
+        endpoint_url=f"https://s3.{config.AWS_REGION}.amazonaws.com",
         config=Config(signature_version="s3v4"),
     )
 
