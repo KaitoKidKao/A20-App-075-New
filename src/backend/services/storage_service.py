@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 
 def _s3():
     import boto3
-    return boto3.client("s3", region_name=config.AWS_REGION)
+    from botocore.config import Config
+    return boto3.client(
+        "s3",
+        region_name=config.AWS_REGION,
+        config=Config(signature_version="s3v4"),
+    )
 
 
 def upload_to_s3(local_path: Path, s3_key: str) -> bool:
