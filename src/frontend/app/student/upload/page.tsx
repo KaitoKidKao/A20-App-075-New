@@ -51,19 +51,24 @@ export default function UploadVideo() {
     fileInputRef.current?.click();
   };
 
-  const uploadToS3 = (url: string, file: File): Promise<void> => {
+  const uploadToS3 = (url: string, file: File, contentType: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
-          // S3 upload = 0–85%, confirm step = 85–100%
           setUploadProgress((e.loaded / e.total) * 85);
         }
       };
-      xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`S3 upload failed: ${xhr.status}`));
-      xhr.onerror = () => reject(new Error('Kết nối S3 thất bại.'));
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Upload S3 thất bại (HTTP ${xhr.status}). Liên hệ admin.`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Lỗi mạng khi upload lên S3 (CORS hoặc network). Mở DevTools > Network để xem chi tiết.'));
       xhr.open('PUT', url);
-      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.setRequestHeader('Content-Type', contentType);
       xhr.send(file);
     });
   };
@@ -77,14 +82,15 @@ export default function UploadVideo() {
 
     try {
       // Step 1: Get presigned URL from backend
+      const contentType = selectedFile.type || 'video/mp4';
       const { video_id, upload_url, s3_key } = await api.videos.presignUpload({
         filename: selectedFile.name,
-        content_type: selectedFile.type || 'video/mp4',
+        content_type: contentType,
         video_title: videoTitle,
       });
 
       // Step 2: Upload directly to S3 (bypasses Amplify proxy — no size limit)
-      await uploadToS3(upload_url, selectedFile);
+      await uploadToS3(upload_url, selectedFile, contentType);
       setUploadProgress(85);
 
       // Step 3: Notify backend to process
