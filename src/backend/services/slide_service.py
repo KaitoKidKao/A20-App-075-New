@@ -50,6 +50,26 @@ class SlideService:
         logger.info(f"🧠 LLM đang soạn nội dung cho {num_slides} slides (Lesson: {lesson_id})...")
         slides_content = await SlideService._call_llm_for_slides(transcript_data, num_slides)
 
+        # LOGIC BÙ ĐẮP: Nếu AI sinh thiếu slide so với yêu cầu
+        while len(slides_content) < num_slides:
+            if len(slides_content) >= 2:
+                # Chèn vào vị trí sát cuối để không làm hỏng slide cảm ơn
+                insert_pos = len(slides_content) - 1
+                prev_title = slides_content[insert_pos-1]["title"]
+                slides_content.insert(insert_pos, {
+                    "title": f"{prev_title} (Tiếp theo)",
+                    "content": ["Mở rộng thêm các ý chi tiết của phần trước...", "Ví dụ minh họa và ứng dụng thực tế."]
+                })
+            else:
+                # Trường hợp hiếm khi AI sinh quá ít (1 slide)
+                slides_content.append({"title": "Nội dung bổ sung", "content": ["Chi tiết bài giảng đang được cập nhật..."]})
+
+        # Cắt bớt nếu AI sinh thừa (trường hợp hiếm)
+        if len(slides_content) > num_slides:
+            last_slide = slides_content[-1]
+            slides_content = slides_content[:num_slides-1]
+            slides_content.append(last_slide)
+
         # 4. Tạo file PowerPoint
         SlideService.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         output_filename = f"{lesson_id}_{uuid.uuid4().hex[:8]}.pptx"
