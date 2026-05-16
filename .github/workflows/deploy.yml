@@ -49,40 +49,14 @@ jobs:
           docker push $REGISTRY/$REPOSITORY:latest
           echo "IMAGE=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Deploy to EC2 via SSM
-        run: |
-          INSTANCE_ID=$(aws ec2 describe-instances \
-            --filters \
-              "Name=tag:Name,Values=a20-prod-backend" \
-              "Name=instance-state-name,Values=running" \
-            --query "Reservations[0].Instances[0].InstanceId" \
-            --output text \
-            --region $AWS_REGION)
-
-          echo "Deploying to instance: $INSTANCE_ID"
-
-          COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["/opt/a20/deploy.sh"]' \
-            --timeout-seconds 300 \
-            --query "Command.CommandId" \
-            --output text \
-            --region $AWS_REGION)
-
-          echo "SSM command ID: $COMMAND_ID"
-
-          aws ssm wait command-executed \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --region $AWS_REGION
-
-          aws ssm get-command-invocation \
-            --command-id "$COMMAND_ID" \
-            --instance-id "$INSTANCE_ID" \
-            --region $AWS_REGION \
-            --query "[StatusDetails, StandardOutputContent]" \
-            --output text
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          timeout:  180s
+          script:   /opt/a20/deploy.sh
 
   # ── Build & push frontend image to ECR (optional — Amplify handles this) ───
   # Amplify auto-deploys on push to main, so this job is only needed

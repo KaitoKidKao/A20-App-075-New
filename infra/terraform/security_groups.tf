@@ -23,13 +23,22 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # SSH — only from your IP
+  # SSH — from your IP
   ingress {
     description = "SSH admin"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = [var.your_ip_cidr]
+  }
+
+  # SSH — EC2 Instance Connect service IPs for ap-southeast-1
+  ingress {
+    description = "EC2 Instance Connect"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["18.139.202.0/24"]
   }
 
   # Allow all outbound (for ECR pulls, OpenAI calls, etc.)
