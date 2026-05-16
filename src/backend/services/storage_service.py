@@ -90,6 +90,16 @@ def generate_presigned_url(s3_key: str, expires_in: int = 3600) -> str | None:
         return None
 
 
+def s3_object_exists(s3_key: str) -> bool:
+    if not config.AWS_S3_BUCKET:
+        return False
+    try:
+        _s3().head_object(Bucket=config.AWS_S3_BUCKET, Key=s3_key)
+        return True
+    except Exception:
+        return False
+
+
 def generate_presigned_upload_url(s3_key: str, content_type: str, expires_in: int = 3600) -> str | None:
     """Return a pre-signed PUT URL for direct browser-to-S3 upload."""
     if not config.AWS_S3_BUCKET:
