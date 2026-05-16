@@ -51,38 +51,54 @@ export default function UploadVideo() {
     fileInputRef.current?.click();
   };
 
+  const uploadToS3 = (url: string, file: File): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          // S3 upload = 0–85%, confirm step = 85–100%
+          setUploadProgress((e.loaded / e.total) * 85);
+        }
+      };
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`S3 upload failed: ${xhr.status}`));
+      xhr.onerror = () => reject(new Error('Kết nối S3 thất bại.'));
+      xhr.open('PUT', url);
+      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.send(file);
+    });
+  };
+
   const handleStartProcessing = async () => {
     if (!selectedFile) return;
 
     setIsUploading(true);
     setErrorMsg('');
-
-    // Simulate visual progress while uploading
-    let fakeProgress = 0;
-    const progressInterval = setInterval(() => {
-      fakeProgress += Math.random() * 8;
-      if (fakeProgress > 90) fakeProgress = 90;
-      setUploadProgress(fakeProgress);
-    }, 300);
+    setUploadProgress(0);
 
     try {
-      const data = await api.videos.upload(selectedFile, undefined, videoTitle);
-      clearInterval(progressInterval);
+      // Step 1: Get presigned URL from backend
+      const { video_id, upload_url, s3_key } = await api.videos.presignUpload({
+        filename: selectedFile.name,
+        content_type: selectedFile.type || 'video/mp4',
+        video_title: videoTitle,
+      });
 
-      if (data.video_id) {
-        await loadMyVideos();
-        setUploadProgress(100);
-        setSelectedFile(null);
-        setVideoTitle('');
-        setTimeout(() => {
-          router.push(`/student/videos/${data.video_id}/processing`);
-        }, 800);
-      } else {
-        throw new Error('Máy chủ không trả về video_id.');
-      }
+      // Step 2: Upload directly to S3 (bypasses Amplify proxy — no size limit)
+      await uploadToS3(upload_url, selectedFile);
+      setUploadProgress(85);
+
+      // Step 3: Notify backend to process
+      await api.videos.confirmUpload(video_id, s3_key);
+      setUploadProgress(100);
+
+      await loadMyVideos();
+      setSelectedFile(null);
+      setVideoTitle('');
+      setTimeout(() => {
+        router.push(`/student/videos/${video_id}/processing`);
+      }, 800);
     } catch (error: unknown) {
-      clearInterval(progressInterval);
-      const message = error instanceof Error ? error.message : 'Kết nối thất bại. Vui lòng kiểm tra backend đang chạy.';
+      const message = error instanceof Error ? error.message : 'Upload thất bại. Vui lòng thử lại.';
       setErrorMsg(message);
       setIsUploading(false);
       setUploadProgress(0);

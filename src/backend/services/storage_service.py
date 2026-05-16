@@ -82,3 +82,18 @@ def generate_presigned_url(s3_key: str, expires_in: int = 3600) -> str | None:
     except Exception as exc:
         logger.warning("Presigned URL failed for %s: %s", s3_key, exc)
         return None
+
+
+def generate_presigned_upload_url(s3_key: str, content_type: str, expires_in: int = 3600) -> str | None:
+    """Return a pre-signed PUT URL for direct browser-to-S3 upload."""
+    if not config.AWS_S3_BUCKET:
+        return None
+    try:
+        return _s3().generate_presigned_url(
+            "put_object",
+            Params={"Bucket": config.AWS_S3_BUCKET, "Key": s3_key, "ContentType": content_type},
+            ExpiresIn=expires_in,
+        )
+    except Exception as exc:
+        logger.warning("Presigned upload URL failed for %s: %s", s3_key, exc)
+        return None

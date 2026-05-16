@@ -619,6 +619,37 @@ export const api = {
       }
       return res.json();
     },
+
+    async presignUpload(params: {
+      filename: string;
+      content_type: string;
+      video_title?: string;
+      module_id?: string;
+    }): Promise<{ video_id: string; upload_url: string; s3_key: string; expires_in: number }> {
+      const res = await apiFetch("/api/videos/presign-upload", {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to get upload URL.");
+      }
+      return res.json();
+    },
+
+    async confirmUpload(videoId: string, s3Key: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/confirm-upload`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({ s3_key: s3Key }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to confirm upload.");
+      }
+      return res.json();
+    },
     async uploadBatch(files: File[], moduleId?: string): Promise<BatchUploadResponse> {
       const formData = new FormData();
       for (const file of files) {
