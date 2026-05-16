@@ -3,14 +3,30 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import delete, func
 from sqlmodel import Session, select
 
 from src.backend.auth import get_current_user
 from src.backend.database import get_session
 import uuid
 
-from src.backend.models import Course, Enrollment, Lesson, Module, ProcessingJob, Role, User, UserProgress
+from src.backend.models import (
+    ContentMetadata,
+    Course,
+    Enrollment,
+    Flashcard,
+    Lesson,
+    Module,
+    ProcessingJob,
+    Question,
+    QuestionOption,
+    Quiz,
+    QuizAttempt,
+    Role,
+    User,
+    UserFlashcardProgress,
+    UserProgress,
+)
 from src.backend.services.observability_service import runtime_metrics
 from src.backend.services.settings_service import (
     ALLOW_PUBLIC_ROLE_REGISTRATION_KEY,
@@ -504,6 +520,39 @@ async def delete_course(
     if role_name != "admin" and course.instructor_id != current_user.id:
         raise HTTPException(status_code=403, detail="You do not have permission to delete this course.")
 
+    modules = session.exec(select(Module).where(Module.course_id == course.id)).all()
+    module_ids = [module.id for module in modules]
+    lessons = session.exec(select(Lesson).where(Lesson.module_id.in_(module_ids))).all() if module_ids else []
+    lesson_ids = [lesson.id for lesson in lessons]
+
+    if lesson_ids:
+        # Remove lesson-level linked data first to satisfy FK constraints.
+        flashcards = session.exec(select(Flashcard).where(Flashcard.lesson_id.in_(lesson_ids))).all()
+        flashcard_ids = [flashcard.id for flashcard in flashcards]
+        if flashcard_ids:
+            session.exec(delete(UserFlashcardProgress).where(UserFlashcardProgress.flashcard_id.in_(flashcard_ids)))
+        session.exec(delete(Flashcard).where(Flashcard.lesson_id.in_(lesson_ids)))
+
+        quizzes = session.exec(select(Quiz).where(Quiz.lesson_id.in_(lesson_ids))).all()
+        quiz_ids = [quiz.id for quiz in quizzes]
+        if quiz_ids:
+            questions = session.exec(select(Question).where(Question.quiz_id.in_(quiz_ids))).all()
+            question_ids = [question.id for question in questions]
+            if question_ids:
+                session.exec(delete(QuestionOption).where(QuestionOption.question_id.in_(question_ids)))
+            session.exec(delete(Question).where(Question.quiz_id.in_(quiz_ids)))
+            session.exec(delete(QuizAttempt).where(QuizAttempt.quiz_id.in_(quiz_ids)))
+            session.exec(delete(Quiz).where(Quiz.lesson_id.in_(lesson_ids)))
+
+        session.exec(delete(UserProgress).where(UserProgress.lesson_id.in_(lesson_ids)))
+        session.exec(delete(ProcessingJob).where(ProcessingJob.lesson_id.in_(lesson_ids)))
+        session.exec(delete(ContentMetadata).where(ContentMetadata.lesson_id.in_(lesson_ids)))
+        session.exec(delete(Lesson).where(Lesson.id.in_(lesson_ids)))
+
+    if module_ids:
+        session.exec(delete(Module).where(Module.id.in_(module_ids)))
+
+    session.exec(delete(Enrollment).where(Enrollment.course_id == course.id))
     session.delete(course)
     session.commit()
     return {"ok": True, "message": f"Course {course_id} and all related content deleted."}

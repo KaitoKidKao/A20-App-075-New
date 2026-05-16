@@ -22,6 +22,12 @@ type SidebarItem = {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isAdminArea = pathname.startsWith('/admin');
 
   const sectionLabelClass = cn(
@@ -74,7 +80,7 @@ export function AppSidebar() {
       ];
 
   const isItemActive = (href: string) => {
-    if (typeof window !== 'undefined') {
+    if (mounted) {
       const [baseHref, hash] = href.split('#');
       if (hash) {
         return pathname === baseHref && window.location.hash === `#${hash}`;

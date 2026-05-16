@@ -13,8 +13,13 @@ import { useRouter } from 'next/navigation';
 
 export function TopBar() {
   const { theme, setTheme, user, logout } = useAppStore();
+  const [mounted, setMounted] = React.useState(false);
   const router = useRouter();
   const [notifOpen, setNotifOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
   const [notifications, setNotifications] = React.useState<
     Array<{ id: string; message: string; created_at: string; read: boolean }>
   >([]);
@@ -73,11 +78,11 @@ export function TopBar() {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              aria-label={theme === 'light' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng'}
-              title={theme === 'light' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng'}
+              aria-label={mounted ? (theme === 'light' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng') : ''}
+              title={mounted ? (theme === 'light' ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng') : ''}
               className="p-2.5 text-slate-500 hover:bg-slate-50 hover:text-primary rounded-full transition-all"
             >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+              {mounted ? (theme === 'light' ? <Moon size={20} /> : <Sun size={20} />) : <div className="w-5 h-5" />}
             </button>
 
             <div className="relative">
