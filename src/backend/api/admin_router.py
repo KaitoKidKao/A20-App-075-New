@@ -1,7 +1,7 @@
 from datetime import timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import delete, func
 from sqlmodel import Session, select
@@ -13,6 +13,7 @@ import uuid
 from src.backend.models import (
     ContentMetadata,
     Course,
+    DeletionAudit,
     Enrollment,
     Flashcard,
     Lesson,
@@ -52,7 +53,7 @@ def _require_admin(user: User) -> None:
 
 def _resolve_scope_course_ids(current_user: User, session: Session) -> list[uuid.UUID]:
     role_name = (current_user.role.name if current_user.role else "student").lower()
-    statement = select(Course)
+    statement = select(Course).where(Course.is_deleted == False)  # noqa: E712
     if role_name != "admin":
         statement = statement.where(Course.instructor_id == current_user.id)
     courses = session.exec(statement).all()
@@ -81,6 +82,50 @@ class AdminCourseUpdatePayload(BaseModel):
     is_published: bool | None = None
 
 
+def _create_deletion_audit(
+    *,
+    session: Session,
+    entity_type: str,
+    entity_id: str,
+    entity_display_name: str | None,
+    reason: str,
+    actor: User,
+) -> None:
+    audit = DeletionAudit(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        entity_display_name=entity_display_name,
+        deleted_by_user_id=actor.id,
+        deleted_by_email=actor.email,
+        reason=reason.strip(),
+    )
+    session.add(audit)
+
+
+@router.get("/deletion-audits")
+async def list_deletion_audits(
+    limit: int = 50,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    _require_teacher_or_admin(current_user)
+    safe_limit = max(1, min(limit, 200))
+    rows = session.exec(select(DeletionAudit).order_by(DeletionAudit.created_at.desc()).limit(safe_limit)).all()
+    return [
+        {
+            "id": str(row.id),
+            "entity_type": row.entity_type,
+            "entity_id": row.entity_id,
+            "entity_display_name": row.entity_display_name,
+            "deleted_by_user_id": str(row.deleted_by_user_id) if row.deleted_by_user_id else None,
+            "deleted_by_email": row.deleted_by_email,
+            "reason": row.reason,
+            "created_at": row.created_at,
+        }
+        for row in rows
+    ]
+
+
 @router.get("/dashboard")
 async def get_admin_dashboard(
     current_user: User = Depends(get_current_user),
@@ -89,7 +134,7 @@ async def get_admin_dashboard(
     _require_teacher_or_admin(current_user)
     role_name = (current_user.role.name if current_user.role else "student").lower()
 
-    course_statement = select(Course)
+    course_statement = select(Course).where(Course.is_deleted == False)  # noqa: E712
     if role_name != "admin":
         course_statement = course_statement.where(Course.instructor_id == current_user.id)
     courses = session.exec(course_statement).all()
@@ -186,7 +231,7 @@ async def list_admin_courses(
     _require_teacher_or_admin(current_user)
     role_name = (current_user.role.name if current_user.role else "student").lower()
 
-    course_statement = select(Course).order_by(Course.created_at.desc())
+    course_statement = select(Course).where(Course.is_deleted == False).order_by(Course.created_at.desc())  # noqa: E712
     if role_name != "admin":
         course_statement = course_statement.where(Course.instructor_id == current_user.id)
 
@@ -404,7 +449,7 @@ async def list_users_for_admin(
     session: Session = Depends(get_session),
 ):
     _require_admin(current_user)
-    users = session.exec(select(User).order_by(User.created_at.desc())).all()
+    users = session.exec(select(User).where(User.is_deleted == False).order_by(User.created_at.desc())).all()  # noqa: E712
     return [
         {
             "id": str(user.id),
@@ -457,6 +502,7 @@ async def update_user_role(
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: uuid.UUID,
+    reason: str = Query(..., min_length=3, max_length=500),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -468,7 +514,17 @@ async def delete_user(
     if str(target_user.id) == str(current_user.id):
         raise HTTPException(status_code=400, detail="You cannot delete your own account.")
 
-    session.delete(target_user)
+    target_user.is_deleted = True
+    target_user.updated_at = utc_now()
+    _create_deletion_audit(
+        session=session,
+        entity_type="user",
+        entity_id=str(target_user.id),
+        entity_display_name=target_user.email,
+        reason=reason,
+        actor=current_user,
+    )
+    session.add(target_user)
     session.commit()
     return {"ok": True, "message": f"User {user_id} deleted."}
 
@@ -507,6 +563,7 @@ async def update_course(
 @router.delete("/courses/{course_id}")
 async def delete_course(
     course_id: uuid.UUID,
+    reason: str = Query(..., min_length=3, max_length=500),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -553,6 +610,14 @@ async def delete_course(
         session.exec(delete(Module).where(Module.id.in_(module_ids)))
 
     session.exec(delete(Enrollment).where(Enrollment.course_id == course.id))
+    _create_deletion_audit(
+        session=session,
+        entity_type="course",
+        entity_id=str(course.id),
+        entity_display_name=course.title,
+        reason=reason,
+        actor=current_user,
+    )
     session.delete(course)
     session.commit()
     return {"ok": True, "message": f"Course {course_id} and all related content deleted."}

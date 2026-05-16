@@ -13,7 +13,7 @@ function cn(...inputs: ClassValue[]) {
 interface SelectOption {
   id: string;
   title: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface CustomSelectProps {

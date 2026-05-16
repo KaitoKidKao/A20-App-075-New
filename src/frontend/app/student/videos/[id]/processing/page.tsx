@@ -99,6 +99,7 @@ export default function VideoProcessingPage() {
         
         <button 
           onClick={() => router.push('/student/upload')}
+          suppressHydrationWarning
           className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-[#FF4F6E] transition-colors"
         >
           <ChevronLeft size={16} />
@@ -210,12 +211,14 @@ export default function VideoProcessingPage() {
                  <>
                    <button 
                      onClick={() => router.push(`/student/videos/${videoId}`)}
+                     suppressHydrationWarning
                      className="flex-1 py-5 bg-[#FF4F6E] text-white rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
                    >
                      Vào bài học <ArrowRight size={18} />
                    </button>
                    <button 
                      onClick={() => router.push('/student/documents')}
+                     suppressHydrationWarning
                      className="px-8 py-5 bg-white text-slate-900 border border-slate-200 rounded-[20px] font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition-all"
                    >
                      Quay lại khóa học
@@ -224,6 +227,7 @@ export default function VideoProcessingPage() {
                ) : isFailed ? (
                  <button 
                    onClick={() => router.push('/student/upload')}
+                   suppressHydrationWarning
                    className="w-full py-5 bg-slate-900 text-white rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
                  >
                    Quay lại trang tải lên

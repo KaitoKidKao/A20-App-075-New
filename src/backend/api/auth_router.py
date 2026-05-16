@@ -73,7 +73,7 @@ async def login(
     response: Response = None,
     session: Session = Depends(get_session),
 ):
-    statement = select(User).where(User.email == form_data.username)
+    statement = select(User).where(User.email == form_data.username, User.is_deleted == False)  # noqa: E712
     user = session.exec(statement).first()
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password.")

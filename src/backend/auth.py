@@ -60,6 +60,6 @@ async def get_current_user(request: Request, session: Session = Depends(get_sess
 
     statement = select(User).where(User.email == email)
     user = session.exec(statement).first()
-    if user is None:
+    if user is None or user.is_deleted:
         raise credentials_exception
     return user

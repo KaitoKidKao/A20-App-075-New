@@ -180,21 +180,6 @@ export default function CourseDetailPage() {
                 </div>
               </div>
               <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <div className="rounded-xl border-b border-slate-100 bg-slate-50 p-4">
-                  <div className="text-xs font-black uppercase tracking-wider text-slate-600 mb-2">Ho tro nguoi khiem thinh</div>
-                  <div className="flex flex-wrap gap-2 text-xs font-bold">
-                    <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700">Phu de song ngu: VI/EN</span>
-                    <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700">
-                      Transcript san sang: {stats.transcript_ready_lessons}/{stats.total_lessons}
-                    </span>
-                    {stats.processing_lessons > 0 && (
-                      <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700">
-                        Dang xu ly: {stats.processing_lessons}
-                      </span>
-                    )}
-                    <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700">Dieu huong ban phim</span>
-                  </div>
-                </div>
                 {modules.map((module) => (
                   <div key={module.id} className="border-b border-slate-200 last:border-0">
                     <button
@@ -363,7 +348,6 @@ export default function CourseDetailPage() {
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-500"><Clock size={16} className="text-primary" />Duration: {formatDuration(stats.total_duration_minutes)}</div>
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-500"><Layers size={16} className="text-primary" />Chapters: {stats.total_modules}</div>
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-500"><Play size={16} className="text-primary" />Completed: {user_context.completed_lessons}/{stats.total_lessons}</div>
-                    <div className="flex items-center gap-3 text-xs font-bold text-slate-500"><UserIcon size={16} className="text-primary" />Level: {course.level || 'N/A'}</div>
                   </div>
                 </div>
               </div>
