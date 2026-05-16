@@ -2,7 +2,7 @@ import os
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy import delete
 from sqlmodel import Session, select
 
@@ -18,6 +18,7 @@ from src.backend.models import (
     Course,
     Lesson,
     ContentMetadata,
+    DeletionAudit,
     Quiz,
     Question,
     QuestionOption,
@@ -40,6 +41,27 @@ from src.backend.services.rate_limit_service import rate_limit
 from src.backend.services.video_service import VideoService
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
+
+
+def _create_deletion_audit(
+    *,
+    session: Session,
+    entity_type: str,
+    entity_id: str,
+    entity_display_name: str | None,
+    reason: str,
+    actor: User,
+) -> None:
+    session.add(
+        DeletionAudit(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            entity_display_name=entity_display_name,
+            deleted_by_user_id=actor.id,
+            deleted_by_email=actor.email,
+            reason=reason.strip(),
+        )
+    )
 
 
 def _parse_lesson_id(lesson_id: str) -> uuid.UUID:
@@ -130,7 +152,7 @@ async def get_or_create_default_hierarchy(session: Session, user: User):
             category_id=category.id,
             instructor_id=user.id,
             title=personal_title,
-            description="Khu tự học cá nhân cho video học sinh tự tải lên",
+            description="Không gian tự học cá nhân cho các video bạn tự tải lên.",
             is_published=False,
         )
         session.add(course)
@@ -720,6 +742,7 @@ async def get_handsign_export_manifest(
 @router.delete("/{video_id}")
 async def delete_video(
     video_id: str,
+    reason: str = Query(..., min_length=3, max_length=500),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -759,6 +782,14 @@ async def delete_video(
     session.exec(delete(UserProgress).where(UserProgress.lesson_id == lesson_uuid))
     session.exec(delete(ProcessingJob).where(ProcessingJob.lesson_id == lesson_uuid))
     session.exec(delete(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid))
+    _create_deletion_audit(
+        session=session,
+        entity_type="lesson",
+        entity_id=str(lesson.id),
+        entity_display_name=lesson.title,
+        reason=reason,
+        actor=current_user,
+    )
     session.delete(lesson)
     session.commit()
 

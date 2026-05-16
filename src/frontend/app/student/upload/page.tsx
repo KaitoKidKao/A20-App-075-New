@@ -120,7 +120,7 @@ export default function UploadVideo() {
 
               {errorMsg && (
                 <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-black animate-in fade-in slide-in-from-top-2">
-                  âŒ {errorMsg}
+                  Lỗi: {errorMsg}
                 </div>
               )}
 

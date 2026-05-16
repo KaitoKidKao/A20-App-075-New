@@ -17,6 +17,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
   const isAuthPage = pathname.startsWith('/auth/');
+  const isAdminPage = pathname.startsWith('/admin');
   const isVideoProcessingPage =
     pathname.startsWith('/student/videos/') && pathname.includes('/processing');
 
@@ -28,14 +29,31 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (isAdminPage) {
+    return (
+      <div className="h-screen overflow-hidden">
+        <TopBar />
+        <div className="flex h-[calc(100vh-80px)] flex-col pt-20">
+          <div className="flex min-h-0 flex-1 w-full">
+            {!isVideoProcessingPage && <AppSidebar />}
+            <main id="app-main-scroll" className="min-w-0 flex-1 overflow-y-auto pb-12">
+              {children}
+              {!isVideoProcessingPage && <Footer />}
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col min-h-screen overflow-x-hidden">
+    <div className="flex min-h-screen flex-col overflow-x-hidden">
       <TopBar />
-      <div className="pt-20 flex flex-col min-h-screen">
+      <div className="flex min-h-screen flex-col pt-20">
         {pathname.startsWith('/student/') && !isVideoProcessingPage && <ProfileHeader />}
-        <div className="flex-1 flex w-full">
+        <div className="flex w-full flex-1">
           {!isVideoProcessingPage && <AppSidebar />}
-          <main className="flex-1 min-w-0 pb-12">
+          <main className="min-w-0 flex-1 pb-12">
             {children}
           </main>
         </div>
