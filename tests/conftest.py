@@ -1,9 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 from src.backend.main import app
 from src.backend.database import get_session
-from src.backend.models.user import User
+# Explicitly import all models to register them in SQLModel metadata
+from src.backend.models import (
+    user, course, content, progress, assessment, flashcard, job, system_setting, review, video
+)
+from src.backend.models.user import User, Role
 from src.backend.auth import get_password_hash
 
 from sqlalchemy.pool import StaticPool
@@ -20,6 +24,11 @@ engine = create_engine(
 import src.backend.database as db_module
 db_module.engine = engine
 db_module.DB_PATH = ":memory:"
+
+import src.backend.main as main_module
+main_module.engine = engine
+from sqlmodel import Session as SQLSession
+main_module.Session = SQLSession
 
 @pytest.fixture(autouse=True)
 def setup_db():
@@ -39,11 +48,19 @@ def client():
 
 @pytest.fixture
 def test_admin(session: Session):
+    # Ensure role exists
+    admin_role = session.exec(select(Role).where(Role.name == "admin")).first()
+    if not admin_role:
+        admin_role = Role(name="admin")
+        session.add(admin_role)
+        session.commit()
+        session.refresh(admin_role)
+        
     admin = User(
         email="admin_test@a20.ai",
         password_hash=get_password_hash("adminpass"),
         full_name="Admin Test",
-        role="admin"
+        role_id=admin_role.id
     )
     session.add(admin)
     session.commit()
@@ -52,11 +69,19 @@ def test_admin(session: Session):
 
 @pytest.fixture
 def test_student(session: Session):
+    # Ensure role exists
+    student_role = session.exec(select(Role).where(Role.name == "student")).first()
+    if not student_role:
+        student_role = Role(name="student")
+        session.add(student_role)
+        session.commit()
+        session.refresh(student_role)
+        
     student = User(
         email="student_test@a20.ai",
         password_hash=get_password_hash("studentpass"),
         full_name="Student Test",
-        role="student"
+        role_id=student_role.id
     )
     session.add(student)
     session.commit()

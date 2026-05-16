@@ -56,18 +56,30 @@ def test_access_protected_route_without_token(client: TestClient):
     assert response.status_code == 401
 
 def test_rbac_user_access_other_video(client: TestClient, student_token, session: Session):
-    # Create another user and their video
+    # Create another user and their course/lesson
     user2 = User(email="user2@example.com", password_hash="hash", full_name="User 2")
     session.add(user2)
     session.commit()
     session.refresh(user2)
     
-    from src.backend.models.video import Video
-    video2 = Video(id="video2-id", title="Private Video", storage_path="path", user_id=user2.id)
-    session.add(video2)
+    from src.backend.models.course import Category, Course, Module, Lesson
+    cat = Category(name="Cat 2")
+    session.add(cat)
     session.commit()
     
-    # Try to access video2 with student_token (which belongs to test_student)
-    response = client.get(f"/api/videos/{video2.id}/status", headers={"Authorization": f"Bearer {student_token}"})
+    course2 = Course(title="Course 2", instructor_id=user2.id, category_id=cat.id)
+    session.add(course2)
+    session.commit()
+    
+    mod2 = Module(title="Mod 2", course_id=course2.id)
+    session.add(mod2)
+    session.commit()
+    
+    lesson2 = Lesson(title="Private Lesson", module_id=mod2.id, status="queued")
+    session.add(lesson2)
+    session.commit()
+    
+    # Try to access lesson2 with student_token (belongs to test_student, not enrolled in course2)
+    response = client.get(f"/api/videos/{lesson2.id}/status", headers={"Authorization": f"Bearer {student_token}"})
     assert response.status_code == 403
-    assert "Ban khong co quyen xem trang thai video nay" in response.json()["detail"]
+    assert "Access denied" in response.json()["detail"]

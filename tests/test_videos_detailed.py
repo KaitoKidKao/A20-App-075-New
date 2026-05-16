@@ -1,13 +1,16 @@
 import pytest
+import uuid
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock, AsyncMock
-from src.backend.models.video import Video
+from src.backend.models.course import Lesson, Course, Module, Category
 from sqlmodel import Session, select
 
 @patch("src.backend.api.videos_router.VideoService.save_video_stream")
+@patch("src.backend.api.videos_router.VideoService.validate_video_duration")
 @patch("src.backend.api.videos_router.enqueue_pipeline_job")
-def test_upload_video_success(mock_enqueue, mock_save, client: TestClient, student_token, session: Session):
+def test_upload_video_success(mock_enqueue, mock_validate, mock_save, client: TestClient, student_token, session: Session):
     mock_save.return_value = "/path/to/video.mp4"
+    mock_validate.return_value = None
     mock_enqueue.return_value = "background_tasks"
     
     file_content = b"fake video content"
@@ -17,6 +20,9 @@ def test_upload_video_success(mock_enqueue, mock_save, client: TestClient, stude
         files={"file": ("test.mp4", file_content, "video/mp4")}
     )
     
+    if response.status_code != 200:
+        print(f"DEBUG: Response body: {response.json()}")
+        
     assert response.status_code == 200
     data = response.json()
     assert "video_id" in data
@@ -24,10 +30,10 @@ def test_upload_video_success(mock_enqueue, mock_save, client: TestClient, stude
     
     # Verify DB record
     video_id = data["video_id"]
-    video = session.get(Video, video_id)
-    assert video is not None
-    assert video.status == "queued"
-    assert video.title == "test.mp4"
+    lesson = session.get(Lesson, uuid.UUID(video_id))
+    assert lesson is not None
+    assert lesson.status == "queued"
+    assert lesson.title == "test.mp4"
 
 def test_upload_invalid_format(client: TestClient, student_token):
     file_content = b"fake text content"
@@ -55,22 +61,36 @@ def test_process_url_success(mock_enqueue, client: TestClient, student_token, se
     
     # Verify DB record
     video_id = data["video_id"]
-    video = session.get(Video, video_id)
-    assert video is not None
-    assert video.status == "queued"
+    lesson = session.get(Lesson, uuid.UUID(video_id))
+    assert lesson is not None
+    assert lesson.status == "queued"
 
 def test_get_video_status_not_found(client: TestClient, student_token):
+    random_uuid = str(uuid.uuid4())
     response = client.get(
-        "/api/videos/non-existent-id/status",
+        f"/api/videos/{random_uuid}/status",
         headers={"Authorization": f"Bearer {student_token}"}
     )
     assert response.status_code == 404
-    assert "Khong tim thay video" in response.json()["detail"]
+    assert "Khong tim thay bai hoc" in response.json()["detail"]
 
 def test_list_my_videos(client: TestClient, student_token, test_student, session: Session):
-    # Add a video manually
-    video = Video(id="v1", title="My Video", storage_path="path", user_id=test_student.id)
-    session.add(video)
+    # Setup hierarchy for test
+    category = Category(name="Test Category")
+    session.add(category)
+    session.flush()
+    
+    course = Course(title="Tu hoc ca nhan", instructor_id=test_student.id, category_id=category.id)
+    session.add(course)
+    session.flush()
+    
+    module = Module(title="Mac dinh", course_id=course.id)
+    session.add(module)
+    session.flush()
+    
+    lesson_id = uuid.uuid4()
+    lesson = Lesson(id=lesson_id, title="My Video", module_id=module.id, status="queued")
+    session.add(lesson)
     session.commit()
     
     response = client.get(
@@ -79,4 +99,4 @@ def test_list_my_videos(client: TestClient, student_token, test_student, session
     )
     assert response.status_code == 200
     videos = response.json()
-    assert any(v["id"] == "v1" for v in videos)
+    assert any(v["id"] == str(lesson_id) for v in videos)

@@ -1,8 +1,9 @@
 import os
 
 from sqlmodel import SQLModel, Session, create_engine
-
 from src.backend import config
+# Import models to ensure they are registered in SQLModel.metadata
+from src.backend import models
 
 DB_PATH = "data/lecture_platform.db"
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
