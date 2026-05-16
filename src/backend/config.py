@@ -7,6 +7,13 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "")
 
+# AWS
+AWS_REGION = os.getenv("AWS_REGION", "ap-southeast-1")
+AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "").strip()
+
+# Whisper — use "tiny" or "base" on free-tier EC2 (1GB RAM), "small" on t3.small+
+WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base")
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 JSON_LOGS = os.getenv("JSON_LOGS", "false").lower() == "true"
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")

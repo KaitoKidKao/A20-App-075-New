@@ -1,0 +1,97 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/backend/**'
+      - 'requirements.txt'
+      - 'Dockerfile.backend'
+      - 'src/frontend/**'
+      - 'infra/**'
+
+env:
+  AWS_REGION: ap-southeast-1
+
+jobs:
+  # ── Build & push backend image to ECR ──────────────────────────────────────
+  deploy-backend:
+    name: Backend → ECR → EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        env:
+          REGISTRY:   ${{ steps.ecr-login.outputs.registry }}
+          REPOSITORY: a20-prod-backend
+          IMAGE_TAG:  ${{ github.sha }}
+        run: |
+          docker build \
+            -f Dockerfile.backend \
+            -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
+            -t $REGISTRY/$REPOSITORY:latest \
+            .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:latest
+          echo "IMAGE=$REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host:    ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key:     ${{ secrets.EC2_SSH_KEY }}
+          timeout: 120s
+          script: /opt/a20/deploy.sh
+
+  # ── Build & push frontend image to ECR (optional — Amplify handles this) ───
+  # Amplify auto-deploys on push to main, so this job is only needed
+  # if you want a Docker-based frontend deploy instead of Amplify.
+  deploy-frontend:
+    name: Frontend → ECR (optional)
+    runs-on: ubuntu-latest
+    if: false  # Set to: contains(github.event.head_commit.modified, 'src/frontend')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push frontend image
+        env:
+          REGISTRY:        ${{ steps.ecr-login.outputs.registry }}
+          REPOSITORY:      a20-prod-frontend
+          IMAGE_TAG:       ${{ github.sha }}
+          BACKEND_API_URL: http://${{ secrets.EC2_HOST }}
+        run: |
+          docker build \
+            -f src/frontend/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL=$BACKEND_API_URL \
+            -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
+            -t $REGISTRY/$REPOSITORY:latest \
+            src/frontend
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker push $REGISTRY/$REPOSITORY:latest

@@ -1,0 +1,84 @@
+"""
+S3-backed storage — transparent fallback to local filesystem when AWS_S3_BUCKET is not set.
+
+Usage pattern (write-through):
+  1. Pipeline writes to local path as usual.
+  2. Call upload_to_s3() after writing to back the file up to S3.
+  3. On new EC2 instance, call ensure_local() to pull from S3 if local copy is missing.
+"""
+import json
+import logging
+from pathlib import Path
+from typing import Any
+
+from src.backend import config
+
+logger = logging.getLogger(__name__)
+
+
+def _s3():
+    import boto3
+    return boto3.client("s3", region_name=config.AWS_REGION)
+
+
+def upload_to_s3(local_path: Path, s3_key: str) -> bool:
+    """Upload local file to S3 bucket. No-op if AWS_S3_BUCKET is not configured."""
+    if not config.AWS_S3_BUCKET:
+        return False
+    try:
+        _s3().upload_file(str(local_path), config.AWS_S3_BUCKET, s3_key)
+        logger.debug("S3 upload: %s → s3://%s/%s", local_path.name, config.AWS_S3_BUCKET, s3_key)
+        return True
+    except Exception as exc:
+        logger.warning("S3 upload failed for %s: %s", s3_key, exc)
+        return False
+
+
+def download_from_s3(s3_key: str, local_path: Path) -> bool:
+    """Download file from S3 to local path. No-op if AWS_S3_BUCKET is not configured."""
+    if not config.AWS_S3_BUCKET:
+        return False
+    try:
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        _s3().download_file(config.AWS_S3_BUCKET, s3_key, str(local_path))
+        logger.debug("S3 download: s3://%s/%s → %s", config.AWS_S3_BUCKET, s3_key, local_path.name)
+        return True
+    except Exception as exc:
+        logger.debug("S3 download miss for %s: %s", s3_key, exc)
+        return False
+
+
+def ensure_local(s3_key: str, local_path: Path) -> bool:
+    """Return True if the file exists locally (downloading from S3 if needed)."""
+    if local_path.exists():
+        return True
+    return download_from_s3(s3_key, local_path)
+
+
+def write_json_to_s3(data: dict[str, Any], s3_key: str) -> bool:
+    """Serialize dict as JSON and upload directly to S3. No-op if not configured."""
+    if not config.AWS_S3_BUCKET:
+        return False
+    try:
+        import io
+        body = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+        _s3().put_object(Bucket=config.AWS_S3_BUCKET, Key=s3_key, Body=body, ContentType="application/json")
+        return True
+    except Exception as exc:
+        logger.warning("S3 put_object failed for %s: %s", s3_key, exc)
+        return False
+
+
+def generate_presigned_url(s3_key: str, expires_in: int = 3600) -> str | None:
+    """Return a pre-signed GET URL for s3_key, or None if S3 is not configured."""
+    if not config.AWS_S3_BUCKET:
+        return None
+    try:
+        return _s3().generate_presigned_url(
+            "get_object",
+            Params={"Bucket": config.AWS_S3_BUCKET, "Key": s3_key},
+            ExpiresIn=expires_in,
+        )
+    except Exception as exc:
+        logger.warning("Presigned URL failed for %s: %s", s3_key, exc)
+        return None

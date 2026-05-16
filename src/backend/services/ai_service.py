@@ -16,8 +16,7 @@ class AIService:
     
     _vsl_data = None
 
-    # Sử dụng bản 'base' hoặc 'small' để tối ưu cho CPU
-    MODEL_SIZE = "small"
+    MODEL_SIZE = config.WHISPER_MODEL_SIZE
     
     # Khởi tạo Whisper Model (Lazy Loading)
     _whisper_model = None
