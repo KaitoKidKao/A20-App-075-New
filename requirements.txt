@@ -27,3 +27,4 @@ email-validator>=2.0.0
 
 # Avatar
 replicate>=0.53.0
+python-pptx>=0.6.21

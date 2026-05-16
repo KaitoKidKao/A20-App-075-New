@@ -79,8 +79,12 @@ class VideoService:
             "default=noprint_wrappers=1:nokey=1",
             str(video_path),
         ]
+        # Set LD_LIBRARY_PATH to fix potential library issues on this system
+        env = os.environ.copy()
+        env["LD_LIBRARY_PATH"] = "/usr/lib/x86_64-linux-gnu"
+
         try:
-            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            result = subprocess.run(command, capture_output=True, text=True, check=True, env=env)
             duration = float((result.stdout or "0").strip() or 0)
         except FileNotFoundError:
             logger.warning("ffprobe is not installed; skipping duration validation for %s", video_path)
@@ -139,6 +143,8 @@ class VideoService:
         # Chạy tải video trong ThreadPool vì yt-dlp là sync
         loop = asyncio.get_event_loop()
         def download():
+            # Set LD_LIBRARY_PATH for the current process/thread
+            os.environ["LD_LIBRARY_PATH"] = "/usr/lib/x86_64-linux-gnu"
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
                 return Path(ydl.prepare_filename(info))

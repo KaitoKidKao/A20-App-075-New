@@ -24,4 +24,5 @@ dependencies = [
     "sqlmodel>=0.0.16",
     "uvicorn>=0.29.0",
     "yt-dlp>=2024.3.10",
+    "python-pptx>=1.0.2",
 ]

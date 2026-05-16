@@ -130,12 +130,17 @@ class AvatarVideoService:
                 str(output_path)
             ]
 
+            # Set LD_LIBRARY_PATH to fix potential library issues on this system
+            env = os.environ.copy()
+            env["LD_LIBRARY_PATH"] = "/usr/lib/x86_64-linux-gnu"
+
             logger.info(f"🎬 FFmpeg concat: {' '.join(cmd)}")
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=120
+                timeout=120,
+                env=env
             )
 
             # Dọn file tạm
@@ -184,8 +189,12 @@ class AvatarVideoService:
                 str(output_path)
             ]
 
+            # Set LD_LIBRARY_PATH
+            env = os.environ.copy()
+            env["LD_LIBRARY_PATH"] = "/usr/lib/x86_64-linux-gnu"
+
             logger.info(f"🎬 FFmpeg re-encode concat: {len(video_paths)} clips")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env)
 
             if result.returncode != 0:
                 logger.error(f"❌ FFmpeg re-encode error: {result.stderr[:500]}")
@@ -218,7 +227,11 @@ class AvatarVideoService:
                 str(output_path)
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            # Set LD_LIBRARY_PATH
+            env = os.environ.copy()
+            env["LD_LIBRARY_PATH"] = "/usr/lib/x86_64-linux-gnu"
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env)
             if result.returncode != 0:
                 logger.error(f"❌ FFmpeg video-only concat error: {result.stderr[:500]}")
                 return False

@@ -57,6 +57,14 @@ export interface AvatarState {
   disclaimer?: string;
 }
 
+export interface HandsSignSegment {
+  start: number;
+  end: number;
+  word: string;
+  vsl_info: VSLInfo | null;
+  hamnosys_hand: string | null;
+}
+
 export interface HandsSignResponse {
   video_id: string;
   handsign_data: HandsSignGloss[];
