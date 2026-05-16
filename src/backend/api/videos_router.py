@@ -102,7 +102,14 @@ def _ensure_lesson_owner_or_admin(video_id: str, current_user: User, session: Se
     raise HTTPException(status_code=403, detail="Only course teacher/admin can delete lesson videos.")
 
 
-async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
+def _build_personal_course_title(user: User) -> str:
+    display_name = (user.full_name or "").strip()
+    if not display_name:
+        display_name = user.email.split("@")[0]
+    return f"Khóa học cá nhân của {display_name}"
+
+
+async def get_or_create_default_hierarchy(session: Session, user: User):
     # Get or create "Chung" category
     category = session.exec(select(Category).where(Category.name == "Chung")).first()
     if not category:
@@ -110,21 +117,26 @@ async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
         session.add(category)
         session.flush()
     
-    # Get or create "Quick Uploads" course
+    personal_title = _build_personal_course_title(user)
+    # Reuse legacy course title if it exists, otherwise use personalized title.
     course = session.exec(
         select(Course).where(
-            Course.title == "Tu hoc ca nhan",
-            Course.instructor_id == user_id,
+            Course.instructor_id == user.id,
+            Course.title.in_(["Tu hoc ca nhan", personal_title]),
         )
     ).first()
     if not course:
         course = Course(
             category_id=category.id,
-            instructor_id=user_id,
-            title="Tu hoc ca nhan",
-            description="Khu tu hoc ca nhan cho video hoc sinh tu tai len",
+            instructor_id=user.id,
+            title=personal_title,
+            description="Khu tự học cá nhân cho video học sinh tự tải lên",
             is_published=False,
         )
+        session.add(course)
+        session.flush()
+    elif course.title != personal_title:
+        course.title = personal_title
         session.add(course)
         session.flush()
     
@@ -133,7 +145,7 @@ async def get_or_create_default_hierarchy(session: Session, user_id: uuid.UUID):
     if not module:
         module = Module(
             course_id=course.id,
-            title="Mac dinh",
+            title="Video tự học",
             sort_order=1
         )
         session.add(module)
@@ -172,6 +184,7 @@ async def _create_lesson_and_enqueue(
     current_user: User,
     session: Session,
     background_tasks: BackgroundTasks,
+    video_title: str | None = None,
 ) -> dict:
     lesson_uuid = uuid.uuid4()
     lesson_id = str(lesson_uuid)
@@ -192,12 +205,13 @@ async def _create_lesson_and_enqueue(
     VideoService.validate_video_duration(video_path)
 
     target_module = _ensure_teacher_module(module_id, current_user, session)
-    module = target_module or await get_or_create_default_hierarchy(session, current_user.id)
+    module = target_module or await get_or_create_default_hierarchy(session, current_user)
+    resolved_video_title = (video_title or "").strip() or file.filename
 
     lesson = Lesson(
         id=lesson_uuid,
         module_id=module.id,
-        title=file.filename,
+        title=resolved_video_title,
         content_type="video",
         status="queued",
         duration_minutes=0,
@@ -240,6 +254,7 @@ async def upload_video(
     _: None = Depends(rate_limit("upload", config.UPLOAD_RATE_LIMIT)),
     file: UploadFile = File(...),
     module_id: str | None = Form(default=None),
+    video_title: str | None = Form(default=None),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -250,6 +265,7 @@ async def upload_video(
             current_user=current_user,
             session=session,
             background_tasks=background_tasks,
+            video_title=video_title,
         )
     except HTTPException:
         raise
@@ -270,6 +286,7 @@ async def upload_videos_batch(
     _: None = Depends(rate_limit("upload", config.UPLOAD_RATE_LIMIT)),
     files: list[UploadFile] = File(...),
     module_id: str | None = Form(default=None),
+    video_titles: list[str] | None = Form(default=None),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -279,7 +296,10 @@ async def upload_videos_batch(
         raise HTTPException(status_code=400, detail="Maximum 20 files per batch.")
 
     results: list[dict] = []
-    for file in files:
+    for index, file in enumerate(files):
+        video_title = None
+        if video_titles and index < len(video_titles):
+            video_title = (video_titles[index] or "").strip() or None
         try:
             res = await _create_lesson_and_enqueue(
                 file=file,
@@ -287,6 +307,7 @@ async def upload_videos_batch(
                 current_user=current_user,
                 session=session,
                 background_tasks=background_tasks,
+                video_title=video_title,
             )
             results.append({"ok": True, **res})
         except HTTPException as exc:
@@ -316,7 +337,7 @@ async def process_url(
     lesson_uuid = uuid.uuid4()
     lesson_id = str(lesson_uuid)
     
-    module = await get_or_create_default_hierarchy(session, current_user.id)
+    module = await get_or_create_default_hierarchy(session, current_user)
     
     lesson = Lesson(
         id=lesson_uuid,
@@ -348,7 +369,7 @@ async def list_my_videos(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    module = await get_or_create_default_hierarchy(session, current_user.id)
+    module = await get_or_create_default_hierarchy(session, current_user)
     lessons = session.exec(
         select(Lesson).where(Lesson.module_id == module.id).order_by(Lesson.created_at.desc())
     ).all()

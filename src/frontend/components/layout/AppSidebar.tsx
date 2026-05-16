@@ -25,16 +25,16 @@ export function AppSidebar() {
   const isAdminArea = pathname.startsWith('/admin');
 
   const sectionLabelClass = cn(
-    'font-heading mb-3 px-3 text-xs font-black uppercase tracking-widest',
-    'text-[var(--app-text-muted)]'
+    'font-heading mb-3 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest',
+    'text-primary bg-primary/5 rounded-lg inline-block ml-3'
   );
 
   const itemClass = (isActive: boolean) =>
     cn(
-      'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all',
+      'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all relative',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
       isActive
-        ? 'ring-primary/15 bg-primary/10 text-primary font-heading font-black ring-1 shadow-sm'
+        ? 'text-primary font-heading font-black'
         : 'text-[var(--app-text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-text)] font-heading font-bold'
     );
 
@@ -74,8 +74,14 @@ export function AppSidebar() {
       ];
 
   const isItemActive = (href: string) => {
+    if (typeof window !== 'undefined') {
+      const [baseHref, hash] = href.split('#');
+      if (hash) {
+        return pathname === baseHref && window.location.hash === `#${hash}`;
+      }
+    }
     const baseHref = href.split('#')[0];
-    return pathname === baseHref || pathname.startsWith(`${baseHref}/`);
+    return pathname === baseHref || (pathname.startsWith(`${baseHref}/`) && baseHref !== '/admin');
   };
 
   const renderSection = (title: string, items: SidebarItem[]) => (
@@ -86,6 +92,9 @@ export function AppSidebar() {
           const isActive = isItemActive(item.href);
           return (
             <Link key={`${title}-${item.label}`} href={item.href} className={itemClass(isActive)}>
+              {isActive && (
+                <div className="absolute left-0 w-1 h-5 bg-primary rounded-r-full" />
+              )}
               <item.icon size={18} className={iconClass(isActive)} />
               <span className="text-[13px]">{item.label}</span>
             </Link>
@@ -102,7 +111,7 @@ export function AppSidebar() {
       )}
     >
       <div className="scrollbar-hide flex-1 overflow-y-auto px-3 py-6">
-        {renderSection('Menu chính', learningItems)}
+        {renderSection('Trang chủ', learningItems)}
         {renderSection('Công cụ', toolItems)}
         {renderSection('Cài đặt tài khoản', accountItems)}
       </div>

@@ -21,6 +21,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { StatusBadge, type Status } from '@/components/ui/StatusBadge';
+import { CustomSelect } from '@/components/ui/Select';
 import { api, type AdminCourseWorkspace, type AdminDashboard, type AdminRecentJob, type AdminUser } from '@/lib/api';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -526,7 +527,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <label className="flex-1 inline-flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
                 <input type="radio" checked={mode === 'existing'} onChange={() => setMode('existing')} className="accent-[#FF4F6E]" />
-                Sẵn có
+                Khóa học hiện có
               </label>
               <label className="flex-1 inline-flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
                 <input type="radio" checked={mode === 'new'} onChange={() => setMode('new')} className="accent-[#FF4F6E]" />
@@ -551,33 +552,29 @@ export default function AdminDashboardPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <select
+                <CustomSelect
+                  options={adminCourses}
                   value={selectedCourseId}
-                  onChange={(e) => {
-                    const next = e.target.value;
+                  onChange={(next) => {
                     setSelectedCourseId(next);
                     const course = adminCourses.find((item) => item.id === next);
                     setSelectedModuleId(course?.modules[0]?.id || '');
                   }}
-                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white transition-all"
-                >
-                  <option value="">Chọn khóa học</option>
-                  {adminCourses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
-                </select>
+                  placeholder="Chọn khóa học"
+                />
 
                 <div className="flex gap-3">
-                  <select
+                  <CustomSelect
+                    options={selectedCourse?.modules || []}
                     value={selectedModuleId}
-                    onChange={(e) => setSelectedModuleId(e.target.value)}
+                    onChange={(next) => setSelectedModuleId(next)}
                     disabled={!selectedCourseId || createNewModule}
-                    className="flex-1 rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white disabled:opacity-50 transition-all"
-                  >
-                    <option value="">Chọn chương</option>
-                    {(selectedCourse?.modules || []).map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
-                  </select>
+                    placeholder="Chọn chương"
+                    className="flex-1"
+                  />
                   <button 
                     onClick={() => setCreateNewModule(!createNewModule)}
-                    className={cn("px-4 rounded-2xl border transition-all", createNewModule ? "bg-[#FF4F6E] border-[#FF4F6E] text-white" : "bg-slate-50 border-slate-100 text-slate-400")}
+                    className={cn("px-4 h-[54px] rounded-2xl border transition-all flex items-center justify-center", createNewModule ? "bg-[#FF4F6E] border-[#FF4F6E] text-white" : "bg-slate-50 border-slate-100 text-slate-400")}
                   >
                     <Plus size={20} />
                   </button>
@@ -745,19 +742,17 @@ export default function AdminDashboardPage() {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <select
+                      <CustomSelect
+                        options={[
+                          { id: 'student', title: 'Học viên' },
+                          { id: 'teacher', title: 'Giảng viên' },
+                          { id: 'admin', title: 'Admin' },
+                        ]}
                         value={user.role}
                         disabled={updatingRoleUserId === user.id}
-                        onChange={(e) => handleChangeUserRole(user.id, e.target.value as 'student' | 'teacher' | 'admin')}
-                        className={cn(
-                          "rounded-xl border-none px-4 py-2 text-xs font-black transition-all outline-none",
-                          user.role === 'admin' ? "bg-rose-50 text-rose-600" : user.role === 'teacher' ? "bg-blue-50 text-blue-600" : "bg-slate-50 text-slate-600"
-                        )}
-                      >
-                        <option value="student">Học viên</option>
-                        <option value="teacher">Giảng viên</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                        onChange={(next) => handleChangeUserRole(user.id, next as 'student' | 'teacher' | 'admin')}
+                        className="w-40"
+                      />
                     </td>
                     <td className="px-8 py-6 text-right">
                       <button 

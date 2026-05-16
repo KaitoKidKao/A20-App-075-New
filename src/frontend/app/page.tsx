@@ -41,13 +41,13 @@ export default function LandingPage() {
             <span className="text-2xl font-black tracking-tight text-slate-900">Dreams</span>
           </div>
           <div className="hidden md:flex items-center gap-12 text-[13px] font-black uppercase tracking-[0.2em] text-slate-400">
-            <a href="#features" className="hover:text-[#FF4F6E] transition-colors">Features</a>
-            <a href="#mission" className="hover:text-[#FF4F6E] transition-colors">Mission</a>
+            <a href="#features" className="hover:text-[#FF4F6E] transition-colors">Tính năng</a>
+            <a href="#mission" className="hover:text-[#FF4F6E] transition-colors">Sứ mệnh</a>
             <button 
               onClick={handleStart}
               className="px-8 py-3 bg-[#FF4F6E] text-white rounded-xl hover:bg-[#e64663] transition-all shadow-lg shadow-[#FF4F6E]/20 font-black uppercase tracking-widest text-[12px]"
             >
-              Sign In
+              Đăng nhập
             </button>
           </div>
         </div>
@@ -62,12 +62,11 @@ export default function LandingPage() {
           <div className="lg:w-[55%] space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
 
             <div className="space-y-8">
-              <h1 className="text-6xl md:text-[88px] font-black text-slate-900 leading-[0.95] tracking-tight">
-                Hear with your <span className="text-[#FF4F6E] italic">eyes</span>, <br />
-                Learn with heart.
+              <h1 className="text-5xl md:text-[72px] font-black text-slate-900 leading-[1.1] tracking-tight max-w-4xl">
+                Lắng nghe bằng <span className="text-[#FF4F6E] italic inline-block no-underline">đôi mắt</span>, học tập từ trái tim.
               </h1>
               <p className="text-xl md:text-2xl text-slate-500 font-medium leading-relaxed max-w-2xl">
-                Breaking barriers for deaf and hard-of-hearing students. Dreams transforms every lecture into a visual, interactive, and accessible journey.
+                Xóa bỏ rào cản giao tiếp cho người khiếm thính. Dreams chuyển hóa mọi bài giảng thành trải nghiệm trực quan sống động và dễ tiếp cận nhất.
               </p>
             </div>
 
@@ -76,23 +75,23 @@ export default function LandingPage() {
                 onClick={handleStart}
                 className="w-full sm:w-auto px-12 py-6 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-2xl shadow-[#FF4F6E]/30 hover:bg-[#e64663] transition-all hover:scale-105 active:scale-[0.98] text-lg"
               >
-                Join Dreams Now
+                Khám phá Dreams ngay
               </button>
               <button className="flex items-center gap-4 text-slate-900 font-black hover:text-[#FF4F6E] transition-colors group">
                  <div className="w-14 h-14 rounded-full border-2 border-slate-100 flex items-center justify-center group-hover:border-[#FF4F6E] transition-all">
                     <Play size={20} fill="currentColor" />
                  </div>
-                 Watch Story
+                 Xem câu chuyện
               </button>
             </div>
           </div>
 
-          {/* Right Hero Image - NEW PATH TO AVOID CACHE */}
+          {/* Right Hero Image */}
           <div className="lg:w-[45%] relative animate-in fade-in slide-in-from-right-8 duration-1000 delay-300">
              <div className="relative z-10 rounded-[60px] overflow-hidden shadow-2xl border-[16px] border-white bg-white aspect-square">
                 <Image 
                   src="/assets/images/hero-final-v2.png" 
-                  alt="Student Standing with Laptop" 
+                  alt="Học viên Dreams" 
                   fill
                   className="object-contain p-4"
                 />
@@ -104,8 +103,8 @@ export default function LandingPage() {
         <section id="features" className="py-32 bg-slate-50/50">
           <div className="max-w-[1440px] mx-auto px-8 md:px-20">
              <div className="text-center max-w-3xl mx-auto mb-24 space-y-4">
-                <h2 className="text-4xl md:text-6xl font-black tracking-tight">Superpowers for your <span className="text-[#FF4F6E]">Education</span></h2>
-                <p className="text-lg text-slate-500 font-medium">Designed specifically for the unique needs of deaf and hard-of-hearing learners.</p>
+                <h2 className="text-4xl md:text-6xl font-black tracking-tight">Công nghệ đột phá cho <span className="text-[#FF4F6E]">Giáo dục hòa nhập</span></h2>
+                <p className="text-lg text-slate-500 font-medium">Giải pháp tối ưu được thiết kế riêng cho nhu cầu của người học khiếm thính.</p>
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -113,9 +112,9 @@ export default function LandingPage() {
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <Eye size={32} />
                    </div>
-                   <h3 className="text-2xl font-black mb-4">Visual Learning</h3>
+                   <h3 className="text-2xl font-black mb-4">Phụ đề Trực quan</h3>
                    <p className="text-slate-500 font-medium leading-relaxed">
-                      Transform every audio lecture into crystal clear, real-time captions with emotional context.
+                      Tự động chuyển đổi âm thanh thành phụ đề thời gian thực sắc nét, truyền tải trọn vẹn tông điệu và cảm xúc.
                    </p>
                 </div>
 
@@ -123,9 +122,9 @@ export default function LandingPage() {
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <Zap size={32} fill="currentColor" />
                    </div>
-                   <h3 className="text-2xl font-black mb-4">AI Summaries</h3>
+                   <h3 className="text-2xl font-black mb-4">Tóm lược AI</h3>
                    <p className="text-slate-500 font-medium leading-relaxed">
-                      Get high-level summaries of complex topics instantly, so you can focus on understanding.
+                      Công nghệ AI tự động ghi chú và tóm tắt nội dung trọng tâm, giúp bạn nắm bắt kiến thức cốt lõi ngay tức thì.
                    </p>
                 </div>
 
@@ -133,16 +132,16 @@ export default function LandingPage() {
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <MessageSquare size={32} />
                    </div>
-                   <h3 className="text-2xl font-black mb-4">Interaction</h3>
+                   <h3 className="text-2xl font-black mb-4">Kết nối Đa chiều</h3>
                    <p className="text-slate-500 font-medium leading-relaxed">
-                      Communicate with teachers and peers seamlessly through integrated visual feedback tools.
+                      Tương tác không giới hạn với giảng viên và bạn học thông qua các công cụ phản hồi trực quan sinh động.
                    </p>
                 </div>
              </div>
           </div>
         </section>
 
-        {/* MISSION SECTION - NEW PATH TO AVOID CACHE */}
+        {/* MISSION SECTION */}
         <section id="mission" className="py-32">
           <div className="max-w-[1440px] mx-auto px-8 md:px-20">
              <div className="flex flex-col lg:flex-row items-center gap-24">
@@ -150,24 +149,25 @@ export default function LandingPage() {
                    <div className="rounded-[60px] overflow-hidden shadow-2xl aspect-square relative">
                       <Image 
                         src="/assets/images/mission-final-v2.png" 
-                        alt="Visual Meaning" 
+                        alt="Sứ mệnh Dreams" 
                         fill
                         className="object-contain p-4"
                       />
                    </div>
                 </div>
                 <div className="lg:w-1/2 space-y-10">
-                   <span className="text-[#FF4F6E] font-black uppercase tracking-[0.3em] text-xs">Our Core Values</span>
-                   <h2 className="text-4xl md:text-6xl font-black leading-tight">Equality isn&apos;t a feature. <br /> It&apos;s the <span className="text-[#FF4F6E]">Foundation</span>.</h2>
+                   <span className="text-[#FF4F6E] font-black uppercase tracking-[0.3em] text-xs">Giá trị cốt lõi</span>
+                                       <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl">Bình đẳng giáo dục là <span className="text-[#FF4F6E]">Nền tảng</span> bền vững.</h2>
+
                    <p className="text-xl text-slate-500 font-medium leading-relaxed">
-                      We believe every student deserves to be heard and to hear. Dreams is built to erase the invisible walls in classrooms.
+                      Chúng tôi tin rằng tri thức là dành cho tất cả mọi người. Dreams sinh ra để xóa nhòa những bức tường vô hình trong môi trường sư phạm truyền thống.
                    </p>
                    <ul className="space-y-6">
                       {[
-                        "Real-time transcription with tone detection",
-                        "Smart summarization of complex lecture videos",
-                        "Interactive visual classroom environment",
-                        "Personalized learning path for every student"
+                        "Phụ đề thời gian thực tích hợp nhận diện cảm xúc",
+                        "Tóm tắt video bài giảng thông minh bằng AI",
+                        "Môi trường học tập tương tác trực quan 360°",
+                        "Lộ trình học tập cá nhân hóa cho từng học viên"
                       ].map((item, i) => (
                         <li key={i} className="flex items-center gap-4 font-bold text-slate-700">
                            <div className="w-6 h-6 bg-[#FF4F6E]/10 text-[#FF4F6E] rounded-full flex items-center justify-center">
@@ -186,17 +186,17 @@ export default function LandingPage() {
         <section className="py-32 bg-[#1A1A1A] text-white relative overflow-hidden">
            <div className="max-w-[1440px] mx-auto px-8 md:px-20 relative z-10 flex flex-col lg:flex-row items-center gap-20">
               <div className="lg:w-1/2 space-y-10">
-                 <h2 className="text-5xl md:text-7xl font-black leading-tight">Ready to start your <span className="text-[#FF4F6E]">Dreams</span> journey?</h2>
-                 <p className="text-xl text-slate-400 font-medium">Join a global community of students who are redefining what it means to &quot;listen&quot; and &quot;learn&quot;.</p>
+                 <h2 className="text-4xl md:text-6xl font-black leading-tight max-w-2xl">Chinh phục ước mơ cùng <span className="text-[#FF4F6E]">Dreams</span></h2>
+                 <p className="text-xl text-slate-400 font-medium">Gia nhập cộng đồng học tập không rào cản, nơi mọi thanh âm đều được thấu hiểu bằng đôi mắt.</p>
                  <div className="flex flex-col sm:flex-row gap-6">
                     <button 
                       onClick={handleStart}
                       className="px-12 py-6 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-2xl hover:bg-[#e64663] transition-all hover:scale-105 active:scale-[0.98] text-lg"
                     >
-                      Get Started for Free
+                      Bắt đầu Miễn phí
                     </button>
                     <button className="px-10 py-6 border-2 border-white/10 text-white font-black rounded-2xl hover:bg-white/10 transition-all">
-                       Contact School
+                       Liên hệ Nhà trường
                     </button>
                  </div>
               </div>
@@ -229,11 +229,11 @@ export default function LandingPage() {
                <span className="text-xl font-black text-slate-900">Dreams</span>
             </div>
             <div className="flex gap-12 text-[11px] font-black uppercase tracking-widest text-slate-400">
-               <a href="#" className="hover:text-[#FF4F6E] transition-colors">How it works</a>
-               <a href="#" className="hover:text-[#FF4F6E] transition-colors">Privacy</a>
-               <a href="#" className="hover:text-[#FF4F6E] transition-colors">Contact</a>
+               <a href="#" className="hover:text-[#FF4F6E] transition-colors">Cách hoạt động</a>
+               <a href="#" className="hover:text-[#FF4F6E] transition-colors">Quyền riêng tư</a>
+               <a href="#" className="hover:text-[#FF4F6E] transition-colors">Liên hệ</a>
             </div>
-            <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">© 2026 Dreams. Built for inclusion.</p>
+            <p className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">© 2026 Dreams. Được xây dựng vì sự hòa nhập.</p>
          </div>
       </footer>
     </div>
