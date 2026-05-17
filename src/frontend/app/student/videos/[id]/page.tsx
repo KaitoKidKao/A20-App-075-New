@@ -1376,7 +1376,7 @@ export default function VideoLessonPage() {
                                 <p className="text-xs font-bold text-slate-500 mt-1">Điểm đạt: {activeQuiz.passing_score}%</p>
                               </div>
 
-                              {activeQuiz.questions.map((question, qIdx) => (
+                              {(activeQuiz.questions ?? []).map((question, qIdx) => (
                                 <div key={question.id} className="rounded-2xl border border-slate-100 p-5 bg-white">
                                   <p className="text-sm font-extrabold text-slate-900 mb-4">{qIdx + 1}. {question.question_text}</p>
                                   <div className="space-y-2">
