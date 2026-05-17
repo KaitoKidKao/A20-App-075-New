@@ -753,12 +753,14 @@ export default function VideoLessonPage() {
         api.videos.getVizData(videoId),
       ]);
 
-      setTimeline(timelineRes.timeline || []);
-      setHighlights(highlightsRes.highlights || []);
-      setQuestions(questionsRes.questions || []);
-      setBriefing(briefingRes.briefing || null);
-      setFlashcards(flashcardsRes.flashcards || []);
-      const rawVisualData = vizDataRes.visual_data || null;
+      const v = <T,>(r: PromiseSettledResult<T>) => r.status === 'fulfilled' ? r.value : null;
+
+      setTimeline(v(timelineRes)?.timeline || []);
+      setHighlights(v(highlightsRes)?.highlights || []);
+      setQuestions(v(questionsRes)?.questions || []);
+      setBriefing(v(briefingRes)?.briefing || null);
+      setFlashcards(v(flashcardsRes)?.flashcards || []);
+      const rawVisualData = v(vizDataRes)?.visual_data || null;
       let normalizedVisualData: VisualData | null = null;
       if (rawVisualData && typeof rawVisualData === 'object') {
         const hasInfographic = Object.prototype.hasOwnProperty.call(rawVisualData, 'infographic');
@@ -769,8 +771,8 @@ export default function VideoLessonPage() {
           normalizedVisualData = { infographic: rawVisualData as InfographicData };
         }
       }
-      if (normalizedVisualData?.infographic && vizDataRes.cover_image_url) {
-        normalizedVisualData.infographic.cover_image_url = vizDataRes.cover_image_url;
+      if (normalizedVisualData?.infographic && v(vizDataRes)?.cover_image_url) {
+        normalizedVisualData.infographic.cover_image_url = v(vizDataRes)!.cover_image_url!;
       }
       setVisualData(normalizedVisualData);
     } catch (err) {
