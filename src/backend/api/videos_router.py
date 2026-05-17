@@ -1022,15 +1022,25 @@ async def generate_slides_endpoint(
 
 @router.get("/slides/download/{filename}")
 async def download_slides(filename: str):
+    # Validate filename to prevent path traversal
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Tên file không hợp lệ.")
+
     file_path = SlideService.OUTPUT_DIR / filename
     if not file_path.exists():
+        # Try to restore from S3
+        s3_key = f"{SlideService.S3_SLIDES_PREFIX}/{filename}"
+        from src.backend.services.storage_service import ensure_local
+        ensure_local(s3_key, file_path)
+
+    if not file_path.exists():
         raise HTTPException(status_code=404, detail="File không tồn tại.")
-    
+
     from fastapi.responses import FileResponse
     return FileResponse(
         path=file_path,
         filename=filename,
-        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
     )
 
 
