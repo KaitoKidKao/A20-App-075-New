@@ -343,7 +343,9 @@ export default function VideoLessonPage() {
   }, [hasNext, currentIndex, moduleLessons, router]);
 
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/videos/${videoId}/stream`;
+  const _authToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const _tokenParam = _authToken ? `?token=${encodeURIComponent(_authToken)}` : '';
+  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/videos/${videoId}/stream${_tokenParam}`;
   const normalizedAvatarStatus = (avatarStatus || 'not_generated').toLowerCase();
   const isAvatarReady = normalizedAvatarStatus === 'ready' || normalizedAvatarStatus === 'generated' || normalizedAvatarStatus === 'completed';
   const isAvatarProcessing = normalizedAvatarStatus === 'processing' || normalizedAvatarStatus === 'queued' || normalizedAvatarStatus === 'running';
@@ -370,7 +372,8 @@ export default function VideoLessonPage() {
       video.preload = 'metadata';
       video.muted = true;
       video.playsInline = true;
-      video.src = `${backendBaseUrl}/api/videos/${lessonId}/stream`;
+      const tok = localStorage.getItem('auth_token');
+      video.src = `${backendBaseUrl}/api/videos/${lessonId}/stream${tok ? `?token=${encodeURIComponent(tok)}` : ''}`;
 
       let resolved = false;
       const timeout = window.setTimeout(() => {
