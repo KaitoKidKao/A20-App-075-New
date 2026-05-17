@@ -8,8 +8,8 @@
 
 | Hạng mục | Đường dẫn liên kết |
 | :--- | :--- |
-| **Live URL** | *https://main.d1vyf197dtmhjw.amplifyapp.com/* |
-| **Video Demo** | *[Đang cập nhật link YouTube]* |
+| **Live URL** |[Deams](https://main.d1vyf197dtmhjw.amplifyapp.com/) |
+| **Video Demo** | [Deams](https://www.youtube.com/watch?v=o1b9VRQWcZw&feature=youtu.be) |
 |  **Pitch Deck** | *[[Team 075] - Dreams - Pitch Deck.pdf](https://drive.google.com/file/d/1oUSMvy4ltEoQWZUIa2C5Pqt01yG5_tS6/view?usp=sharing)* |
 | **Kiến trúc hệ thống** | [docs/architecture.md](docs/architecture.md) |
 |  **AI Logs & Prompts** | [docs/ai-logs.md](docs/ai-logs.md) |
