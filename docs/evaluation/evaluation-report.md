@@ -1,17 +1,17 @@
-# 📈 Báo Cáo Đánh Giá & Kịch Bản Kiểm Thử Hệ Thống — Dreams
+# Báo Cáo Đánh Giá & Kịch Bản Kiểm Thử Hệ Thống — Dreams
 
 Tài liệu này cung cấp toàn bộ minh chứng kỹ thuật về quy trình kiểm thử tự động (Automated Testing), đánh giá chất lượng (Evaluation), nhật ký AI (Prompt Logs), phân tích các tình huống lỗi biên (Failure Cases) và phản hồi từ người dùng của nền tảng học tập thông minh **Dreams (Mã dự án: A20-App-075)**.
 
 ---
 
-## 🔗 Quick Links
+##  Quick Links
 *   **Trang chủ Dự án:** [README.md](../../README.md)
 *   **Kiến trúc Hệ thống:** [docs/architecture.md](../architecture.md)
 *   **Nhật ký Phân công (Worklog):** [docs/worklog.md](../worklog.md)
 
 ---
 
-## 1. 🎯 Mục tiêu đánh giá (Evaluation Objectives)
+## 1.  Mục tiêu đánh giá (Evaluation Objectives)
 
 Báo cáo này nhằm chứng minh một cách minh bạch 4 câu hỏi lớn của Ban giám khảo cuộc thi AI20K dựa trên **bộ test suite tự động (Automated unit/integration tests) được cài đặt trực tiếp trong mã nguồn**:
 1.  **Sản phẩm có đúng mục tiêu không?** Đảm bảo Dreams giải quyết triệt để rào cản học tập của sinh viên khiếm thính qua các lớp kiểm thử dịch thuật song ngữ, chuẩn hóa ngôn ngữ ký hiệu (VSL/Handsign) và theo dõi tiến trình học tập.
@@ -21,7 +21,7 @@ Báo cáo này nhằm chứng minh một cách minh bạch 4 câu hỏi lớn c�
 
 ---
 
-## 🔍 2. Phạm vi kiểm thử (Scope of Testing)
+## 2. Phạm vi kiểm thử (Scope of Testing)
 
 Quy trình kiểm thử tự động bao phủ 100% các thành phần logic nghiệp vụ cốt lõi tại Backend (`src/backend/`):
 *   **Authentication & Security:** Flow đăng ký, đăng nhập cấp JWT Cookie bảo mật, phân quyền người học (Student/Teacher) và phân lớp bảo mật chặn bypass.
@@ -34,7 +34,7 @@ Quy trình kiểm thử tự động bao phủ 100% các thành phần logic ngh
 
 ---
 
-## 🧪 3. Bộ kịch bản kiểm thử tự động (Automated Master Test Suite)
+##  3. Bộ kịch bản kiểm thử tự động (Automated Master Test Suite)
 
 Hệ thống được trang bị bộ kiểm thử tự động toàn diện sử dụng framework **Pytest**. Dưới đây là bảng ánh xạ **13 test files** tương ứng với các trường hợp kiểm thử thực tế được định nghĩa trực tiếp trong thư mục [src/backend/tests/](../../src/backend/tests/):
 
@@ -54,7 +54,7 @@ Hệ thống được trang bị bộ kiểm thử tự động toàn diện s�
 
 ---
 
-## 📊 4. Chỉ số đo lường hiệu năng hệ thống (System Metrics)
+## 4. Chỉ số đo lường hiệu năng hệ thống (System Metrics)
 
 Hệ thống tích hợp một hệ thống giám sát thời gian thực tự xây dựng tại [observability_service.py](../../src/backend/services/observability_service.py). Lớp `RuntimeMetrics` và middleware `metrics_middleware` trong `main.py` đo lường và cung cấp các chỉ số hiệu năng thực tế thông qua endpoint giám sát **`/api/metrics`** (được kiểm thử tự động trong `test_observability_api.py`):
 
@@ -66,7 +66,7 @@ Hệ thống tích hợp một hệ thống giám sát thời gian thực tự x
 
 ---
 
-## 🤖 5. Nhật ký AI & Xác thực tính năng AI (AI Verification Logs)
+##  5. Nhật ký AI & Xác thực tính năng AI (AI Verification Logs)
 
 Để đảm bảo các API kết nối với LLM (OpenAI GPT) hoạt động chính xác theo đúng cấu trúc đầu ra mong muốn, nhóm đã xây dựng script kiểm thử chuyên dụng **`src/backend/tests/verify_ai_features.py`**. 
 
@@ -213,7 +213,7 @@ Script này quét các tệp transcript trong `data/uploads/transcripts` và g�
 
 Dưới đây là album ảnh chụp màn hình thực tế ghi nhận các tính năng kỹ thuật cốt lõi hoạt động trơn tru:
 
-### 🛠️ Bước 1: Kiểm thử mã nguồn tự động (Automated Code Testing)
+###  Bước 1: Kiểm thử mã nguồn tự động (Automated Code Testing)
 
 1.  **Chụp ảnh 01: Chạy Suite Pytest tự động thành công**
     *   *Mục đích:* Chứng minh 100% các file kiểm thử (13 files) và tất cả các test case đều vượt qua (PASSED) ở môi trường cục bộ.
@@ -223,7 +223,7 @@ Dưới đây là album ảnh chụp màn hình thực tế ghi nhận các tín
 
 ---
 
-### 🌐 Bước 2: Trải nghiệm ứng dụng trên trình duyệt (Web UI Interfaces)
+###  Bước 2: Trải nghiệm ứng dụng trên trình duyệt (Web UI Interfaces)
 
 2.  **Chụp ảnh 02: Giao diện Đăng nhập hệ thống (Login Page)**
     *   *Mục đích:* Minh họa giao diện đăng nhập trực quan, thẩm mỹ của hệ thống Dreams dành cho người học.
@@ -263,7 +263,7 @@ Dưới đây là album ảnh chụp màn hình thực tế ghi nhận các tín
 
 ---
 
-## 📝 7. Nhận xét cuối cùng (Concluding Remarks)
+## 7. Nhận xét cuối cùng (Concluding Remarks)
 
 Hệ thống Dreams sở hữu một nền tảng kiểm thử tự động vô cùng bài bản:
 1.  **100% Code-Aligned Testing:** Toàn bộ logic nghiệp vụ cốt lõi đều được bảo vệ và kiểm chứng thông qua **13 file kiểm thử tự động**, có thể chạy độc lập bất kỳ lúc nào bằng lệnh `pytest`.
