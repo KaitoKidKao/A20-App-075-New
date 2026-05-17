@@ -19,11 +19,21 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api, CourseReview, StudentCourseDetail } from '@/lib/api';
+import { getFullImageUrl } from '@/lib/utils';
 
 function formatDuration(minutes: number): string {
   const h = Math.floor(Math.max(minutes, 0) / 60);
   const m = Math.max(minutes, 0) % 60;
   return `${h}h ${m}m`;
+}
+
+function naturalLessonCompare(a: any, b: any): number {
+  const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  if (byOrder !== 0) return byOrder;
+  return (a.title || '').localeCompare((b.title || ''), 'vi', {
+    sensitivity: 'base',
+    numeric: true,
+  });
 }
 
 export default function CourseDetailPage() {
@@ -98,7 +108,7 @@ export default function CourseDetailPage() {
   if (!detail) return <div className="min-h-screen flex items-center justify-center font-black text-rose-500">Course not found.</div>;
 
   const { course, stats, user_context, modules } = detail;
-  const courseImage = course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
+  const courseImage = getFullImageUrl(course.thumbnail_url) || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
 
   const handleSubmitReview = async () => {
     if (!user_context.is_enrolled) return;
@@ -196,7 +206,7 @@ export default function CourseDetailPage() {
                     </button>
                     {activeAccordion === module.id && (
                       <div id={`module-panel-${module.id}`} className="divide-y divide-slate-100 bg-white">
-                        {module.lessons.map((lesson, idx) => (
+                        {[...module.lessons].sort(naturalLessonCompare).map((lesson, idx) => (
                           <div key={lesson.id} className="p-4 flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                               <MonitorPlay size={16} className="text-slate-400" />

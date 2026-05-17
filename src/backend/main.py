@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlmodel import Session
 
@@ -65,6 +66,7 @@ app.include_router(template_router)
 app.include_router(avatar_router)
 app.include_router(course_router)
 app.include_router(student_router)
+app.mount("/uploads", StaticFiles(directory=config.UPLOADS_DIR), name="uploads")
 
 @app.get("/api/health")
 def health_check():

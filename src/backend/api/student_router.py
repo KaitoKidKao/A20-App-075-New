@@ -319,6 +319,12 @@ async def get_course_detail(
         select(Lesson).where(Lesson.module_id.in_(module_ids)).order_by(Lesson.sort_order, Lesson.created_at)
     ).all() if module_ids else []
 
+    import re
+    def natural_sort_key(title):
+        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', title or '')]
+
+    lessons = sorted(lessons, key=lambda l: (l.sort_order or 0, natural_sort_key(l.title)))
+
     lesson_by_module: dict[uuid.UUID, list[Lesson]] = {}
     for lesson in lessons:
         lesson_by_module.setdefault(lesson.module_id, []).append(lesson)

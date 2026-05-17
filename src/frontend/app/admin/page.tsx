@@ -51,6 +51,13 @@ function normalizeCourseDescription(description?: string | null): string {
   return raw;
 }
 
+function naturalLessonTitleCompare(aTitle?: string, bTitle?: string): number {
+  return (aTitle || '').localeCompare((bTitle || ''), 'vi', {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +97,7 @@ export default function AdminDashboardPage() {
     jobs: true,
     deletionHistory: false,
   });
+  const [expandedCourseLessons, setExpandedCourseLessons] = useState<Record<string, boolean>>({});
 
   // Course Edit Modal State
   const [isEditCourseModalOpen, setIsEditCourseModalOpen] = useState(false);
@@ -414,6 +422,31 @@ export default function AdminDashboardPage() {
     });
   };
 
+  const handleDeleteLessonFromCourse = async (videoId: string, lessonTitle: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa Bài Học',
+      message: `Bạn có chắc muốn xóa bài học "${lessonTitle}" khỏi khóa học?`,
+      onConfirm: async (reason: string) => {
+        const finalReason = reason.trim();
+        if (!finalReason) return;
+        setDeletingVideoId(videoId);
+        try {
+          await api.videos.delete(videoId, finalReason);
+          await loadAdminData(currentRole);
+          closeConfirmModal();
+          setPublishMessage('Đã xóa bài học khỏi khóa học.');
+        } catch {
+          setPublishMessage('Lỗi khi xóa bài học.');
+        } finally {
+          setDeletingVideoId(null);
+        }
+      },
+      confirmText: 'Xóa',
+      type: 'danger'
+    });
+  };
+
   const resolveUploadTarget = async () => {
     if (mode === 'new') {
       if (!courseTitle.trim()) throw new Error('Nhập tên khóa học mới.');
@@ -687,15 +720,29 @@ export default function AdminDashboardPage() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {adminCourses.map((course) => (
-                <tr key={course.id} className="hover:bg-slate-50/30 transition-colors group">
+                <React.Fragment key={course.id}>
+                <tr className="hover:bg-slate-50/30 transition-colors group">
                   <td className="px-8 py-6">
                     <p className="text-sm font-bold text-slate-900 group-hover:text-[#FF4F6E] transition-colors">{course.title}</p>
                     <p className="text-xs font-bold text-slate-400 truncate max-w-xs">{normalizeCourseDescription(course.description)}</p>
                   </td>
                   <td className="px-8 py-6">
-                    <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-                      {course.modules.length} chương
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                        {course.modules.length} chương
+                      </span>
+                      <button
+                        onClick={() =>
+                          setExpandedCourseLessons((prev) => ({
+                            ...prev,
+                            [course.id]: !prev[course.id],
+                          }))
+                        }
+                        className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-[#FF4F6E]"
+                      >
+                        {expandedCourseLessons[course.id] ? 'Ẩn bài học' : 'Xem bài học'}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-8 py-6">
                     <button
@@ -731,6 +778,58 @@ export default function AdminDashboardPage() {
                     </div>
                   </td>
                 </tr>
+                {expandedCourseLessons[course.id] && (
+                  <tr className="bg-slate-50/50">
+                    <td colSpan={4} className="px-8 py-5">
+                      <div className="space-y-4">
+                        {(course.modules || [])
+                          .slice()
+                          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                          .map((module) => (
+                            <div key={module.id} className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+                              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                                <p className="text-xs font-black uppercase tracking-widest text-slate-500">{module.title}</p>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                  {(module.lessons || []).length} bài học
+                                </span>
+                              </div>
+                              <div className="divide-y divide-slate-50">
+                                {(module.lessons || [])
+                                  .slice()
+                                  .sort((a, b) => {
+                                    const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+                                    if (byOrder !== 0) return byOrder;
+                                    return naturalLessonTitleCompare(a.title, b.title);
+                                  })
+                                  .map((lesson) => (
+                                    <div key={lesson.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-bold text-slate-700 truncate">{lesson.title}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{lesson.status}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeleteLessonFromCourse(lesson.id, lesson.title)}
+                                        disabled={deletingVideoId === lesson.id}
+                                        className="text-[10px] font-extrabold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50 whitespace-nowrap"
+                                      >
+                                        {deletingVideoId === lesson.id ? 'Đang xóa...' : 'Xóa bài học'}
+                                      </button>
+                                    </div>
+                                  ))}
+                                {(module.lessons || []).length === 0 && (
+                                  <p className="px-4 py-3 text-xs font-bold text-slate-400">Chưa có bài học trong chương này.</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        {(course.modules || []).length === 0 && (
+                          <p className="text-xs font-bold text-slate-400">Khóa học chưa có chương.</p>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { motion, type Variants } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import { Download, LayoutDashboard, Target, Users, Zap, TrendingUp, Layers, HelpCircle, CheckCircle, BarChart3, Activity } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getFullImageUrl } from '@/lib/utils';
 import { ChartRenderer } from './ChartRenderer';
 
 export type LearnerLevel = 'beginner' | 'intermediate' | 'advanced';
@@ -159,13 +159,14 @@ export function InfographicViewer({ data }: Props) {
         >
           {data.cover_image_url && (
             <motion.div variants={itemVariants} className="mb-10">
-              <div className="relative aspect-[16/9] overflow-hidden rounded-[32px] border border-slate-100 bg-slate-50 shadow-sm">
+              <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-slate-50 shadow-sm flex justify-center items-center">
                 <Image
-                  src={data.cover_image_url}
+                  src={getFullImageUrl(data.cover_image_url)}
                   alt={`${title} visual cover`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 900px"
+                  width={1600}
+                  height={900}
+                  className="w-full h-auto max-h-[700px] object-contain rounded-[32px]"
+                  unoptimized
                 />
               </div>
             </motion.div>
