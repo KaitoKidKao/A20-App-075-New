@@ -399,6 +399,10 @@ export interface BatchUploadResponse {
 const buildHeaders = (isMultipart = false): HeadersInit => {
   const headers: HeadersInit = {};
   if (!isMultipart) headers["Content-Type"] = "application/json";
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('auth_token');
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
   return headers;
 };
 
