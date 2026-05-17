@@ -35,7 +35,7 @@ class MindmapService:
 
         # 3. Load transcript — local first, then S3 fallback
         transcript_path = AIService.TRANSCRIPT_DIR / f"{lesson_id}.json"
-        s3_key = f"Transcripts/{lesson_id}.json"
+        s3_key = f"uploads/transcripts/{lesson_id}.json"
         if not transcript_path.exists():
             logger.info(f"Transcript not local, trying S3: {s3_key}")
             ensure_local(s3_key, transcript_path)
