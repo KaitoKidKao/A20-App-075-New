@@ -29,6 +29,7 @@ from src.backend.models import (
     Module,
     Enrollment,
     UserProgress,
+    GeneratedSlide,
 )
 from src.backend.services.avatar_video_service import AvatarVideoService
 from src.backend.services.handsign_animation_service import (
@@ -844,12 +845,27 @@ async def generate_slides_endpoint(
     
     try:
         result = await SlideService.generate_slides(session, video_id, template_id, num_slides)
-        # Tra ve thong tin file (FE se dung link nay de download qua mot endpoint static khac)
+        filename = result['filename']
+        download_url = f"/api/videos/slides/download/{filename}"
+
+        # Luu lich su slide vao DB
+        record = GeneratedSlide(
+            user_id=current_user.id,
+            video_id=video_id,
+            filename=filename,
+            template_id=template_id,
+            num_slides=result["num_slides"],
+        )
+        session.add(record)
+        session.commit()
+        session.refresh(record)
+
         return {
             "video_id": video_id,
             "status": "completed",
-            "download_url": f"/api/videos/slides/download/{result['filename']}",
-            "num_slides": result["num_slides"]
+            "download_url": download_url,
+            "num_slides": result["num_slides"],
+            "slide_id": str(record.id),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -866,6 +882,36 @@ async def download_slides(filename: str):
         filename=filename,
         media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
     )
+
+
+@router.get("/{video_id}/slides/history")
+async def get_slide_history(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Lay danh sach slide da tao cua user cho video nay."""
+    check_video_access(video_id, current_user, session)
+    stmt = (
+        select(GeneratedSlide)
+        .where(
+            GeneratedSlide.video_id == video_id,
+            GeneratedSlide.user_id == current_user.id,
+        )
+        .order_by(GeneratedSlide.created_at.desc())
+    )
+    records = session.exec(stmt).all()
+    return [
+        {
+            "id": str(r.id),
+            "filename": r.filename,
+            "template_id": r.template_id,
+            "num_slides": r.num_slides,
+            "download_url": f"/api/videos/slides/download/{r.filename}",
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in records
+    ]
 
 @router.get("/{video_id}/stream")
 async def stream_video(

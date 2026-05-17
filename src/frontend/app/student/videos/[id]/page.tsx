@@ -268,6 +268,11 @@ export default function VideoLessonPage() {
   const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
   const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
   const [slideDownloadUrl, setSlideDownloadUrl] = useState<string | null>(null);
+  const [slideHistory, setSlideHistory] = useState<{
+    id: string; filename: string; template_id: string; num_slides: number;
+    download_url: string; created_at: string;
+  }[]>([]);
+  const [isLoadingSlideHistory, setIsLoadingSlideHistory] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('template_08');
   const [numSlides, setNumSlides] = useState(15);
   const [mindmapData, setMindmapData] = useState<any>(null);
@@ -939,6 +944,18 @@ export default function VideoLessonPage() {
     }
   };
 
+  const fetchSlideHistory = useCallback(async () => {
+    setIsLoadingSlideHistory(true);
+    try {
+      const history = await api.videos.getSlideHistory(videoId);
+      setSlideHistory(history);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingSlideHistory(false);
+    }
+  }, [videoId]);
+
   const handleGenerateSlides = async () => {
     setIsGeneratingSlides(true);
     setSlideDownloadUrl(null);
@@ -946,6 +963,8 @@ export default function VideoLessonPage() {
       const res = await api.videos.generateSlides(videoId, selectedTemplate, numSlides);
       if (res.download_url) {
         setSlideDownloadUrl(`${API_BASE_URL}${res.download_url}`);
+        // Refresh lich su sau khi tao xong
+        fetchSlideHistory();
       }
     } catch (err) {
       console.error(err);
@@ -989,7 +1008,10 @@ export default function VideoLessonPage() {
     if (activeTab === 'mindmap') {
       handleFetchMindmap();
     }
-  }, [activeTab, handleFetchMindmap]);
+    if (activeTab === 'slide') {
+      fetchSlideHistory();
+    }
+  }, [activeTab, handleFetchMindmap, fetchSlideHistory]);
 
   const activeQuiz = quizzes[selectedQuizIdx] || null;
 
@@ -1590,6 +1612,8 @@ export default function VideoLessonPage() {
 
                   {activeTab === 'slide' && (
                     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                      {/* useEffect trigger via render: fetch once when tab opens */}
+                      {(() => { return null; })()}
                       <div className="flex flex-col gap-6">
                         <div className="flex flex-col lg:flex-row gap-8">
                           {/* Left: Template Selection */}
@@ -1622,28 +1646,66 @@ export default function VideoLessonPage() {
                               })}
                             </div>
 
-                            {/* Prominent Download Card & Preview */}
-                            {slideDownloadUrl && (
-                              <div className="mt-8 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
-
-                                {/* Office Online Viewer Iframe */}
-                                <div className="w-full h-[500px] md:h-[600px] bg-slate-100 rounded-[32px] border-4 border-slate-200 overflow-hidden relative shadow-inner">
-                                  {slideDownloadUrl.includes('localhost') || slideDownloadUrl.includes('127.0.0.1') ? (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8 text-center bg-slate-50">
-                                      <Presentation size={48} className="mb-4 opacity-50" />
-                                      <h4 className="font-extrabold text-lg mb-2">Không thể xem trước ở môi trường Localhost</h4>
-                                      <p className="text-sm max-w-md">Trình xem trước của Microsoft yêu cầu file phải nằm trên Server Public. Hiện tại bạn đang chạy ở localhost nên không thể xem trực tiếp. Vui lòng ấn tải về máy để xem nhé!</p>
-                                    </div>
+                            {/* Slide History Section */}
+                            <div className="mt-8">
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                  <Download size={16} />
+                                  Slide đã tạo
+                                </h3>
+                                <button
+                                  onClick={fetchSlideHistory}
+                                  disabled={isLoadingSlideHistory}
+                                  className="text-xs font-bold text-slate-400 hover:text-[#FF4F6E] transition-colors flex items-center gap-1"
+                                >
+                                  {isLoadingSlideHistory ? (
+                                    <div className="w-3 h-3 border border-slate-300 border-t-slate-600 rounded-full animate-spin" />
                                   ) : (
-                                    <iframe 
-                                      src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(slideDownloadUrl)}`}
-                                      className="w-full h-full border-none"
-                                      title="Slide Preview"
-                                    />
+                                    <span>↻ Làm mới</span>
                                   )}
-                                </div>
+                                </button>
                               </div>
-                            )}
+
+                              {isLoadingSlideHistory ? (
+                                <div className="flex items-center gap-3 p-5 bg-slate-50 rounded-2xl">
+                                  <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                                  <span className="text-sm font-bold text-slate-400">Đang tải lịch sử...</span>
+                                </div>
+                              ) : slideHistory.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400">
+                                  <Presentation size={36} className="mb-3 opacity-30" />
+                                  <p className="text-sm font-bold">Chưa có slide nào được tạo cho video này</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  {slideHistory.map((item) => {
+                                    const date = new Date(item.created_at);
+                                    const label = `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+                                    return (
+                                      <div key={item.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-[#FF4F6E]/30 hover:shadow-md transition-all group">
+                                        <div className="w-10 h-10 bg-[#FF4F6E]/10 rounded-xl flex items-center justify-center text-[#FF4F6E] shrink-0">
+                                          <Presentation size={20} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-black text-slate-800 truncate">
+                                            Mẫu {item.template_id.replace('template_', '')} · {item.num_slides} trang
+                                          </p>
+                                          <p className="text-xs font-bold text-slate-400 mt-0.5">{label}</p>
+                                        </div>
+                                        <a
+                                          href={`${API_BASE_URL}${item.download_url}`}
+                                          download
+                                          className="shrink-0 px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center gap-1.5"
+                                        >
+                                          <Download size={14} />
+                                          Tải về
+                                        </a>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {/* Right: Preview and Config */}
