@@ -1,4 +1,4 @@
-# 🤖 Nhật Ký Tương Tác & Sử Dụng AI (AI Prompt Logs)
+#  Nhật Ký Tương Tác & Sử Dụng AI (AI Prompt Logs)
 *Dự án Dreams — Nền tảng học tập AI cho sinh viên khiếm thính*
 
 Tài liệu này ghi nhận chi tiết hai phần quan trọng theo yêu cầu của BTC cuộc thi **AI20K**:
@@ -184,7 +184,7 @@ Hệ thống log này ghi nhận toàn bộ lịch sử các câu lệnh và tó
 
 ---
 
-## 🚀 PHẦN 2: Nhật Ký Hoạt Động của Core AI (Application Core AI Prompt Logs)
+##  PHẦN 2: Nhật Ký Hoạt Động của Core AI (Application Core AI Prompt Logs)
 Phần này mô tả chi tiết cách hệ thống **Dreams** tương tác với LLM thông qua các Prompt kỹ thuật chuyên sâu để xử lý video bài giảng.
 
 ### 📝 Case 01: Nhận diện & Trích xuất Phụ Đề Bài Giảng (ASR Transcription)
@@ -216,7 +216,7 @@ Phần này mô tả chi tiết cách hệ thống **Dreams** tương tác với
 
 ---
 
-### 🌳 Case 02: Tự Động Sinh Sơ Đồ Tư Duy Tương Tác (Interactive Mindmap Generation)
+###  Case 02: Tự Động Sinh Sơ Đồ Tư Duy Tương Tác (Interactive Mindmap Generation)
 *   **Chức năng:** Chuyển đổi văn bản phụ đề dài thành cấu trúc cây sơ đồ tư duy phân cấp dạng JSON.
 *   **Hạ tầng sử dụng:** OpenAI GPT-4o-mini (`response_format: json_object`).
 *   **Dữ liệu Input:** Bản tóm tắt phụ đề bài học Machine Learning.
@@ -268,7 +268,7 @@ Phần này mô tả chi tiết cách hệ thống **Dreams** tương tác với
 
 ---
 
-### 📊 Case 03: Tự Động Soạn Slide Bài Giảng PowerPoint (.pptx)
+### Case 03: Tự Động Soạn Slide Bài Giảng PowerPoint (.pptx)
 *   **Chức năng:** Phân tích bài giảng để tự động soạn thảo cấu trúc slide tóm tắt gồm tiêu đề và các gạch đầu dòng tương ứng, sẵn sàng đổ vào template PPTX.
 *   **Hạ tầng sử dụng:** OpenAI GPT-4o-mini.
 *   **Prompt / System Instruction:**
@@ -312,7 +312,7 @@ Phần này mô tả chi tiết cách hệ thống **Dreams** tương tác với
 
 ---
 
-### 📝 Case 04: Lỗi Ảo Giác AI & Cách Tối Ưu Hóa (Hallucination & Prompt Engineering)
+###  Case 04: Lỗi Ảo Giác AI & Cách Tối Ưu Hóa (Hallucination & Prompt Engineering)
 *   **Vấn đề phát hiện:** Khi sinh câu hỏi trắc nghiệm (Quiz), LLM đôi khi sinh ra các câu trả lời nhiễu quá vô lý hoặc câu hỏi nằm ngoài phạm vi bài học, gây nhiễu cho sinh viên khiếm thính tự học.
 *   **Nguyên nhân:** System Instruction quá lỏng lẻo, chưa định nghĩa rõ thế nào là câu hỏi chất lượng cao và cách neo (anchor) vào ngữ cảnh (context) bài giảng gốc.
 *   **Giải pháp Prompt Engineering cải tiến (Đã áp dụng thành công):**
