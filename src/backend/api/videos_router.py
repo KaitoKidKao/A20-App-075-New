@@ -45,6 +45,7 @@ from src.backend.services.rate_limit_service import rate_limit
 from src.backend.services.video_service import VideoService
 from src.backend.services.slide_service import SlideService
 from src.backend.services.mindmap_service import MindmapService
+from src.backend.utils.text_encoding import normalize_text_utf8
 
 class SlideGenerateRequest(BaseModel):
     template_id: str = Field(default="template_01", description="ID của template slide (template_01 -> template_10)")
@@ -67,6 +68,10 @@ def _fix_mojibake_text(value: str | None) -> str:
     except Exception:
         repaired = raw
     return repaired.replace("\x00", "").strip()
+
+
+def _fix_mojibake_text(value: str | None) -> str:  # type: ignore[no-redef]
+    return normalize_text_utf8(value)
 
 
 def _create_deletion_audit(

@@ -10,13 +10,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
-from urllib.parse import urlparse
+from sqlalchemy import text
 
-import psycopg2
-from dotenv import load_dotenv
-
-load_dotenv()
+from src.backend.database import engine
 
 TABLES_COLUMNS: list[tuple[str, list[str]]] = [
     ("courses", ["title", "description"]),
@@ -45,33 +41,8 @@ def try_fix_encoding(text: str) -> str | None:
     return fixed if after <= before else None
 
 
-def parse_database_url() -> dict:
-    raw = os.getenv("DATABASE_URL", "").strip()
-    if not raw:
-        raise RuntimeError("DATABASE_URL is missing in environment/.env.")
-
-    normalized = raw.replace("postgresql+psycopg://", "postgresql://")
-    parsed = urlparse(normalized)
-    if parsed.scheme not in {"postgresql", "postgres"}:
-        raise RuntimeError(f"Unsupported DATABASE_URL scheme: {parsed.scheme}")
-
-    database = (parsed.path or "").lstrip("/")
-    if not database:
-        raise RuntimeError("DATABASE_URL is missing database name.")
-
-    return {
-        "host": parsed.hostname or "localhost",
-        "port": parsed.port or 5432,
-        "user": parsed.username or "",
-        "password": parsed.password or "",
-        "database": database,
-    }
-
-
 def fix_table(conn, table: str, columns: list[str], dry_run: bool) -> int:
-    cur = conn.cursor()
-    cur.execute(f"SELECT id, {', '.join(columns)} FROM {table}")  # nosec B608
-    rows = cur.fetchall()
+    rows = conn.execute(text(f"SELECT id, {', '.join(columns)} FROM {table}")).fetchall()  # nosec B608
 
     fixed_count = 0
     for row in rows:
@@ -86,19 +57,16 @@ def fix_table(conn, table: str, columns: list[str], dry_run: bool) -> int:
                     updates[col] = fixed
 
         if updates:
-            set_clause = ", ".join(f"{col} = %s" for col in updates)
-            params = list(updates.values()) + [row_id]
+            set_clause = ", ".join(f"{col} = :{col}" for col in updates)
+            params = {**updates, "row_id": row_id}
             if not dry_run:
-                cur.execute(
-                    f"UPDATE {table} SET {set_clause} WHERE id = %s",  # nosec B608
+                conn.execute(
+                    text(f"UPDATE {table} SET {set_clause} WHERE id = :row_id"),  # nosec B608
                     params,
                 )
             fixed_count += 1
             print(f"  Fixed row id={row_id}: {list(updates.keys())}")
 
-    if not dry_run:
-        conn.commit()
-    cur.close()
     print(f"  Total fixed in {table}: {fixed_count}/{len(rows)} rows")
     return fixed_count
 
@@ -108,22 +76,18 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Only print rows that would be updated.")
     args = parser.parse_args()
 
-    db_config = parse_database_url()
-    print(
-        f"Connecting to DB {db_config['host']}:{db_config['port']}/{db_config['database']} ..."
-    )
-    conn = psycopg2.connect(**db_config)
-
+    print("Connecting to DB via project engine...")
     total = 0
-    for table, columns in TABLES_COLUMNS:
-        print(f"\nProcessing table: {table}")
-        try:
-            total += fix_table(conn, table, columns, dry_run=args.dry_run)
-        except Exception as exc:
-            print(f"  ERROR: {exc}")
-            conn.rollback()
+    with engine.begin() as conn:
+        if conn.dialect.name == "postgresql":
+            conn.execute(text("SET client_encoding TO 'UTF8'"))
+        for table, columns in TABLES_COLUMNS:
+            print(f"\nProcessing table: {table}")
+            try:
+                total += fix_table(conn, table, columns, dry_run=args.dry_run)
+            except Exception as exc:
+                print(f"  ERROR: {exc}")
 
-    conn.close()
     mode = "DRY-RUN" if args.dry_run else "APPLIED"
     print(f"\nDone. mode={mode}, total_changes={total}")
 

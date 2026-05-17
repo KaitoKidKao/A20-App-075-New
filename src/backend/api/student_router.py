@@ -32,6 +32,7 @@ from src.backend.models import (
     ContentMetadata,
 )
 from src.backend.utils.datetime_utils import utc_now
+from src.backend.utils.text_encoding import normalize_text_utf8
 from src.backend.services.video_service import VideoService
 
 router = APIRouter(prefix="/api/student", tags=["student"])
@@ -630,6 +631,10 @@ async def list_lesson_quizzes(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
+    # Override mojibake repair with one-pass UTF-8 normalization to avoid double decode.
+    def _fix_mojibake_text(value: str | None) -> str:  # type: ignore[no-redef]
+        return normalize_text_utf8(value)
+
     quizzes = session.exec(select(Quiz).where(Quiz.lesson_id == lesson_id)).all()
     result = []
     for quiz in quizzes:
@@ -640,7 +645,7 @@ async def list_lesson_quizzes(
             {
                 "id": str(quiz.id),
                 "lesson_id": str(quiz.lesson_id),
-                "title": quiz.title,
+                "title": _fix_mojibake_text(quiz.title),
                 "passing_score": quiz.passing_score,
                 "questions": [
                     {

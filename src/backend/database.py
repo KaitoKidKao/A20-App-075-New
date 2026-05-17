@@ -15,6 +15,9 @@ is_sqlite = database_url.startswith("sqlite")
 engine_kwargs: dict = {"pool_pre_ping": True}
 if is_sqlite:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+elif database_url.startswith("postgresql"):
+    # Ensure postgres client session uses UTF-8 consistently.
+    engine_kwargs["connect_args"] = {"options": "-c client_encoding=UTF8"}
 
 engine = create_engine(database_url, **engine_kwargs)
 
