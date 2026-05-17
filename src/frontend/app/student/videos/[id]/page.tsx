@@ -230,7 +230,7 @@ export default function VideoLessonPage() {
       video.preload = 'metadata';
       video.muted = true;
       video.playsInline = true;
-      video.src = `/api/video/${lessonId}`;
+      video.src = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/video/${lessonId}`;
 
       let resolved = false;
       const timeout = window.setTimeout(() => {
@@ -1233,7 +1233,7 @@ export default function VideoLessonPage() {
                       &ldquo;{briefing.objective}&rdquo;
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {briefing.key_terms.map((term, i) => (
+                      {(briefing.key_terms ?? []).map((term, i) => (
                         <span key={i} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-extrabold text-slate-500 uppercase tracking-widest shadow-sm">
                           {term}
                         </span>
@@ -1380,7 +1380,7 @@ export default function VideoLessonPage() {
                                 <div key={question.id} className="rounded-2xl border border-slate-100 p-5 bg-white">
                                   <p className="text-sm font-extrabold text-slate-900 mb-4">{qIdx + 1}. {question.question_text}</p>
                                   <div className="space-y-2">
-                                    {question.options.map((opt) => (
+                                    {(question.options ?? []).map((opt) => (
                                       <label key={opt.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 hover:bg-slate-50 cursor-pointer">
                                         <input
                                           type="radio"
