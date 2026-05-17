@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Reveal.js AI Slide Previewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/dracula.min.css">
+    <style>
+        #input-area {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            width: 300px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+            background: #222;
+            color: #0f0;
+            border: 1px solid #444;
+        }
+
+        button {
+            width: 100%;
+            padding: 5px;
+            cursor: pointer;
+            background: #444;
+            color: white;
+            border: none;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="input-area">
+        <h3>Paste Slide JSON here:</h3>
+        <textarea id="json-input" placeholder='[{"title":"Slide 1","content":["Point 1"]}]'></textarea>
+        <button onclick="renderSlides()">Render Slides</button>
+        <p style="font-size: 10px; opacity: 0.7;">Press 'S' for Speaker Notes</p>
+    </div>
+
+    <div class="reveal">
+        <div class="slides" id="slides-container">
+            <!-- Slides will be injected here -->
+            <section>
+                <h1>AI Slide Previewer</h1>
+                <p>Paste your JSON on the right to begin</p>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script>
+        let deck = new Reveal();
+        deck.initialize({ hash: true });
+
+        function renderSlides() {
+            const input = document.getElementById('json-input').value;
+            try {
+                let slides = JSON.parse(input);
+                
+                // Nếu input là object API (có key 'slides'), ta lấy mảng slides bên trong
+                if (!Array.isArray(slides) && slides.slides) {
+                    slides = slides.slides;
+                }
+
+                if (!Array.isArray(slides)) {
+                    throw new Error("Dữ liệu không phải là một mảng slides hợp lệ.");
+                }
+
+                const container = document.getElementById('slides-container');
+                container.innerHTML = '';
+
+                slides.forEach(slide => {
+                    const section = document.createElement('section');
+
+                    const title = document.createElement('h2');
+                    title.innerText = slide.title;
+                    section.appendChild(title);
+
+                    if (Array.isArray(slide.content)) {
+                        const ul = document.createElement('ul');
+                        slide.content.forEach(item => {
+                            const li = document.createElement('li');
+                            li.innerText = item;
+                            ul.appendChild(li);
+                        });
+                        section.appendChild(ul);
+                    } else if (slide.content) {
+                        const p = document.createElement('p');
+                        p.innerText = slide.content;
+                        section.appendChild(p);
+                    }
+
+                    if (slide.notes) {
+                        const notes = document.createElement('aside');
+                        notes.className = 'notes';
+                        notes.innerText = slide.notes;
+                        section.appendChild(notes);
+                    }
+
+                    container.appendChild(section);
+                });
+
+                deck.destroy();
+                deck = new Reveal();
+                deck.initialize({ hash: true });
+            } catch (e) {
+                alert("Invalid JSON format! Error: " + e.message);
+            }
+        }
+    </script>
+</body>
+
+</html>

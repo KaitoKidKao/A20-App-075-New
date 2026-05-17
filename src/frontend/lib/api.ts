@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface AuthUser {
   name: string;
@@ -56,6 +56,8 @@ export interface AvatarState {
   is_optional?: boolean;
   disclaimer?: string;
 }
+
+
 
 export interface HandsSignResponse {
   video_id: string;
@@ -601,7 +603,70 @@ export const api = {
 
     async getAvatar(videoId: string): Promise<AvatarState> {
       const res = await apiFetch(`/api/videos/${videoId}/avatar`, { headers: buildHeaders() });
-      if (!res.ok) throw new Error("Failed to fetch avatar video state.");
+      if (!res.ok) throw new Error("Failed to fetch avatar status.");
+      return res.json();
+    },
+
+    async generateSlides(videoId: string, templateId: string, numSlides: number) {
+      const res = await apiFetch(`/api/videos/${videoId}/generate-slides`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({ template_id: templateId, num_slides: numSlides }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to generate slides.");
+      }
+      return res.json();
+    },
+
+    async getSlideHistory(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/slides/history`, {
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch slide history.");
+      return res.json() as Promise<{
+        id: string;
+        filename: string;
+        template_id: string;
+        num_slides: number;
+        download_url: string;
+        created_at: string;
+      }[]>;
+    },
+
+    async getAllSlideHistory() {
+      const res = await apiFetch(`/api/videos/slides/all-history`, {
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch all slide history.");
+      return res.json() as Promise<{
+        id: string;
+        filename: string;
+        template_id: string;
+        num_slides: number;
+        download_url: string;
+        created_at: string;
+        video_id: string;
+        video_title: string;
+      }[]>;
+    },
+
+    async generateMindmap(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/generate-mindmap`, {
+        method: "POST",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to generate mindmap.");
+      }
+      return res.json();
+    },
+
+    async getMindmap(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/mindmap`, { headers: buildHeaders() });
+      if (!res.ok) throw new Error("Failed to fetch mindmap.");
       return res.json();
     },
 
@@ -734,7 +799,16 @@ export const api = {
       });
       if (!res.ok) throw new Error("Failed to create module.");
       return res.json();
-    }
+    },
+    async updateModule(moduleId: string, data: { title: string; description?: string; sort_order?: number }) {
+      const res = await apiFetch(`/api/courses/modules/${moduleId}`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update module.");
+      return res.json();
+    },
   },
 
   student: {

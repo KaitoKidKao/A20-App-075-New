@@ -23,12 +23,12 @@ export default function ForgotPasswordPage() {
     return (
       <div className="space-y-6 text-center lg:text-left animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="space-y-3">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Kiểm tra email của bạn</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Kiểm tra email của bạn</h1>
           <p className="text-slate-500 font-medium">Chúng tôi đã gửi liên kết đặt lại mật khẩu đến <span className="text-slate-900 font-bold">{email}</span></p>
         </div>
         <Link 
           href="/auth/otp"
-          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all flex items-center justify-center gap-2"
+          className="w-full py-4 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all flex items-center justify-center gap-2"
         >
           Nhập OTP
         </Link>
@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="space-y-2 text-center lg:text-left">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Quên mật khẩu?</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Quên mật khẩu?</h1>
         <p className="text-slate-500 font-medium leading-relaxed">Nhập email để đặt lại mật khẩu.</p>
       </div>
 
@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
 
         <button
           disabled={isSubmitting}
-          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+          className="w-full py-4 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Gửi yêu cầu'}
           {!isSubmitting && (

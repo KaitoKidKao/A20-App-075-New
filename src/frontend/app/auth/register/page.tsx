@@ -93,7 +93,7 @@ export default function RegisterPage() {
           <CheckCircle2 size={48} />
         </div>
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-black text-slate-900">Đăng ký thành công!</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">Đăng ký thành công!</h1>
           <p className="text-slate-500 font-medium">Đang chuyển đến trang đăng nhập...</p>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function RegisterPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="space-y-3 text-center lg:text-left">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Đăng ký</h1>
+        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Đăng ký</h1>
         <p className="text-slate-500 font-medium">
           Đã có tài khoản?
           <Link href="/auth/login" className="text-[#FF4F6E] font-bold hover:underline ml-1">Đăng nhập</Link>
@@ -118,7 +118,7 @@ export default function RegisterPage() {
 
       <form onSubmit={handleRegister} noValidate className="space-y-5">
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Họ và tên *</label>
+          <label className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Họ và tên *</label>
           <div className="relative group">
             <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF4F6E] transition-colors" size={20} />
             <input
@@ -135,7 +135,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Địa chỉ email *</label>
+          <label className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Địa chỉ email *</label>
           <div className="relative group">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF4F6E] transition-colors" size={20} />
             <input
@@ -152,7 +152,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mật khẩu *</label>
+          <label className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Mật khẩu *</label>
           <div className="relative group">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF4F6E] transition-colors" size={20} />
             <input
@@ -176,7 +176,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Xác nhận mật khẩu *</label>
+          <label className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Xác nhận mật khẩu *</label>
           <div className="relative group">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF4F6E] transition-colors" size={20} />
             <input
@@ -194,7 +194,7 @@ export default function RegisterPage() {
 
         {allowRoleRegistration && (
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-slate-400">Vai trò dev/test</label>
+            <label className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Vai trò dev/test</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as 'student' | 'teacher' | 'admin')}
@@ -228,7 +228,7 @@ export default function RegisterPage() {
 
         <button
           disabled={isSubmitting}
-          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-4 disabled:opacity-70"
+          className="w-full py-4 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-4 disabled:opacity-70"
         >
           {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Đăng ký'}
         </button>

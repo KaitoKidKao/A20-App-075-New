@@ -8,6 +8,7 @@ from .job import ProcessingJob
 from .system_setting import SystemSetting
 from .review import CourseReview
 from .deletion_audit import DeletionAudit
+from .generated_slide import GeneratedSlide
 
 __all__ = [
     "Role", "User", "Profile",
@@ -20,4 +21,5 @@ __all__ = [
     "SystemSetting",
     "CourseReview",
     "DeletionAudit",
+    "GeneratedSlide",
 ]

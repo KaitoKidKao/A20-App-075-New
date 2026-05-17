@@ -64,14 +64,14 @@ export default function LandingPage() {
                   <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
                </svg>
             </div>
-            <span className="text-2xl font-black tracking-tight text-slate-900">Dreams</span>
+            <span className="text-2xl font-extrabold tracking-tight text-slate-900">Dreams</span>
           </div>
-          <div className="hidden md:flex items-center gap-12 text-[13px] font-black uppercase tracking-[0.2em] text-slate-400">
+          <div className="hidden md:flex items-center gap-12 text-[13px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
             <a href="#features" className="hover:text-[#FF4F6E] transition-colors">Tính năng</a>
             <a href="#mission" className="hover:text-[#FF4F6E] transition-colors">Sứ mệnh</a>
             <button 
               onClick={handleStart}
-              className="px-8 py-3 bg-[#FF4F6E] text-white rounded-xl hover:bg-[#e64663] transition-all shadow-lg shadow-[#FF4F6E]/20 font-black uppercase tracking-widest text-[12px]"
+              className="px-8 py-3 bg-[#FF4F6E] text-white rounded-xl hover:bg-[#e64663] transition-all shadow-lg shadow-[#FF4F6E]/20 font-extrabold uppercase tracking-widest text-[12px]"
             >
               Đăng nhập
             </button>
@@ -88,7 +88,7 @@ export default function LandingPage() {
           <div data-reveal data-delay="0" className="scroll-reveal lg:w-[55%] space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000">
 
             <div className="space-y-8">
-              <h1 className="text-5xl md:text-[72px] font-black text-slate-900 leading-[1.1] tracking-tight max-w-4xl">
+              <h1 className="text-5xl md:text-[72px] font-extrabold text-slate-900 leading-[1.1] tracking-tight max-w-4xl">
                 Lắng nghe bằng <span className="text-[#FF4F6E] italic inline-block no-underline">đôi mắt</span>, học tập từ trái tim.
               </h1>
               <p className="text-xl md:text-2xl text-slate-500 font-medium leading-relaxed max-w-2xl">
@@ -99,11 +99,11 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row items-center gap-8">
               <button 
                 onClick={handleStart}
-                className="w-full sm:w-auto px-12 py-6 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-2xl shadow-[#FF4F6E]/30 hover:bg-[#e64663] transition-all hover:scale-105 active:scale-[0.98] text-lg"
+                className="w-full sm:w-auto px-12 py-6 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-2xl shadow-[#FF4F6E]/30 hover:bg-[#e64663] transition-all hover:scale-105 active:scale-[0.98] text-lg"
               >
                 Khám phá Dreams ngay
               </button>
-              <button className="flex items-center gap-4 text-slate-900 font-black hover:text-[#FF4F6E] transition-colors group">
+              <button className="flex items-center gap-4 text-slate-900 font-extrabold hover:text-[#FF4F6E] transition-colors group">
                  <div className="w-14 h-14 rounded-full border-2 border-slate-100 flex items-center justify-center group-hover:border-[#FF4F6E] transition-all">
                     <Play size={20} fill="currentColor" />
                  </div>
@@ -119,6 +119,8 @@ export default function LandingPage() {
                   src="/assets/images/hero-final-v2.png" 
                   alt="Học viên Dreams" 
                   fill
+                  priority
+                  sizes="(max-width: 768px) 100vw, 45vw"
                   className="object-contain p-4"
                 />
              </div>
@@ -129,7 +131,7 @@ export default function LandingPage() {
         <section id="features" className="py-32 bg-slate-50/50">
           <div className="max-w-[1440px] mx-auto px-8 md:px-20">
              <div data-reveal data-delay="0" className="scroll-reveal text-center max-w-3xl mx-auto mb-24 space-y-4">
-                <h2 className="text-4xl md:text-6xl font-black tracking-tight">Công nghệ đột phá cho <span className="text-[#FF4F6E]">Giáo dục hòa nhập</span></h2>
+                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight">Công nghệ đột phá cho <span className="text-[#FF4F6E]">Giáo dục hòa nhập</span></h2>
                 <p className="text-lg text-slate-500 font-medium">Giải pháp tối ưu được thiết kế riêng cho nhu cầu của người học khiếm thính.</p>
              </div>
 
@@ -138,7 +140,7 @@ export default function LandingPage() {
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <Eye size={32} />
                    </div>
-                   <h3 className="text-2xl font-black mb-4">Phụ đề Trực quan</h3>
+                   <h3 className="text-2xl font-extrabold mb-4">Phụ đề Trực quan</h3>
                    <p className="text-slate-500 font-medium leading-relaxed">
                       Tự động chuyển đổi âm thanh thành phụ đề thời gian thực sắc nét, truyền tải trọn vẹn tông điệu và cảm xúc.
                    </p>
@@ -148,7 +150,7 @@ export default function LandingPage() {
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <Zap size={32} fill="currentColor" />
                    </div>
-                   <h3 className="text-2xl font-black mb-4">Tóm lược AI</h3>
+                   <h3 className="text-2xl font-extrabold mb-4">Tóm lược AI</h3>
                    <p className="text-slate-500 font-medium leading-relaxed">
                       Công nghệ AI tự động ghi chú và tóm tắt nội dung trọng tâm, giúp bạn nắm bắt kiến thức cốt lõi ngay tức thì.
                    </p>
@@ -158,7 +160,7 @@ export default function LandingPage() {
                    <div className="w-16 h-16 bg-[#FF4F6E]/5 text-[#FF4F6E] rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
                       <MessageSquare size={32} />
                    </div>
-                   <h3 className="text-2xl font-black mb-4">Kết nối Đa chiều</h3>
+                   <h3 className="text-2xl font-extrabold mb-4">Kết nối Đa chiều</h3>
                    <p className="text-slate-500 font-medium leading-relaxed">
                       Tương tác không giới hạn với giảng viên và bạn học thông qua các công cụ phản hồi trực quan sinh động.
                    </p>
@@ -177,13 +179,14 @@ export default function LandingPage() {
                         src="/assets/images/mission-final-v2.png" 
                         alt="Sứ mệnh Dreams" 
                         fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
                         className="object-contain p-4"
                       />
                    </div>
                 </div>
                 <div data-reveal data-delay="140" className="scroll-reveal lg:w-1/2 space-y-10">
-                   <span className="text-[#FF4F6E] font-black uppercase tracking-[0.3em] text-xs">Giá trị cốt lõi</span>
-                                       <h2 className="text-3xl md:text-5xl font-black leading-tight max-w-xl">Bình đẳng giáo dục là <span className="text-[#FF4F6E]">Nền tảng</span> bền vững.</h2>
+                   <span className="text-[#FF4F6E] font-extrabold uppercase tracking-[0.3em] text-xs">Giá trị cốt lõi</span>
+                                       <h2 className="text-3xl md:text-5xl font-extrabold leading-tight max-w-xl">Bình đẳng giáo dục là <span className="text-[#FF4F6E]">Nền tảng</span> bền vững.</h2>
 
                    <p className="text-xl text-slate-500 font-medium leading-relaxed">
                       Chúng tôi tin rằng tri thức là dành cho tất cả mọi người. Dreams sinh ra để xóa nhòa những bức tường vô hình trong môi trường sư phạm truyền thống.
@@ -212,16 +215,16 @@ export default function LandingPage() {
         <section className="py-32 bg-[#1A1A1A] text-white relative overflow-hidden">
            <div className="max-w-[1440px] mx-auto px-8 md:px-20 relative z-10 flex flex-col lg:flex-row items-center gap-20">
               <div data-reveal data-delay="0" className="scroll-reveal lg:w-1/2 space-y-10">
-                 <h2 className="text-4xl md:text-6xl font-black leading-tight max-w-2xl">Chinh phục ước mơ cùng <span className="text-[#FF4F6E]">Dreams</span></h2>
+                 <h2 className="text-4xl md:text-6xl font-extrabold leading-tight max-w-2xl">Chinh phục ước mơ cùng <span className="text-[#FF4F6E]">Dreams</span></h2>
                  <p className="text-xl text-slate-400 font-medium">Gia nhập cộng đồng học tập không rào cản, nơi mọi thanh âm đều được thấu hiểu bằng đôi mắt.</p>
                  <div className="flex flex-col sm:flex-row gap-6">
                     <button 
                       onClick={handleStart}
-                      className="px-12 py-6 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-2xl hover:bg-[#e64663] transition-all hover:scale-105 active:scale-[0.98] text-lg"
+                      className="px-12 py-6 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-2xl hover:bg-[#e64663] transition-all hover:scale-105 active:scale-[0.98] text-lg"
                     >
                       Bắt đầu Miễn phí
                     </button>
-                    <button className="px-10 py-6 border-2 border-white/10 text-white font-black rounded-2xl hover:bg-white/10 transition-all">
+                    <button className="px-10 py-6 border-2 border-white/10 text-white font-extrabold rounded-2xl hover:bg-white/10 transition-all">
                        Liên hệ Nhà trường
                     </button>
                  </div>
@@ -252,9 +255,9 @@ export default function LandingPage() {
                      <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
                   </svg>
                </div>
-               <span className="text-xl font-black text-slate-900">Dreams</span>
+               <span className="text-xl font-extrabold text-slate-900">Dreams</span>
             </div>
-            <div className="flex gap-12 text-[11px] font-black uppercase tracking-widest text-slate-400">
+            <div className="flex gap-12 text-[11px] font-extrabold uppercase tracking-widest text-slate-400">
                <a href="#" className="hover:text-[#FF4F6E] transition-colors">Cách hoạt động</a>
                <a href="#" className="hover:text-[#FF4F6E] transition-colors">Quyền riêng tư</a>
                <a href="#" className="hover:text-[#FF4F6E] transition-colors">Liên hệ</a>

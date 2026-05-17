@@ -227,6 +227,32 @@ Optional script:
 python src/backend/tests/verify_ai_features.py
 ```
 
+## Encoding Hardening (UTF-8)
+
+Use UTF-8 as the only text encoding across source files and DB payloads.
+
+Audit source/config files for encoding problems:
+
+```bash
+python -m src.backend.scripts.audit_text_encoding
+```
+
+Audit suspicious mojibake text in DB (no write):
+
+```bash
+python -m src.backend.scripts.repair_mojibake_text --audit
+```
+
+Apply one-time DB cleanup when needed:
+
+```bash
+python -m src.backend.scripts.repair_mojibake_text --apply
+```
+
+Important:
+- Do not keep runtime "auto-repair/decode" logic in API/UI render paths.
+- Fix corrupted records at DB level using the script above.
+
 ## QA / Release Checklist
 
 Phase 9 QA docs:

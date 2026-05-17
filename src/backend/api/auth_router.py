@@ -30,7 +30,10 @@ async def registration_config(session: Session = Depends(get_session)):
 
 @router.post("/register", response_model=dict)
 async def register(user_data: UserCreate, session: Session = Depends(get_session)):
-    role_name = (user_data.role or "student").strip().lower() if _allow_public_role_registration(session) else "student"
+    requested_role = (user_data.role or "student").strip().lower()
+
+    role_name = requested_role if _allow_public_role_registration(session) else "student"
+
     if role_name not in ALLOWED_ROLES:
         raise HTTPException(status_code=400, detail="Invalid user role.")
 

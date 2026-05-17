@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="space-y-2 text-center lg:text-left">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Set Password</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Set Password</h1>
         <p className="text-slate-500 font-medium leading-relaxed">Your new password must be different from previous password</p>
       </div>
 
@@ -77,7 +77,7 @@ export default function ResetPasswordPage() {
 
         <button
           disabled={isSubmitting || !password || password !== confirmPassword}
-          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+          className="w-full py-4 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Reset Password'}
           {!isSubmitting && (

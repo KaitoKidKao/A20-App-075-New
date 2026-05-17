@@ -100,7 +100,7 @@ export default function VideoProcessingPage() {
         <button 
           onClick={() => router.push('/student/upload')}
           suppressHydrationWarning
-          className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-[#FF4F6E] transition-colors"
+          className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-slate-400 hover:text-[#FF4F6E] transition-colors"
         >
           <ChevronLeft size={16} />
           <span>Quay lại trang tải lên</span>
@@ -118,11 +118,11 @@ export default function VideoProcessingPage() {
              
              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
                 <div className="space-y-3">
-                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">
+                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[10px] font-extrabold uppercase tracking-widest">
                       <Clock size={12} />
                       ID: {videoId.slice(0, 8)}
                    </div>
-                   <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+                   <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
                      {isComplete ? 'Xử lý hoàn tất!' : isFailed ? 'Xử lý thất bại' : 'AI đang xử lý bài giảng'}
                    </h1>
                    <p className="text-sm font-bold text-slate-400 max-w-md">
@@ -177,7 +177,7 @@ export default function VideoProcessingPage() {
                             )}>
                                <Icon size={24} className={isActive ? "animate-pulse" : ""} />
                             </div>
-                            <h3 className={cn("text-xs font-black uppercase tracking-widest mb-1", isPast ? "text-slate-900" : "text-slate-400")}>{step.title}</h3>
+                            <h3 className={cn("text-xs font-extrabold uppercase tracking-widest mb-1", isPast ? "text-slate-900" : "text-slate-400")}>{step.title}</h3>
                             <p className="text-[10px] font-bold text-slate-400 hidden md:block max-w-[120px]">{step.desc}</p>
                          </div>
                        );
@@ -192,15 +192,15 @@ export default function VideoProcessingPage() {
                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto text-red-500 shadow-sm mb-6">
                     <AlertTriangle size={24} />
                  </div>
-                 <h3 className="text-xl font-black text-red-600">Lỗi kỹ thuật khi xử lý</h3>
+                 <h3 className="text-xl font-extrabold text-red-600">Lỗi kỹ thuật khi xử lý</h3>
                  <p className="text-red-500/80 font-bold text-sm max-w-md mx-auto">{failMessage}</p>
-                 <p className="text-[11px] font-black uppercase tracking-widest text-red-400 pt-4">Gợi ý: kiểm tra FFmpeg trên máy chủ hoặc thử định dạng video khác.</p>
+                 <p className="text-[11px] font-extrabold uppercase tracking-widest text-red-400 pt-4">Gợi ý: kiểm tra FFmpeg trên máy chủ hoặc thử định dạng video khác.</p>
               </div>
             ) : (
               <div className="text-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
                  <div className="flex items-center justify-center gap-3">
                     {isComplete ? <Sparkles size={20} className="text-emerald-500" /> : <Activity size={20} className="text-[#FF4F6E] animate-pulse" />}
-                    <span className="text-sm font-black text-slate-600">{mapStatusToUI(currentStatus).label}</span>
+                    <span className="text-sm font-extrabold text-slate-600">{mapStatusToUI(currentStatus).label}</span>
                  </div>
               </div>
             )}
@@ -212,14 +212,14 @@ export default function VideoProcessingPage() {
                    <button 
                      onClick={() => router.push(`/student/videos/${videoId}`)}
                      suppressHydrationWarning
-                     className="flex-1 py-5 bg-[#FF4F6E] text-white rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
+                     className="flex-1 py-5 bg-[#FF4F6E] text-white rounded-[20px] font-extrabold text-sm uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
                    >
                      Vào bài học <ArrowRight size={18} />
                    </button>
                    <button 
                      onClick={() => router.push('/student/documents')}
                      suppressHydrationWarning
-                     className="px-8 py-5 bg-white text-slate-900 border border-slate-200 rounded-[20px] font-black text-sm uppercase tracking-widest hover:bg-slate-50 transition-all"
+                     className="px-8 py-5 bg-white text-slate-900 border border-slate-200 rounded-[20px] font-extrabold text-sm uppercase tracking-widest hover:bg-slate-50 transition-all"
                    >
                      Quay lại khóa học
                    </button>
@@ -228,12 +228,12 @@ export default function VideoProcessingPage() {
                  <button 
                    onClick={() => router.push('/student/upload')}
                    suppressHydrationWarning
-                   className="w-full py-5 bg-slate-900 text-white rounded-[20px] font-black text-sm uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
+                   className="w-full py-5 bg-slate-900 text-white rounded-[20px] font-extrabold text-sm uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-slate-800 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
                  >
                    Quay lại trang tải lên
                  </button>
                ) : (
-                 <div className="w-full flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                 <div className="w-full flex items-center justify-center gap-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
                     <Info size={14} /> Bạn có thể đóng trình duyệt. Tiến trình vẫn tiếp tục ở backend.
                  </div>
                )}

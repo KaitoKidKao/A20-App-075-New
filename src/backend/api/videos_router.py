@@ -1,8 +1,11 @@
 import os
+import re
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import delete
 from sqlmodel import Session, select
 
@@ -27,6 +30,7 @@ from src.backend.models import (
     Module,
     Enrollment,
     UserProgress,
+    GeneratedSlide,
 )
 from src.backend.services.avatar_video_service import AvatarVideoService
 from src.backend.services.handsign_animation_service import (
@@ -40,8 +44,35 @@ from src.backend.services.queue_service import enqueue_download_and_pipeline, en
 from src.backend.services.rate_limit_service import rate_limit
 from src.backend.services.storage_service import generate_presigned_upload_url, download_from_s3
 from src.backend.services.video_service import VideoService
+from src.backend.services.slide_service import SlideService
+from src.backend.services.mindmap_service import MindmapService
+from src.backend.utils.text_encoding import normalize_text_utf8
+
+class SlideGenerateRequest(BaseModel):
+    template_id: str = Field(default="template_01", description="ID của template slide (template_01 -> template_10)")
+    num_slides: int = Field(default=10, ge=1, le=20, description="Số lượng slide muốn tạo")
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
+
+
+def _fix_mojibake_text(value: str | None) -> str:
+    raw = (value or "").replace("\x00", "").strip()
+    if not raw:
+        return ""
+    if re.search(r"[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]", raw, flags=re.IGNORECASE):
+        return raw
+    suspicious = any(m in raw for m in ("Ã", "Â", "ï¿½", "�"))
+    if not suspicious:
+        return raw
+    try:
+        repaired = raw.encode("latin1").decode("utf-8")
+    except Exception:
+        repaired = raw
+    return repaired.replace("\x00", "").strip()
+
+
+def _fix_mojibake_text(value: str | None) -> str:  # type: ignore[no-redef]
+    return normalize_text_utf8(value)
 
 
 def _create_deletion_audit(
@@ -76,9 +107,25 @@ def _find_existing_video_path(lesson_id: str, session: Session) -> Path | None:
     lesson_uuid = _parse_lesson_id(lesson_id)
     content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)).first()
     if content and content.video_url:
-        candidate = Path(content.video_url)
-        if candidate.exists() and candidate.is_file():
-            return candidate
+        raw_path = str(content.video_url).strip()
+        normalized = raw_path.replace("\\", "/")
+        candidates = []
+
+        # 1) direct as-is
+        candidates.append(Path(raw_path))
+        # 2) normalized slash path
+        candidates.append(Path(normalized))
+        # 3) relative-to-app fallback for values like data/uploads/videos/xxx.mp4
+        if normalized.startswith("data/uploads/"):
+            candidates.append(Path("/app") / normalized)
+        elif normalized.startswith("./data/uploads/"):
+            candidates.append(Path("/app") / normalized[2:])
+        # 4) basename fallback inside uploads dir
+        candidates.append(VideoService.UPLOAD_DIR / Path(normalized).name)
+
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_file():
+                return candidate
 
     for candidate in VideoService.UPLOAD_DIR.glob(f"{lesson_id}.*"):
         if candidate.is_file():
@@ -694,8 +741,22 @@ async def get_flashcards(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    ai_analysis = _get_ai_analysis(video_id, session)
-    return {"video_id": video_id, "flashcards": ai_analysis.get("flashcards", [])}
+    statement = select(Flashcard).where(Flashcard.lesson_id == _parse_lesson_id(video_id))
+    cards = session.exec(statement).all()
+    return {
+        "video_id": video_id,
+        "flashcards": [
+            {
+                "id": str(card.id),
+                "lesson_id": str(card.lesson_id),
+                "front": _fix_mojibake_text(card.front),
+                "back": _fix_mojibake_text(card.back),
+                "hint": _fix_mojibake_text(card.hint) if card.hint else None,
+                "created_at": card.created_at,
+            }
+            for card in cards
+        ],
+    }
 
 
 @router.get("/{video_id}/viz-data")
@@ -892,3 +953,184 @@ async def delete_video(
     session.commit()
 
     return {"video_id": video_id, "deleted": True}
+
+
+@router.post("/{video_id}/generate-mindmap")
+async def generate_mindmap_endpoint(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    try:
+        mindmap = await MindmapService.generate_mindmap(session, video_id)
+        return {"video_id": video_id, "mindmap": mindmap}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{video_id}/mindmap")
+async def get_mindmap(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    ai_analysis = _get_ai_analysis(video_id, session)
+    if "mindmap" not in ai_analysis:
+        return {"video_id": video_id, "mindmap": None, "message": "Mindmap chua duoc tao."}
+    return {"video_id": video_id, "mindmap": ai_analysis["mindmap"]}
+
+
+@router.post("/{video_id}/generate-slides")
+async def generate_slides_endpoint(
+    video_id: str,
+    request: SlideGenerateRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    template_id = request.template_id
+    num_slides = request.num_slides
+    
+    try:
+        result = await SlideService.generate_slides(session, video_id, template_id, num_slides)
+        filename = result['filename']
+        download_url = f"/api/videos/slides/download/{filename}"
+
+        # Luu lich su slide vao DB
+        record = GeneratedSlide(
+            user_id=current_user.id,
+            video_id=video_id,
+            filename=filename,
+            template_id=template_id,
+            num_slides=result["num_slides"],
+        )
+        session.add(record)
+        session.commit()
+        session.refresh(record)
+
+        return {
+            "video_id": video_id,
+            "status": "completed",
+            "download_url": download_url,
+            "num_slides": result["num_slides"],
+            "slide_id": str(record.id),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/slides/download/{filename}")
+async def download_slides(filename: str):
+    file_path = SlideService.OUTPUT_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File không tồn tại.")
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
+
+
+@router.get("/{video_id}/slides/history")
+async def get_slide_history(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Lay danh sach slide da tao cua user cho video nay."""
+    check_video_access(video_id, current_user, session)
+    stmt = (
+        select(GeneratedSlide)
+        .where(
+            GeneratedSlide.video_id == video_id,
+            GeneratedSlide.user_id == current_user.id,
+        )
+        .order_by(GeneratedSlide.created_at.desc())
+    )
+    records = session.exec(stmt).all()
+    return [
+        {
+            "id": str(r.id),
+            "filename": r.filename,
+            "template_id": r.template_id,
+            "num_slides": r.num_slides,
+            "download_url": f"/api/videos/slides/download/{r.filename}",
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in records
+    ]
+
+
+@router.get("/slides/all-history")
+async def get_all_slide_history(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Lay tat ca slide da tao cua user, kem ten video."""
+    stmt = (
+        select(GeneratedSlide)
+        .where(GeneratedSlide.user_id == current_user.id)
+        .order_by(GeneratedSlide.created_at.desc())
+    )
+    records = session.exec(stmt).all()
+
+    results = []
+    for r in records:
+        # Lay ten video tu Lesson
+        lesson = session.get(Lesson, r.video_id)
+        results.append({
+            "id": str(r.id),
+            "video_id": r.video_id,
+            "video_title": lesson.title if lesson else r.video_id,
+            "filename": r.filename,
+            "template_id": r.template_id,
+            "num_slides": r.num_slides,
+            "download_url": f"/api/videos/slides/download/{r.filename}",
+            "created_at": r.created_at.isoformat(),
+        })
+    return results
+
+@router.get("/{video_id}/thumbnail")
+async def get_video_thumbnail(
+    video_id: str,
+    session: Session = Depends(get_session),
+):
+    """
+    Extract the first frame of the video using FFmpeg and serve it as a JPEG image.
+    """
+    video_path = _find_existing_video_path(video_id, session)
+    if not video_path:
+        raise HTTPException(status_code=404, detail="Video file not found.")
+
+    try:
+        thumbnail_path = VideoService.extract_thumbnail(video_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract video thumbnail: {e}")
+
+    return FileResponse(
+        path=str(thumbnail_path),
+        media_type="image/jpeg",
+    )
+
+
+@router.get("/{video_id}/stream")
+async def stream_video(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Serve the video file directly with support for Range requests (seeking).
+    """
+    check_video_access(video_id, current_user, session)
+    video_path = _find_existing_video_path(video_id, session)
+    if not video_path:
+        raise HTTPException(status_code=404, detail="Video file not found.")
+    
+    return FileResponse(
+        path=str(video_path),
+        media_type="video/mp4",
+    )

@@ -49,7 +49,7 @@ export function ChartRenderer({ type = 'pie', data = [], category = 'default' }:
       return (
         <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-100">
           <p className="text-sm font-bold text-slate-800">{String(payload[0].name || label)}</p>
-          <p className="text-lg font-black" style={{ color: String(payload[0].color || palette[0]) }}>
+          <p className="text-lg font-extrabold" style={{ color: String(payload[0].color || palette[0]) }}>
             {String(payload[0].value)}
           </p>
         </div>

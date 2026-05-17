@@ -45,7 +45,7 @@ export default function TranscriptsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50 text-[11px] font-black uppercase tracking-widest text-slate-500 border-b">
+              <tr className="bg-slate-50 text-[11px] font-extrabold uppercase tracking-widest text-slate-500 border-b">
                 <th className="px-6 py-4">Buổi học</th>
                 <th className="px-6 py-4">Lớp</th>
                 <th className="px-6 py-4">Ngày lưu</th>

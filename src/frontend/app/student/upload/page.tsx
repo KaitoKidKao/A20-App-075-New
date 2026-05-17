@@ -117,7 +117,7 @@ export default function UploadVideo() {
         
         {/* Header Title */}
         <div className="space-y-2">
-           <h1 className="text-4xl font-black uppercase text-slate-900 tracking-tight">
+           <h1 className="text-4xl font-extrabold uppercase text-slate-900 tracking-tight">
              CHIA SẺ <span className="text-[#FF4F6E]">BÀI GIẢNG</span> CỦA BẠN
            </h1>
            <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">
@@ -141,7 +141,7 @@ export default function UploadVideo() {
               />
 
               {errorMsg && (
-                <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-black animate-in fade-in slide-in-from-top-2">
+                <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs font-extrabold animate-in fade-in slide-in-from-top-2">
                   Lỗi: {errorMsg}
                 </div>
               )}
@@ -161,7 +161,7 @@ export default function UploadVideo() {
                     }`}>
                       {selectedFile ? <CheckCircle2 size={40} /> : <UploadCloud size={40} />}
                     </div>
-                    <h3 className="text-xl font-black text-slate-900 mb-2">
+                    <h3 className="text-xl font-extrabold text-slate-900 mb-2">
                       {selectedFile ? 'Sẵn sàng xử lý!' : 'Kéo & thả video'}
                     </h3>
                     <p className="text-sm font-bold text-slate-400 text-center max-w-[240px]">
@@ -169,14 +169,14 @@ export default function UploadVideo() {
                     </p>
 
                     {selectedFile && (
-                      <div className="mt-4 px-4 py-1.5 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-full uppercase tracking-widest">
+                      <div className="mt-4 px-4 py-1.5 bg-emerald-500/10 text-emerald-600 text-[10px] font-extrabold rounded-full uppercase tracking-widest">
                         {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB • Hợp lệ
                       </div>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-slate-500">Tên video</label>
+                    <label className="text-xs font-extrabold uppercase tracking-widest text-slate-500">Tên video</label>
                     <input
                       type="text"
                       value={videoTitle}
@@ -198,7 +198,7 @@ export default function UploadVideo() {
                      </div>
                   </div>
                   
-                  <h3 className="text-xl font-black text-slate-900 mb-2">
+                  <h3 className="text-xl font-extrabold text-slate-900 mb-2">
                     {uploadProgress >= 100 ? 'Phân tích hoàn tất!' : 'AI đang xử lý...'}
                   </h3>
                   
@@ -208,7 +208,7 @@ export default function UploadVideo() {
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
-                  <span className="text-sm font-black text-[#FF4F6E] italic">{Math.round(uploadProgress)}%</span>
+                  <span className="text-sm font-extrabold text-[#FF4F6E] italic">{Math.round(uploadProgress)}%</span>
                 </div>
               )}
 
@@ -216,7 +216,7 @@ export default function UploadVideo() {
                  <button 
                    onClick={handleStartProcessing}
                    disabled={isUploading || !selectedFile || !videoTitle.trim()}
-                   className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
+                   className={`w-full py-5 rounded-2xl font-extrabold text-sm uppercase tracking-widest transition-all ${
                      isUploading || !selectedFile 
                        ? 'bg-slate-100 text-slate-300 cursor-not-allowed' 
                        : 'bg-[#FF4F6E] text-white shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] hover:scale-[1.02] active:scale-95'
@@ -257,7 +257,7 @@ export default function UploadVideo() {
                   ].map((item, i) => (
                     <div key={i} className="p-4 bg-slate-50/50 border border-slate-100 rounded-2xl flex items-center gap-3">
                        <item.icon size={16} className="text-[#FF4F6E]" />
-                       <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">{item.label}</span>
+                       <span className="text-[11px] font-extrabold text-slate-600 uppercase tracking-widest">{item.label}</span>
                     </div>
                   ))}
                </div>
@@ -269,7 +269,7 @@ export default function UploadVideo() {
         <section className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm">
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-xl font-black text-slate-900">Video tự học đã tải lên</h2>
+              <h2 className="text-xl font-extrabold text-slate-900">Video tự học đã tải lên</h2>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                 Truy xuất lại các video bạn đã upload để học tiếp
               </p>
@@ -277,7 +277,7 @@ export default function UploadVideo() {
             <button
               type="button"
               onClick={loadMyVideos}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-extrabold uppercase tracking-widest text-slate-600 hover:bg-slate-50"
             >
               Tải lại
             </button>
@@ -296,12 +296,12 @@ export default function UploadVideo() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-slate-900">{video.title}</p>
+                      <p className="truncate text-sm font-extrabold text-slate-900">{video.title}</p>
                       <p className="mt-1 text-xs font-bold text-slate-400">
                         {video.completion_status} • {video.progress_percent}%
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
                       {video.status}
                     </span>
                   </div>

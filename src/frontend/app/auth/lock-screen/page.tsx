@@ -21,14 +21,14 @@ export default function LockScreenPage() {
         </div>
 
         <div className="text-center space-y-2">
-           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Xin chào, Ronald Richard</h1>
+           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Xin chào, Ronald Richard</h1>
            <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Nhập mật khẩu để mở khóa màn hình</p>
         </div>
       </div>
 
       <form className="space-y-6">
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-400">Mật khẩu *</label>
+          <label className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Mật khẩu *</label>
           <div className="relative group">
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF4F6E] transition-colors" size={20} />
             <input 
@@ -46,7 +46,7 @@ export default function LockScreenPage() {
           </div>
         </div>
 
-        <button className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+        <button className="w-full py-4 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2">
           Mở khóa
           <ArrowRight size={20} />
         </button>

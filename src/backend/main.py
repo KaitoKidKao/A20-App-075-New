@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import text
 from sqlmodel import Session
@@ -14,6 +15,7 @@ from src.backend.api.auth_router import router as auth_router
 from src.backend.api.admin_router import router as admin_router
 from src.backend.api.avatar_router import router as avatar_router
 from src.backend.api.videos_router import router as videos_router
+from src.backend.api.template_router import router as template_router
 from src.backend.api.course_router import router as course_router
 from src.backend.api.student_router import router as student_router
 from src.backend.api.deps import check_video_access
@@ -66,9 +68,11 @@ async def metrics_middleware(request: Request, call_next):
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(videos_router)
+app.include_router(template_router)
 app.include_router(avatar_router)
 app.include_router(course_router)
 app.include_router(student_router)
+app.mount("/uploads", StaticFiles(directory=config.UPLOADS_DIR), name="uploads")
 
 @app.get("/api/video/{video_id}")
 async def stream_video(

@@ -2,10 +2,10 @@ import json
 import logging
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote_plus
 
 from openai import AsyncOpenAI
 from .. import config
+from .image_generation_service import ImageGenerationService
 
 logger = logging.getLogger(__name__)
 
@@ -522,8 +522,12 @@ class AIService:
                 or visual_data.get("image_prompt")
                 or "educational classroom infographic illustration"
             ).strip()
-            safe_prompt = quote_plus(image_prompt)
-            result["cover_image_url"] = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1024&height=768&nologo=true"
+            cover_image_url = await ImageGenerationService.generate_cover_image_url_async(
+                image_prompt,
+                width=1024,
+                height=768,
+            )
+            result["cover_image_url"] = cover_image_url
             
             # Caching
             video_id = transcript_data["video_id"]

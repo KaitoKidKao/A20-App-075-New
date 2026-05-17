@@ -120,7 +120,7 @@ export default function VideoLearningPage() {
               <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg">Tóm tắt theo đoạn</h3>
-                  <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-green-100 text-green-700 rounded">AI Generated</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 bg-green-100 text-green-700 rounded">AI Generated</span>
                 </div>
                 
                 {mockSummary.map((block, idx) => (

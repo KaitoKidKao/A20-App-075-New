@@ -75,7 +75,7 @@ export default function TeacherLiveSessionPage() {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-            <span className="text-xs font-black uppercase tracking-widest">LIVE</span>
+            <span className="text-xs font-extrabold uppercase tracking-widest">LIVE</span>
           </div>
           <div className="h-4 w-px bg-white/20" />
           <h2 className="text-sm font-bold truncate max-w-[200px]">Toán lớp 10A — 22/04</h2>
@@ -85,7 +85,7 @@ export default function TeacherLiveSessionPage() {
           </div>
         </div>
 
-        <button className="px-4 py-1.5 bg-white text-red-600 text-xs font-black rounded-lg hover:bg-slate-100 transition-all uppercase tracking-tighter">
+        <button className="px-4 py-1.5 bg-white text-red-600 text-xs font-extrabold rounded-lg hover:bg-slate-100 transition-all uppercase tracking-tighter">
           Kết thúc phiên học
         </button>
       </div>
@@ -174,7 +174,7 @@ export default function TeacherLiveSessionPage() {
               {/* Realtime Graph Placeholder */}
               <div className="space-y-4">
                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Hiệu suất ASR</h3>
+                    <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">Hiệu suất ASR</h3>
                     <Activity size={14} className="text-primary" />
                  </div>
                  <div className="h-24 flex items-end gap-1 px-1">
@@ -187,7 +187,7 @@ export default function TeacherLiveSessionPage() {
               {/* Student Connection List */}
               <div className="space-y-4">
                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Học sinh kết nối (24)</h3>
+                    <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">Học sinh kết nối (24)</h3>
                     <button className="text-[10px] font-bold text-primary">Xem tất cả</button>
                  </div>
                  <div className="space-y-2 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
@@ -211,7 +211,7 @@ export default function TeacherLiveSessionPage() {
 
            <div className="mt-auto p-6 bg-black/20 border-t border-white/5">
               <div className="p-4 rounded-2xl bg-primary-soft/5 border border-primary/20 flex flex-col gap-2">
-                 <p className="text-[10px] font-black text-primary uppercase">Mã tham gia lớp học</p>
+                 <p className="text-[10px] font-extrabold text-primary uppercase">Mã tham gia lớp học</p>
                  <div className="flex items-center justify-between">
                     <p className="text-2xl font-mono font-bold tracking-[0.2em]">UDL-10A</p>
                     <button className="text-[10px] font-bold bg-white/10 px-2 py-1 rounded">Sao chép</button>

@@ -172,7 +172,7 @@ export default function NewSessionPage() {
 
                 <button 
                   onClick={handleStart}
-                  className="w-full py-6 bg-primary text-white font-black text-lg rounded-2xl shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+                  className="w-full py-6 bg-primary text-white font-extrabold text-lg rounded-2xl shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                 >
                   <Radio size={24} className="animate-pulse" />
                   BẮT ĐẦU PHIÊN HỌC NGAY

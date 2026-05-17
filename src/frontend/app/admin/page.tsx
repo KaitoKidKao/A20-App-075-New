@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -51,6 +51,74 @@ function normalizeCourseDescription(description?: string | null): string {
   return raw;
 }
 
+function decodeUtf8FromLatin1(text: string): string {
+  try {
+    const bytes = Uint8Array.from(Array.from(text).map((ch) => ch.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function displayText(value?: string | null): string {
+  const raw = (value || '').replace(/\u0000/g, '').trim();
+  if (!raw) return '';
+  // Keep valid Vietnamese text unchanged.
+  if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(raw)) {
+    return raw;
+  }
+  // Only try mojibake repair when text has suspicious markers.
+  const suspicious = raw.includes('Ã') || raw.includes('Ä') || raw.includes('�') || raw.includes('¦');
+  if (!suspicious) return raw;
+  const candidates = [raw, decodeUtf8FromLatin1(raw), decodeUtf8FromLatin1(decodeUtf8FromLatin1(raw))];
+  const viRegex = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/gi;
+  const score = (s: string) => {
+    const viCount = (s.match(viRegex) || []).length;
+    const badCount = (s.match(/[�]/g) || []).length;
+    const weirdSep = (s.match(/[|]/g) || []).length;
+    return viCount * 4 - badCount * 5 - weirdSep * 2;
+  };
+  const best = candidates.sort((a, b) => score(b) - score(a))[0] || raw;
+  const cleaned = best.replace(/\s{2,}/g, ' ').trim();
+  const normalizedSlug = cleaned
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (normalizedSlug === 'bi ging' || normalizedSlug === 'bai giang') {
+    return 'Bài giảng';
+  }
+
+  // Nếu dữ liệu đã vỡ encoding nặng, hiển thị text fallback dễ đọc.
+  const hasCorruption = /[�]/.test(cleaned) || cleaned.includes('|');
+  if (hasCorruption) {
+    const lowered = cleaned.toLowerCase();
+    if (lowered.includes('gi') || lowered.includes('lecture')) return 'Bài giảng';
+    if (lowered.includes('khoa') || lowered.includes('course')) return 'Khóa học';
+    return 'Nội dung đang được cập nhật';
+  }
+
+  return cleaned;
+}
+
+function normalizeCourseDescriptionSafe(description?: string | null): string {
+  const raw = displayText(description);
+  if (!raw) return 'Chưa có mô tả';
+  if (raw.toLowerCase().includes('khu tự học cá nhân cho video học sinh tự tải lên')) {
+    return 'Không gian tự học cá nhân cho các video bạn tự tải lên.';
+  }
+  return raw;
+}
+
+function naturalLessonTitleCompare(aTitle?: string, bTitle?: string): number {
+  return (aTitle || '').localeCompare((bTitle || ''), 'vi', {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,10 +158,14 @@ export default function AdminDashboardPage() {
     jobs: true,
     deletionHistory: false,
   });
+  const [expandedCourseLessons, setExpandedCourseLessons] = useState<Record<string, boolean>>({});
 
   // Course Edit Modal State
   const [isEditCourseModalOpen, setIsEditCourseModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{ id: string, title: string, description: string, is_published: boolean } | null>(null);
+  // Module Rename Modal State
+  const [isRenameModuleModalOpen, setIsRenameModuleModalOpen] = useState(false);
+  const [renamingModuleData, setRenamingModuleData] = useState<{ id: string; currentTitle: string; newTitle: string } | null>(null);
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -174,9 +246,23 @@ export default function AdminDashboardPage() {
         api.admin.listCourses(),
         api.admin.listDeletionAudits(30),
       ]);
+      const sanitizedCourses = coursesData.map((course) => ({
+        ...course,
+        title: displayText(course.title),
+        description: displayText(course.description || ''),
+        modules: (course.modules || []).map((module) => ({
+          ...module,
+          title: displayText(module.title),
+          lessons: (module.lessons || []).map((lesson) => ({
+            ...lesson,
+            title: displayText(lesson.title),
+          })),
+        })),
+      }));
+
       setDashboard(dashboardData);
       setRecentJobs(jobsData);
-      setAdminCourses(coursesData);
+      setAdminCourses(sanitizedCourses);
       setDeletionAudits(auditsData);
 
       if (role === 'admin') {
@@ -191,9 +277,9 @@ export default function AdminDashboardPage() {
         setAdminUsers([]);
       }
 
-      if (coursesData.length > 0) {
-        setSelectedCourseId((prev) => prev || coursesData[0].id);
-        const currentSelectedCourse = coursesData.find(c => c.id === (selectedCourseId || coursesData[0].id));
+      if (sanitizedCourses.length > 0) {
+        setSelectedCourseId((prev) => prev || sanitizedCourses[0].id);
+        const currentSelectedCourse = sanitizedCourses.find(c => c.id === (selectedCourseId || sanitizedCourses[0].id));
         if (currentSelectedCourse && currentSelectedCourse.modules.length > 0) {
           const firstModule = currentSelectedCourse.modules[0];
           setSelectedModuleId((prev) => prev || firstModule.id);
@@ -254,6 +340,22 @@ export default function AdminDashboardPage() {
     () => adminCourses.find((course) => course.id === selectedCourseId),
     [adminCourses, selectedCourseId]
   );
+  const courseOptions = useMemo(
+    () =>
+      adminCourses.map((course) => ({
+        id: course.id,
+        title: displayText(course.title),
+      })),
+    [adminCourses]
+  );
+  const moduleOptions = useMemo(
+    () =>
+      (selectedCourse?.modules || []).map((module) => ({
+        id: module.id,
+        title: displayText(module.title),
+      })),
+    [selectedCourse]
+  );
   const kpis = useMemo(() => {
     const processingCount = recentJobs.filter(
       (job) => toBadgeStatus(job.status) === 'processing'
@@ -297,6 +399,54 @@ export default function AdminDashboardPage() {
       setPublishMessage('Lỗi khi cập nhật vai trò.');
     } finally {
       setUpdatingRoleUserId(null);
+    }
+  };
+
+  const handleRenameSelectedModule = async () => {
+    if (!selectedCourseId || !selectedModuleId) {
+      setPublishMessage('Vui lòng chọn khóa học và chương trước khi đổi tên.');
+      return;
+    }
+    const module = (selectedCourse?.modules || []).find((item) => item.id === selectedModuleId);
+    if (!module) {
+      setPublishMessage('Không tìm thấy chương để đổi tên.');
+      return;
+    }
+    const currentTitle = displayText(module.title);
+    setRenamingModuleData({
+      id: selectedModuleId,
+      currentTitle: currentTitle,
+      newTitle: currentTitle
+    });
+    setIsRenameModuleModalOpen(true);
+  };
+
+  const handleSaveModuleRename = async () => {
+    if (!renamingModuleData) return;
+    const { id, currentTitle, newTitle } = renamingModuleData;
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle) {
+      setPublishMessage('Tên chương không được để trống.');
+      return;
+    }
+    if (trimmedTitle === currentTitle) {
+      setIsRenameModuleModalOpen(false);
+      return;
+    }
+    const module = (selectedCourse?.modules || []).find((item) => item.id === id);
+    if (!module) return;
+
+    try {
+      await api.courses.updateModule(id, {
+        title: trimmedTitle,
+        description: module.description || undefined,
+        sort_order: module.sort_order,
+      });
+      setPublishMessage('Đã cập nhật tên chương.');
+      setIsRenameModuleModalOpen(false);
+      await loadAdminData(currentRole);
+    } catch {
+      setPublishMessage('Lỗi khi cập nhật tên chương.');
     }
   };
 
@@ -414,6 +564,31 @@ export default function AdminDashboardPage() {
     });
   };
 
+  const handleDeleteLessonFromCourse = async (videoId: string, lessonTitle: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa Bài Học',
+      message: `Bạn có chắc muốn xóa bài học "${lessonTitle}" khỏi khóa học?`,
+      onConfirm: async (reason: string) => {
+        const finalReason = reason.trim();
+        if (!finalReason) return;
+        setDeletingVideoId(videoId);
+        try {
+          await api.videos.delete(videoId, finalReason);
+          await loadAdminData(currentRole);
+          closeConfirmModal();
+          setPublishMessage('Đã xóa bài học khỏi khóa học.');
+        } catch {
+          setPublishMessage('Lỗi khi xóa bài học.');
+        } finally {
+          setDeletingVideoId(null);
+        }
+      },
+      confirmText: 'Xóa',
+      type: 'danger'
+    });
+  };
+
   const resolveUploadTarget = async () => {
     if (mode === 'new') {
       if (!courseTitle.trim()) throw new Error('Nhập tên khóa học mới.');
@@ -484,11 +659,11 @@ export default function AdminDashboardPage() {
         <div className="absolute top-0 right-0 w-[500px] h-full bg-[#FF4F6E]/10 rounded-l-[100px] -z-0" />
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF4F6E]/20 text-[#FF4F6E] rounded-full text-xs font-black uppercase tracking-widest">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF4F6E]/20 text-[#FF4F6E] rounded-full text-xs font-extrabold uppercase tracking-widest">
               <ShieldCheck size={12} fill="currentColor" />
               QUYỀN QUẢN TRỊ VIÊN
             </div>
-            <h1 className="text-4xl font-black text-white leading-tight uppercase">
+            <h1 className="text-4xl font-extrabold text-white leading-tight uppercase">
               QUẢN TRỊ <span className="text-[#FF4F6E]">HỆ THỐNG</span>
             </h1>
             <p className="text-white/50 font-bold max-w-md text-sm">
@@ -508,8 +683,8 @@ export default function AdminDashboardPage() {
             <div className={cn('w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3', kpi.bg, kpi.color)}>
               <kpi.icon size={22} />
             </div>
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">{kpi.label}</p>
-            <p className="text-2xl font-black text-slate-900 tracking-tight">{kpi.value}</p>
+            <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-1">{kpi.label}</p>
+            <p className="text-2xl font-extrabold text-slate-900 tracking-tight">{kpi.value}</p>
           </div>
         ))}
       </div>
@@ -522,13 +697,13 @@ export default function AdminDashboardPage() {
             <UploadCloud size={20} />
           </div>
           <div>
-            <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">ĐĂNG TẢI BÀI GIẢNG</h2>
+            <h2 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">ĐĂNG TẢI BÀI GIẢNG</h2>
             <p className="text-xs font-bold text-slate-400">Thêm video mới vào hệ thống</p>
           </div>
           </div>
           <button
             onClick={() => toggleSection('upload')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-extrabold uppercase tracking-widest text-slate-600 hover:bg-slate-50"
           >
             {expandedSections.upload ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             {expandedSections.upload ? 'Thu gọn' : 'Mở rộng'}
@@ -565,7 +740,7 @@ export default function AdminDashboardPage() {
                 {selectedLectureFiles.length > 0 && (
                   <div className="mt-4 px-4 py-2 bg-[#FF4F6E]/10 border border-[#FF4F6E]/20 rounded-full flex items-center gap-2 animate-in zoom-in-95 duration-300">
                     <div className="w-2 h-2 rounded-full bg-[#FF4F6E] animate-pulse" />
-                    <p className="text-[12px] font-black text-[#FF4F6E] uppercase tracking-widest">
+                    <p className="text-[12px] font-extrabold text-[#FF4F6E] uppercase tracking-widest">
                       {selectedLectureFiles.length} file đã chọn
                     </p>
                   </div>
@@ -604,7 +779,7 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="space-y-3">
                 <CustomSelect
-                  options={adminCourses}
+                  options={courseOptions}
                   value={selectedCourseId}
                   onChange={(next) => {
                     setSelectedCourseId(next);
@@ -616,13 +791,27 @@ export default function AdminDashboardPage() {
 
                 <div className="flex gap-3">
                   <CustomSelect
-                    options={selectedCourse?.modules || []}
+                    options={moduleOptions}
                     value={selectedModuleId}
                     onChange={(next) => setSelectedModuleId(next)}
                     disabled={!selectedCourseId || createNewModule}
                     placeholder="Chọn chương"
                     className="flex-1"
                   />
+                  <button
+                    type="button"
+                    onClick={handleRenameSelectedModule}
+                    disabled={!selectedCourseId || !selectedModuleId || createNewModule}
+                    title="Sửa tên chương"
+                    className={cn(
+                      "px-4 h-[54px] rounded-2xl border transition-all flex items-center justify-center",
+                      !selectedCourseId || !selectedModuleId || createNewModule
+                        ? "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
+                        : "bg-slate-50 border-slate-100 text-slate-500 hover:text-[#FF4F6E] hover:border-[#FF4F6E]/30"
+                    )}
+                  >
+                    <Edit2 size={18} />
+                  </button>
                   <button
                     onClick={() => setCreateNewModule(!createNewModule)}
                     className={cn("px-4 h-[54px] rounded-2xl border transition-all flex items-center justify-center", createNewModule ? "bg-[#FF4F6E] border-[#FF4F6E] text-white" : "bg-slate-50 border-slate-100 text-slate-400")}
@@ -645,7 +834,7 @@ export default function AdminDashboardPage() {
             <button
               onClick={handleUpload}
               disabled={isUploading || selectedLectureFiles.length === 0}
-              className="w-full py-5 bg-slate-900 text-white rounded-[24px] font-black text-sm uppercase tracking-widest hover:bg-[#FF4F6E] transition-all disabled:opacity-50 shadow-lg"
+              className="w-full py-5 bg-slate-900 text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest hover:bg-[#FF4F6E] transition-all disabled:opacity-50 shadow-lg"
             >
               Bắt đầu xử lý video
             </button>
@@ -662,13 +851,13 @@ export default function AdminDashboardPage() {
               <Database size={20} />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">QUẢN LÝ KHÓA HỌC</h2>
+              <h2 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">QUẢN LÝ KHÓA HỌC</h2>
               <p className="text-xs font-bold text-slate-400">Danh sách tất cả các khóa học trong hệ thống</p>
             </div>
           </div>
           <button
             onClick={() => toggleSection('courses')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-extrabold uppercase tracking-widest text-slate-600 hover:bg-slate-50"
           >
             {expandedSections.courses ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             {expandedSections.courses ? 'Thu gọn' : 'Mở rộng'}
@@ -679,30 +868,44 @@ export default function AdminDashboardPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Khóa học</th>
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Thống kê</th>
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Trạng thái</th>
-                <th className="px-8 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">Hành động</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Khóa học</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Thống kê</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Trạng thái</th>
+                <th className="px-8 py-4 text-right text-xs font-extrabold uppercase tracking-widest text-slate-400">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {adminCourses.map((course) => (
-                <tr key={course.id} className="hover:bg-slate-50/30 transition-colors group">
+                <React.Fragment key={course.id}>
+                <tr className="hover:bg-slate-50/30 transition-colors group">
                   <td className="px-8 py-6">
-                    <p className="text-sm font-bold text-slate-900 group-hover:text-[#FF4F6E] transition-colors">{course.title}</p>
-                    <p className="text-xs font-bold text-slate-400 truncate max-w-xs">{normalizeCourseDescription(course.description)}</p>
+                    <p className="text-sm font-bold text-slate-900 group-hover:text-[#FF4F6E] transition-colors">{displayText(course.title)}</p>
+                    <p className="text-xs font-bold text-slate-400 truncate max-w-xs">{normalizeCourseDescriptionSafe(normalizeCourseDescription(course.description))}</p>
                   </td>
                   <td className="px-8 py-6">
-                    <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-                      {course.modules.length} chương
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                        {course.modules.length} chương
+                      </span>
+                      <button
+                        onClick={() =>
+                          setExpandedCourseLessons((prev) => ({
+                            ...prev,
+                            [course.id]: !prev[course.id],
+                          }))
+                        }
+                        className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 hover:text-[#FF4F6E]"
+                      >
+                        {expandedCourseLessons[course.id] ? 'Ẩn bài học' : 'Xem bài học'}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-8 py-6">
                     <button
                       onClick={() => handleToggleCourseVisibility(course)}
                       disabled={updatingCourseId === course.id}
                       className={cn(
-                        "flex items-center gap-2 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all",
+                        "flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all",
                         course.is_published ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                       )}
                     >
@@ -731,6 +934,58 @@ export default function AdminDashboardPage() {
                     </div>
                   </td>
                 </tr>
+                {expandedCourseLessons[course.id] && (
+                  <tr className="bg-slate-50/50">
+                    <td colSpan={4} className="px-8 py-5">
+                      <div className="space-y-4">
+                        {(course.modules || [])
+                          .slice()
+                          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                          .map((module) => (
+                            <div key={module.id} className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+                              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                                <p className="text-xs font-extrabold uppercase tracking-widest text-slate-500">{displayText(module.title)}</p>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                  {(module.lessons || []).length} bài học
+                                </span>
+                              </div>
+                              <div className="divide-y divide-slate-50">
+                                {(module.lessons || [])
+                                  .slice()
+                                  .sort((a, b) => {
+                                    const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+                                    if (byOrder !== 0) return byOrder;
+                                    return naturalLessonTitleCompare(a.title, b.title);
+                                  })
+                                  .map((lesson) => (
+                                    <div key={lesson.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-bold text-slate-700 truncate">{displayText(lesson.title)}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{lesson.status}</p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeleteLessonFromCourse(lesson.id, lesson.title)}
+                                        disabled={deletingVideoId === lesson.id}
+                                        className="text-[10px] font-extrabold uppercase tracking-widest text-rose-600 hover:underline disabled:opacity-50 whitespace-nowrap"
+                                      >
+                                        {deletingVideoId === lesson.id ? 'Đang xóa...' : 'Xóa bài học'}
+                                      </button>
+                                    </div>
+                                  ))}
+                                {(module.lessons || []).length === 0 && (
+                                  <p className="px-4 py-3 text-xs font-bold text-slate-400">Chưa có bài học trong chương này.</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        {(course.modules || []).length === 0 && (
+                          <p className="text-xs font-bold text-slate-400">Khóa học chưa có chương.</p>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -746,7 +1001,7 @@ export default function AdminDashboardPage() {
               <Settings size={28} />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-wide">CÀI ĐẶT ĐĂNG KÝ VAI TRÒ</h2>
+              <h2 className="text-xl font-extrabold uppercase tracking-wide">CÀI ĐẶT ĐĂNG KÝ VAI TRÒ</h2>
               <p className="text-sm font-bold text-white/50">Cho phép người dùng chọn vai trò (Admin/Teacher) khi đăng ký</p>
             </div>
           </div>
@@ -755,7 +1010,7 @@ export default function AdminDashboardPage() {
             onClick={() => handleTogglePublicRoleRegistration(!allowPublicRoleRegistration)}
             disabled={savingSettings}
             className={cn(
-              "relative w-48 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl",
+              "relative w-48 py-4 rounded-2xl font-extrabold text-xs uppercase tracking-widest transition-all shadow-xl",
               allowPublicRoleRegistration ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-white/10 text-white/50 border border-white/10"
             )}
           >
@@ -773,13 +1028,13 @@ export default function AdminDashboardPage() {
               <Users size={20} />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">QUẢN LÝ NGƯỜI DÙNG</h2>
+              <h2 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">QUẢN LÝ NGƯỜI DÙNG</h2>
               <p className="text-xs font-bold text-slate-400">Phân quyền và quản lý tài khoản người dùng</p>
             </div>
             </div>
             <button
               onClick={() => toggleSection('users')}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-extrabold uppercase tracking-widest text-slate-600 hover:bg-slate-50"
             >
               {expandedSections.users ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               {expandedSections.users ? 'Thu gọn' : 'Mở rộng'}
@@ -789,9 +1044,9 @@ export default function AdminDashboardPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Người dùng</th>
-                  <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Vai trò</th>
-                  <th className="px-8 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">Hành động</th>
+                  <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Người dùng</th>
+                  <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Vai trò</th>
+                  <th className="px-8 py-4 text-right text-xs font-extrabold uppercase tracking-widest text-slate-400">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -846,13 +1101,13 @@ export default function AdminDashboardPage() {
               <Clock size={20} />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">TIẾN ĐỘ XỬ LÝ VIDEO</h2>
+              <h2 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">TIẾN ĐỘ XỬ LÝ VIDEO</h2>
               <p className="text-xs font-bold text-slate-400">Trạng thái xử lý AI của các bài giảng video</p>
             </div>
           </div>
           <button
             onClick={() => toggleSection('jobs')}
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 text-xs font-extrabold uppercase tracking-widest text-slate-600 hover:bg-slate-50"
           >
             {expandedSections.jobs ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             {expandedSections.jobs ? 'Thu gọn' : 'Mở rộng'}
@@ -862,10 +1117,10 @@ export default function AdminDashboardPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">ID</th>
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Video / Bài giảng</th>
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Trạng thái</th>
-                <th className="px-8 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">Hành động</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">ID</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Video / Bài giảng</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Trạng thái</th>
+                <th className="px-8 py-4 text-right text-xs font-extrabold uppercase tracking-widest text-slate-400">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -915,13 +1170,13 @@ export default function AdminDashboardPage() {
               <History size={20} />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-wide text-slate-900">NHẬT KÝ XÓA DỮ LIỆU</h2>
+              <h2 className="text-xl font-extrabold uppercase tracking-wide text-slate-900">NHẬT KÝ XÓA DỮ LIỆU</h2>
               <p className="text-xs font-bold text-slate-400">Lịch sử và lý do thực hiện các thao tác xóa</p>
             </div>
           </div>
           <button
             onClick={() => toggleSection('deletionHistory')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-xs font-extrabold uppercase tracking-widest text-slate-600 hover:bg-slate-50"
           >
             {expandedSections.deletionHistory ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             {expandedSections.deletionHistory ? 'Thu gọn' : 'Mở rộng'}
@@ -931,10 +1186,10 @@ export default function AdminDashboardPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Thời gian</th>
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Đối tượng</th>
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Người xóa</th>
-                <th className="px-8 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Lý do</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Thời gian</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Đối tượng</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Người xóa</th>
+                <th className="px-8 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400">Lý do</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -946,7 +1201,7 @@ export default function AdminDashboardPage() {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-2">
                       <span className={cn(
-                        "px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter",
+                        "px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-tighter",
                         audit.entity_type === 'user' ? "bg-purple-100 text-purple-600" :
                           audit.entity_type === 'course' ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"
                       )}>
@@ -982,7 +1237,7 @@ export default function AdminDashboardPage() {
               <Settings size={28} />
             </div>
             <div>
-              <h2 className="text-xl font-black uppercase tracking-wide">CÀI ĐẶT ĐĂNG KÝ VAI TRÒ</h2>
+              <h2 className="text-xl font-extrabold uppercase tracking-wide">CÀI ĐẶT ĐĂNG KÝ VAI TRÒ</h2>
               <p className="text-sm font-bold text-white/50">Cho phép người dùng chọn vai trò (Admin/Teacher) khi đăng ký</p>
             </div>
           </div>
@@ -990,7 +1245,7 @@ export default function AdminDashboardPage() {
             onClick={() => handleTogglePublicRoleRegistration(!allowPublicRoleRegistration)}
             disabled={savingSettings}
             className={cn(
-              "relative w-48 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl",
+              "relative w-48 py-4 rounded-2xl font-extrabold text-xs uppercase tracking-widest transition-all shadow-xl",
               allowPublicRoleRegistration ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-white/10 text-white/50 border border-white/10"
             )}
           >
@@ -1052,6 +1307,49 @@ export default function AdminDashboardPage() {
                 className="flex-1 py-4 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all"
               >
                 {updatingCourseId === editingCourse.id ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Module Modal */}
+      {isRenameModuleModalOpen && renamingModuleData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="bg-slate-900 p-8 text-white">
+              <h3 className="text-2xl font-extrabold">Đổi tên Chương</h3>
+              <p className="text-sm font-bold text-white/50">Cập nhật tên chương bài giảng</p>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Tên chương mới</label>
+                <input
+                  value={renamingModuleData.newTitle}
+                  onChange={(e) => setRenamingModuleData({ ...renamingModuleData, newTitle: e.target.value })}
+                  placeholder="Nhập tên chương bài giảng..."
+                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white transition-all"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveModuleRename();
+                    if (e.key === 'Escape') setIsRenameModuleModalOpen(false);
+                  }}
+                />
+              </div>
+            </div>
+            <div className="p-8 pt-0 flex gap-4">
+              <button
+                onClick={() => setIsRenameModuleModalOpen(false)}
+                className="flex-1 py-4 rounded-2xl border border-slate-100 font-extrabold text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSaveModuleRename}
+                disabled={!renamingModuleData.newTitle.trim()}
+                className="flex-1 py-4 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all disabled:opacity-50"
+              >
+                Lưu thay đổi
               </button>
             </div>
           </div>

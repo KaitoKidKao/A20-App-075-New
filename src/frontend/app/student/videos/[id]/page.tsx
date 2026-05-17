@@ -26,12 +26,113 @@ import {
   Lightbulb,
   Rocket,
   Download,
+  Presentation,
+  Network,
+  Layout,
+  X,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  Minus,
+  Plus,
+  SkipBack,
+  SkipForward
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { api, type HandsSignGloss, type UserProgress } from '@/lib/api';
+import { api, API_BASE_URL, type HandsSignGloss, type UserProgress } from '@/lib/api';
 import { InfographicViewer, type InfographicData } from '@/components/infographic/InfographicViewer';
+
+const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { node: any, isRoot?: boolean, depth?: number, seekTo: (time: string) => void }) => {
+  // Mức 1 (Root = depth 0) và Mức 2 (Branches = depth 1) được mở rộng mặc định
+  const [expanded, setExpanded] = useState(depth < 2);
+  
+  const childrenList = [
+    ...(node.branches || []),
+    ...(node.points ? node.points.map((p: any) => ({ text: p.text, timestamp: p.timestamp })) : [])
+  ];
+  const hasChildren = childrenList.length > 0;
+
+  return (
+    <div className="flex items-center">
+      {/* Node Content */}
+      <div 
+        className={cn(
+          "relative group p-4 rounded-[24px] border bg-white transition-all shadow-sm flex items-center gap-3 z-10 shrink-0",
+          isRoot ? "border-[#FF4F6E] border-2 bg-[#FF4F6E]/5" : "border-slate-200 hover:border-[#FF4F6E]",
+          hasChildren ? "cursor-pointer hover:shadow-lg" : ""
+        )}
+        onClick={() => {
+          if (hasChildren) setExpanded(!expanded);
+        }}
+      >
+        <div className="flex flex-col gap-1">
+          <span className={cn("font-bold", isRoot ? "text-xl text-slate-900" : "text-sm text-slate-700 max-w-[200px] md:max-w-xs")}>
+            {node.topic || node.name || node.text}
+          </span>
+          {node.timestamp && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); seekTo(node.timestamp); }}
+              className="text-[10px] text-[#FF4F6E] font-extrabold w-fit bg-[#FF4F6E]/10 px-2 py-0.5 rounded-full hover:bg-[#FF4F6E]/20 transition-colors"
+            >
+              {node.timestamp}
+            </button>
+          )}
+        </div>
+        
+        {hasChildren && (
+          <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-[#FF4F6E] group-hover:text-white transition-colors shrink-0 ml-2">
+            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </div>
+        )}
+      </div>
+
+      {/* Children Branches */}
+      {expanded && hasChildren && (
+        <div className="flex items-center">
+          {/* Horizontal trunk from parent */}
+          <div className="w-6 h-[2px] bg-slate-200 shrink-0" />
+          
+          <div className="flex flex-col justify-center gap-2 relative">
+             {childrenList.map((child: any, i: number) => {
+                const isFirst = i === 0;
+                const isLast = i === childrenList.length - 1;
+                const isOnly = childrenList.length === 1;
+
+                return (
+                  <div key={i} className="relative flex items-center py-2 pl-6">
+                    {/* The curved connecting lines directly from parent */}
+                    {!isOnly && (
+                      <>
+                        {isFirst && (
+                          <div className="absolute left-0 top-1/2 bottom-0 w-6 border-l-2 border-t-2 border-slate-200 rounded-tl-[16px]" />
+                        )}
+                        {isLast && (
+                          <div className="absolute left-0 top-0 bottom-1/2 w-6 border-l-2 border-b-2 border-slate-200 rounded-bl-[16px]" />
+                        )}
+                        {!isFirst && !isLast && (
+                          <>
+                            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-slate-200" />
+                            <div className="absolute left-0 top-1/2 w-6 h-[2px] bg-slate-200" />
+                          </>
+                        )}
+                      </>
+                    )}
+                    {isOnly && (
+                      <div className="absolute left-0 w-6 h-[2px] bg-slate-200" />
+                    )}
+                    
+                    <RecursiveMindmapNode node={child} depth={depth + 1} seekTo={seekTo} />
+                  </div>
+                );
+             })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface TranscriptSegment {
   start: number;
@@ -135,6 +236,13 @@ const captionPositionWithControlsClass = {
   high: 'top-16',
 };
 
+function naturalTitleCompare(aTitle?: string, bTitle?: string): number {
+  return (aTitle || '').localeCompare((bTitle || ''), 'vi', {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
 export default function VideoLessonPage() {
   const params = useParams();
   const router = useRouter();
@@ -167,6 +275,18 @@ export default function VideoLessonPage() {
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [metadataError, setMetadataError] = useState('');
   const [summaryPoints, setSummaryPoints] = useState<string[]>([]);
+  const [isGeneratingSlides, setIsGeneratingSlides] = useState(false);
+  const [slideDownloadUrl, setSlideDownloadUrl] = useState<string | null>(null);
+  const [slideHistory, setSlideHistory] = useState<{
+    id: string; filename: string; template_id: string; num_slides: number;
+    download_url: string; created_at: string;
+  }[]>([]);
+  const [isLoadingSlideHistory, setIsLoadingSlideHistory] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('template_08');
+  const [numSlides, setNumSlides] = useState(15);
+  const [mindmapData, setMindmapData] = useState<any>(null);
+  const [isLoadingMindmap, setIsLoadingMindmap] = useState(false);
+  const [isGeneratingMindmap, setIsGeneratingMindmap] = useState(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isLoadingQuizzes, setIsLoadingQuizzes] = useState(false);
   const [quizzes, setQuizzes] = useState<LessonQuizItem[]>([]);
@@ -206,9 +326,24 @@ export default function VideoLessonPage() {
   const [moduleLessons, setModuleLessons] = useState<ModuleLessonItem[]>([]);
   const [isLoadingModuleLessons, setIsLoadingModuleLessons] = useState(false);
 
+  const currentIndex = useMemo(() => moduleLessons.findIndex((l) => l.id === videoId), [moduleLessons, videoId]);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < moduleLessons.length - 1;
+
+  const handlePrevVideo = useCallback(() => {
+    if (hasPrev) {
+      router.push(`/student/videos/${moduleLessons[currentIndex - 1].id}`);
+    }
+  }, [hasPrev, currentIndex, moduleLessons, router]);
+
+  const handleNextVideo = useCallback(() => {
+    if (hasNext) {
+      router.push(`/student/videos/${moduleLessons[currentIndex + 1].id}`);
+    }
+  }, [hasNext, currentIndex, moduleLessons, router]);
+
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const videoToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/video/${videoId}${videoToken ? `?token=${videoToken}` : ''}`;
+  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/videos/${videoId}/stream`;
   const normalizedAvatarStatus = (avatarStatus || 'not_generated').toLowerCase();
   const isAvatarReady = normalizedAvatarStatus === 'ready' || normalizedAvatarStatus === 'generated' || normalizedAvatarStatus === 'completed';
   const isAvatarProcessing = normalizedAvatarStatus === 'processing' || normalizedAvatarStatus === 'queued' || normalizedAvatarStatus === 'running';
@@ -220,9 +355,14 @@ export default function VideoLessonPage() {
       : 'bg-rose-50 text-rose-700 border-rose-200';
 
   const buildLessonPreview = useCallback(async (lessonId: string, initialDuration?: string): Promise<{ duration: string; thumb: string }> => {
-    const fallbackThumb = `https://picsum.photos/seed/${lessonId}/200/120`;
+    const thumbUrl = `${backendBaseUrl}/api/videos/${lessonId}/thumbnail`;
+
     if (typeof window === 'undefined') {
-      return { duration: initialDuration || '--:--', thumb: fallbackThumb };
+      return { duration: initialDuration || '--:--', thumb: thumbUrl };
+    }
+
+    if (initialDuration && initialDuration !== '--:--') {
+      return { duration: initialDuration, thumb: thumbUrl };
     }
 
     return await new Promise((resolve) => {
@@ -230,72 +370,38 @@ export default function VideoLessonPage() {
       video.preload = 'metadata';
       video.muted = true;
       video.playsInline = true;
-      video.src = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/video/${lessonId}`;
+      video.src = `${backendBaseUrl}/api/videos/${lessonId}/stream`;
 
       let resolved = false;
       const timeout = window.setTimeout(() => {
         cleanup();
-        resolve({ duration: initialDuration || '--:--', thumb: fallbackThumb });
-      }, 12000);
+        resolve({ duration: '--:--', thumb: thumbUrl });
+      }, 6000);
 
       const cleanup = () => {
         if (resolved) return;
         resolved = true;
         window.clearTimeout(timeout);
         video.removeEventListener('loadedmetadata', onLoadedMetadata);
-        video.removeEventListener('seeked', onSeeked);
         video.removeEventListener('error', onError);
         video.src = '';
       };
 
       const onError = () => {
         cleanup();
-        resolve({ duration: initialDuration || '--:--', thumb: fallbackThumb });
-      };
-
-      const onSeeked = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = 200;
-          canvas.height = 120;
-          const ctx = canvas.getContext('2d');
-
-          const videoDurationFormatted = formatDuration(video.duration);
-          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
-
-          if (!ctx) {
-            cleanup();
-            resolve({ duration: finalDuration, thumb: fallbackThumb });
-            return;
-          }
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const thumb = canvas.toDataURL('image/jpeg', 0.75);
-          cleanup();
-          resolve({ duration: finalDuration, thumb });
-        } catch {
-          cleanup();
-          const videoDurationFormatted = formatDuration(video.duration);
-          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
-          resolve({ duration: finalDuration, thumb: fallbackThumb });
-        }
+        resolve({ duration: '--:--', thumb: thumbUrl });
       };
 
       const onLoadedMetadata = () => {
-        try {
-          video.currentTime = 0.05;
-        } catch {
-          cleanup();
-          const videoDurationFormatted = formatDuration(video.duration);
-          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
-          resolve({ duration: finalDuration, thumb: fallbackThumb });
-        }
+        cleanup();
+        const finalDuration = formatDuration(video.duration);
+        resolve({ duration: finalDuration, thumb: thumbUrl });
       };
 
       video.addEventListener('loadedmetadata', onLoadedMetadata);
-      video.addEventListener('seeked', onSeeked);
       video.addEventListener('error', onError);
     });
-  }, []);
+  }, [backendBaseUrl]);
 
   useEffect(() => {
     const fetchTranscript = async () => {
@@ -374,7 +480,11 @@ export default function VideoLessonPage() {
       try {
         const currentLesson = await api.courses.getLesson(videoId);
         const lessons = await api.courses.listLessons(currentLesson.module_id);
-        const sortedByTitle = [...lessons].sort((a, b) => a.title.localeCompare(b.title, 'vi', { sensitivity: 'base' }));
+        const sortedByTitle = [...lessons].sort((a, b) => {
+          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+          if (byOrder !== 0) return byOrder;
+          return naturalTitleCompare(a.title, b.title);
+        });
         const hydrated = await Promise.all(
           sortedByTitle.map(async (lesson) => {
             const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? formatDuration(lesson.duration_minutes * 60) : '--:--';
@@ -421,7 +531,7 @@ export default function VideoLessonPage() {
   useEffect(() => {
     if (moduleLessons.length === 0) return;
     const unresolved = moduleLessons.filter(
-      (item) => item.duration === '--:--' || item.thumb.includes('picsum.photos/seed/')
+      (item) => item.duration === '--:--'
     );
     if (unresolved.length === 0) return;
 
@@ -448,7 +558,7 @@ export default function VideoLessonPage() {
       );
 
       const stillUnresolved = latest.some(
-        (item) => item.duration === '--:--' || item.thumb.includes('picsum.photos/seed/')
+        (item) => item.duration === '--:--'
       );
       if (!stillUnresolved || attempts >= 6) {
         window.clearInterval(timer);
@@ -643,17 +753,26 @@ export default function VideoLessonPage() {
         api.videos.getVizData(videoId),
       ]);
 
-      const v = <T,>(r: PromiseSettledResult<T>) => r.status === 'fulfilled' ? r.value : null;
-      setTimeline(v(timelineRes)?.timeline || []);
-      setHighlights(v(highlightsRes)?.highlights || []);
-      setQuestions(v(questionsRes)?.questions || []);
-      setBriefing(v(briefingRes)?.briefing || null);
-      setFlashcards(v(flashcardsRes)?.flashcards || []);
-      const nextVisualData = v(vizDataRes)?.visual_data || null;
-      if (nextVisualData?.infographic && v(vizDataRes)?.cover_image_url) {
-        nextVisualData.infographic.cover_image_url = v(vizDataRes)!.cover_image_url!;
+      setTimeline(timelineRes.timeline || []);
+      setHighlights(highlightsRes.highlights || []);
+      setQuestions(questionsRes.questions || []);
+      setBriefing(briefingRes.briefing || null);
+      setFlashcards(flashcardsRes.flashcards || []);
+      const rawVisualData = vizDataRes.visual_data || null;
+      let normalizedVisualData: VisualData | null = null;
+      if (rawVisualData && typeof rawVisualData === 'object') {
+        const hasInfographic = Object.prototype.hasOwnProperty.call(rawVisualData, 'infographic');
+        if (hasInfographic) {
+          normalizedVisualData = rawVisualData as VisualData;
+        } else {
+          // Một số payload lưu trực tiếp infographic ở root visual_data.
+          normalizedVisualData = { infographic: rawVisualData as InfographicData };
+        }
       }
-      setVisualData(nextVisualData);
+      if (normalizedVisualData?.infographic && vizDataRes.cover_image_url) {
+        normalizedVisualData.infographic.cover_image_url = vizDataRes.cover_image_url;
+      }
+      setVisualData(normalizedVisualData);
     } catch (err) {
       console.error('Metadata fetch error:', err);
       setMetadataError('Tài nguyên học tập chưa sẵn sàng. Vui lòng tải lại sau khi xử lý hoàn tất.');
@@ -802,6 +921,9 @@ export default function VideoLessonPage() {
   const handleVideoEnded = () => {
     setIsPlaying(false);
     saveProgress(duration, "completed");
+    if (hasNext) {
+      handleNextVideo();
+    }
   };
 
 
@@ -815,6 +937,13 @@ export default function VideoLessonPage() {
     }
   };
 
+  const seekToSeconds = (seconds: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = seconds;
+      videoRef.current.play();
+    }
+  };
+
   const handleGetSummary = async () => {
     if (summaryPoints.length > 0) return;
     setIsLoadingSummary(true);
@@ -822,11 +951,80 @@ export default function VideoLessonPage() {
       const data = await api.videos.getSummary(videoId);
       setSummaryPoints(data.summary || []);
     } catch (err) {
-      console.error('Summary fetch error:', err);
+      console.error(err);
     } finally {
       setIsLoadingSummary(false);
     }
   };
+
+  const fetchSlideHistory = useCallback(async () => {
+    setIsLoadingSlideHistory(true);
+    try {
+      const history = await api.videos.getSlideHistory(videoId);
+      setSlideHistory(history);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingSlideHistory(false);
+    }
+  }, [videoId]);
+
+  const handleGenerateSlides = async () => {
+    setIsGeneratingSlides(true);
+    setSlideDownloadUrl(null);
+    try {
+      const res = await api.videos.generateSlides(videoId, selectedTemplate, numSlides);
+      if (res.download_url) {
+        setSlideDownloadUrl(`${API_BASE_URL}${res.download_url}`);
+        // Refresh lich su sau khi tao xong
+        fetchSlideHistory();
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi tạo slide. Vui lòng thử lại.");
+    } finally {
+      setIsGeneratingSlides(false);
+    }
+  };
+
+  const handleFetchMindmap = useCallback(async () => {
+    if (mindmapData) return;
+    setIsLoadingMindmap(true);
+    try {
+      const res = await api.videos.getMindmap(videoId);
+      if (res.mindmap) {
+        setMindmapData(res.mindmap);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingMindmap(false);
+    }
+  }, [videoId, mindmapData]);
+
+  const handleGenerateMindmap = async () => {
+    setIsGeneratingMindmap(true);
+    try {
+      const res = await api.videos.generateMindmap(videoId);
+      if (res.mindmap) {
+        setMindmapData(res.mindmap);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi tạo sơ đồ tư duy. Vui lòng thử lại.");
+    } finally {
+      setIsGeneratingMindmap(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'mindmap') {
+      handleFetchMindmap();
+    }
+    if (activeTab === 'slide') {
+      fetchSlideHistory();
+    }
+  }, [activeTab, handleFetchMindmap, fetchSlideHistory]);
 
   const activeQuiz = quizzes[selectedQuizIdx] || null;
 
@@ -985,8 +1183,26 @@ export default function VideoLessonPage() {
 
                 <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-6">
+                    <button
+                      onClick={handlePrevVideo}
+                      disabled={!hasPrev}
+                      className="text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:pointer-events-none hover:scale-110 transition-transform"
+                      aria-label="Bài trước"
+                    >
+                      <SkipBack size={20} fill="currentColor" />
+                    </button>
+
                     <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform" aria-label={isPlaying ? 'Tạm dừng video' : 'Phát video'}>
                       {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+                    </button>
+
+                    <button
+                      onClick={handleNextVideo}
+                      disabled={!hasNext}
+                      className="text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:pointer-events-none hover:scale-110 transition-transform"
+                      aria-label="Bài tiếp theo"
+                    >
+                      <SkipForward size={20} fill="currentColor" />
                     </button>
 
                     <div className="flex items-center gap-2">
@@ -1034,7 +1250,7 @@ export default function VideoLessonPage() {
                           setCaptionBackground(!captionBackground);
                         }}
                         className={cn(
-                          "px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                          "px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase transition-all",
                           captionBackground ? "bg-white/20 text-white shadow-sm" : "text-white/40 hover:text-white/70"
                         )}
                         title="Nền phụ đề"
@@ -1053,7 +1269,7 @@ export default function VideoLessonPage() {
                             }}
                             disabled={!isEnabled}
                             className={cn(
-                              "px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                              "px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase transition-all",
                               language === l ? "bg-[#FF4F6E] text-white shadow-lg" : "text-white/40 hover:text-white/70",
                               !isEnabled && "opacity-20 cursor-not-allowed"
                             )}
@@ -1092,7 +1308,7 @@ export default function VideoLessonPage() {
                           e.stopPropagation();
                           setShowSpeedMenu(!showSpeedMenu);
                         }}
-                        className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-black text-white/90 transition-all font-heading border border-white/5"
+                        className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-extrabold text-white/90 transition-all font-heading border border-white/5"
                         aria-label="Chọn tốc độ phát"
                       >
                         {playbackSpeed === 1 ? '1x' : `${playbackSpeed}x`}
@@ -1177,29 +1393,35 @@ export default function VideoLessonPage() {
                     <Sparkles size={32} />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">TRÍ TUỆ TRỰC QUAN</h3>
-                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest text-[10px]">Tóm tắt AI tức thì cho người học trực quan</p>
+                    <h3 className="text-2xl md:text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight">TRÍ TUỆ TRỰC QUAN</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide max-w-[200px] md:max-w-none leading-tight scale-75 origin-left">Tóm tắt AI tức thì cho người học trực quan</p>
                   </div>
                 </div>
 
-                <button
-                  onClick={handleGetSummary}
-                  disabled={isLoadingSummary}
-                  className="w-full md:w-auto px-10 py-5 bg-[#FF4F6E] text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-2xl shadow-[#FF4F6E]/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-                >
-                  {isLoadingSummary ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Đang phân tích...
-                    </>
-                  ) : (
-                    <>
-                      <Zap size={20} fill="currentColor" />
-                      TẠO TÓM TẮT BẰNG AI
-                    </>
-                  )}
-                </button>
+                <div className="flex flex-wrap items-center justify-end gap-4 w-full md:w-auto md:pr-4">
+                  <button
+                    onClick={handleGetSummary}
+                    disabled={isLoadingSummary}
+                    className="flex-1 md:flex-none px-8 py-5 bg-[#FF4F6E] text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-2xl shadow-[#FF4F6E]/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    {isLoadingSummary ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Đang phân tích...
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={20} fill="currentColor" />
+                        TẠO TÓM TẮT BẰNG AI
+                      </>
+                    )}
+                  </button>
+
+
+                </div>
               </div>
+
+
 
               {summaryPoints.length > 0 && (
                 <div className="mt-10 grid md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
@@ -1215,8 +1437,6 @@ export default function VideoLessonPage() {
               )}
             </div>
 
-            {/* Smart Content Section - Expanded Layout */}
-            <div className="space-y-6">
               {/* Full Width Briefing Banner */}
               {briefing && (
                 <div className="bg-slate-50 rounded-[32px] p-8 md:p-10 border border-slate-100 shadow-sm relative overflow-hidden">
@@ -1243,18 +1463,148 @@ export default function VideoLessonPage() {
                   </div>
                 </div>
               )}
+          </div>
+
+          {/* Right Column: Dynamic Panel (Transcript or Lessons) */}
+          <div className="lg:col-span-5 relative">
+            <div className="sticky top-28 bg-white/95 backdrop-blur-md border border-white/20 rounded-[40px] shadow-2xl shadow-slate-200/40 h-[calc(100vh-140px)] flex flex-col overflow-hidden">
+
+              {/* Panel Tabs */}
+              <div className="flex border-b border-slate-50" role="tablist" aria-label="Bảng nội dung bên phải">
+                <button
+                  onClick={() => setRightPanelTab('transcript')}
+                  role="tab"
+                  aria-selected={rightPanelTab === 'transcript'}
+                  className={cn(
+                    "flex-1 py-8 flex items-center justify-center gap-3 transition-all",
+                    rightPanelTab === 'transcript' ? "bg-white text-slate-900" : "bg-slate-50 text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", rightPanelTab === 'transcript' ? "bg-slate-900 text-white shadow-lg" : "bg-slate-200 text-slate-500")}>
+                    <FileText size={20} />
+                  </div>
+                  <span className="text-sm font-extrabold uppercase tracking-widest">Phụ đề</span>
+                </button>
+                <button
+                  onClick={() => setRightPanelTab('lessons')}
+                  role="tab"
+                  aria-selected={rightPanelTab === 'lessons'}
+                  className={cn(
+                    "flex-1 py-8 flex items-center justify-center gap-3 transition-all",
+                    rightPanelTab === 'lessons' ? "bg-white text-slate-900" : "bg-slate-50 text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", rightPanelTab === 'lessons' ? "bg-slate-900 text-white shadow-lg" : "bg-slate-200 text-slate-500")}>
+                    <List size={20} />
+                  </div>
+                  <span className="text-sm font-extrabold uppercase tracking-widest">Bài học</span>
+                </button>
+              </div>
+
+
+              <div ref={transcriptPanelRef} className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                {rightPanelTab === 'transcript' ? (
+                  <>
+                    {isLoadingTranscript && renderPanelState('Đang tải phụ đề...')}
+                    {!isLoadingTranscript && segments.length === 0 && renderPanelState('Chưa có phụ đề.')}
+                    {segments.map((s, i) => {
+                      const isActive = currentTime >= s.start && currentTime <= s.end;
+                      return (
+                        <button
+                          type="button"
+                          ref={(node) => {
+                            transcriptItemRefs.current[i] = node;
+                          }}
+                          key={i}
+                          onClick={() => seekTo(formatTime(s.start))}
+                          aria-current={isActive ? 'true' : undefined}
+                          className={cn(
+                            "block w-full p-6 rounded-[32px] transition-all cursor-pointer group relative text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FF4F6E]/35",
+                            isActive ? "bg-[#FF4F6E] text-white shadow-2xl shadow-[#FF4F6E]/30 scale-[1.02]" : "hover:bg-slate-50 border border-transparent hover:border-slate-100 text-slate-600"
+                          )}
+                        >
+                          <span className={cn(
+                            "text-[10px] font-extrabold uppercase tracking-[0.2em] mb-3 block",
+                            isActive ? "text-white/70" : "text-[#FF4F6E]"
+                          )}>
+                            {formatTime(s.start)}
+                          </span>
+                          <p className={cn(
+                            "text-base leading-relaxed",
+                            isActive ? "font-extrabold" : "font-bold"
+                          )}>
+                            {s.text}
+                          </p>
+                          {isActive && !reducedMotion && (
+                            <div className="absolute top-8 right-8 animate-ping w-3 h-3 bg-white rounded-full" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    {isLoadingModuleLessons && renderPanelState('Đang tải danh sách bài học...')}
+                    {!isLoadingModuleLessons && moduleLessons.length === 0 && renderPanelState('Chưa có video trong chương này.')}
+                    {!isLoadingModuleLessons && moduleLessons.map((lesson, idx) => (
+                      <div
+                        key={lesson.id}
+                        onClick={() => {
+                          router.push(`/student/videos/${lesson.id}`);
+                        }}
+                        className={cn(
+                          "flex items-center gap-4 p-4 rounded-3xl cursor-pointer transition-all border-2",
+                          videoId === lesson.id ? "border-[#FF4F6E] bg-white shadow-lg" : "border-transparent hover:bg-slate-50"
+                        )}
+                      >
+                        <div className="relative w-24 h-14 rounded-xl overflow-hidden shrink-0 shadow-sm">
+                          <Image src={lesson.thumb} alt={lesson.title} fill className="object-cover" unoptimized={true} />
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Play size={16} className="text-white" fill="currentColor" />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className={cn("text-xs font-extrabold leading-tight", videoId === lesson.id ? "text-slate-900" : "text-slate-500")}>
+                            {idx + 1}. {lesson.title}
+                          </h4>
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
+                            <Clock size={10} />
+                            {lesson.duration}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-8 bg-slate-50 border-t border-slate-100 text-center">
+                <div className="inline-flex items-center gap-3 px-6 py-2 bg-white rounded-full border border-slate-200 text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] shadow-sm">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Đồng bộ trực tiếp: {language.toUpperCase()}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+            {/* Smart Content Section - Expanded Layout */}
+            <div className="space-y-6 mt-10 lg:mt-16">
 
               {/* Visual Tabs Section */}
               <div className="bg-white/95 backdrop-blur-md rounded-[40px] p-8 md:p-10 border border-white/20 shadow-xl shadow-slate-200/20">
                 <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-b border-slate-100 mb-10 pb-2">
                   {[
                     { id: 'timeline', label: 'Cấu trúc thời gian', icon: Clock },
+                    { id: 'mindmap', label: 'Sơ đồ tư duy', icon: Network },
                     { id: 'highlights', label: 'Điểm nhấn chính', icon: Zap },
                     { id: 'questions', label: 'Làm rõ khái niệm', icon: HelpCircle },
                     { id: 'quiz', label: 'Làm bài quiz', icon: ClipboardCheck },
                     { id: 'flashcards', label: 'Thẻ ghi nhớ', icon: BookOpen },
                     { id: 'visuals', label: 'Trực quan hóa', icon: Eye },
                     { id: 'handsign', label: 'Avatar VSL', icon: Hand },
+                    { id: 'slide', label: 'Tạo Slide AI', icon: Presentation },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -1289,6 +1639,207 @@ export default function VideoLessonPage() {
                         ))}
                       </div>
                     )
+                  )}
+
+                  {activeTab === 'slide' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                      {/* useEffect trigger via render: fetch once when tab opens */}
+                      {(() => { return null; })()}
+                      <div className="flex flex-col gap-6">
+                        <div className="flex flex-col lg:flex-row gap-8">
+                          {/* Left: Template Selection */}
+                          <div className="flex-1 space-y-4">
+                            <label className="text-sm font-extrabold text-slate-700 uppercase tracking-widest block mb-4">Chọn Mẫu Slide</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                              {[...Array(10)].map((_, i) => {
+                                const id = `template_${(i + 1).toString().padStart(2, '0')}`;
+                                const isSelected = selectedTemplate === id;
+                                return (
+                                  <button
+                                    key={id}
+                                    onClick={() => setSelectedTemplate(id)}
+                                    className={cn(
+                                      "relative aspect-video rounded-xl border-4 transition-all overflow-hidden group bg-slate-50",
+                                      isSelected ? "border-[#FF4F6E] shadow-xl scale-105 z-10" : "border-slate-100 hover:border-[#FF4F6E]/50"
+                                    )}
+                                  >
+                                    <img src={`${API_BASE_URL}/api/videos/templates/${id}/thumbnail`} alt={`Template ${i + 1}`} className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-500", isSelected ? "scale-110" : "group-hover:scale-110")} />
+                                    <div className={cn("absolute inset-0 bg-slate-900/40 transition-opacity flex items-center justify-center", isSelected ? "opacity-0" : "opacity-100 group-hover:opacity-50")}>
+                                      <span className="text-white font-extrabold text-lg drop-shadow-md">{i + 1}</span>
+                                    </div>
+                                    {isSelected && (
+                                      <div className="absolute top-2 right-2 w-6 h-6 bg-[#FF4F6E] rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in-50">
+                                        <CheckCircle size={14} />
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Slide History Section */}
+                            <div className="mt-8">
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-extrabold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                  <Download size={16} />
+                                  Slide đã tạo
+                                </h3>
+                                <button
+                                  onClick={fetchSlideHistory}
+                                  disabled={isLoadingSlideHistory}
+                                  className="text-xs font-bold text-slate-400 hover:text-[#FF4F6E] transition-colors flex items-center gap-1"
+                                >
+                                  {isLoadingSlideHistory ? (
+                                    <div className="w-3 h-3 border border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                                  ) : (
+                                    <span>↻ Làm mới</span>
+                                  )}
+                                </button>
+                              </div>
+
+                              {isLoadingSlideHistory ? (
+                                <div className="flex items-center gap-3 p-5 bg-slate-50 rounded-2xl">
+                                  <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                                  <span className="text-sm font-bold text-slate-400">Đang tải lịch sử...</span>
+                                </div>
+                              ) : slideHistory.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400">
+                                  <Presentation size={36} className="mb-3 opacity-30" />
+                                  <p className="text-sm font-bold">Chưa có slide nào được tạo cho video này</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  {slideHistory.map((item) => {
+                                    const date = new Date(item.created_at);
+                                    const label = `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+                                    return (
+                                      <div key={item.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-[#FF4F6E]/30 hover:shadow-md transition-all group">
+                                        <div className="w-10 h-10 bg-[#FF4F6E]/10 rounded-xl flex items-center justify-center text-[#FF4F6E] shrink-0">
+                                          <Presentation size={20} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-extrabold text-slate-800 truncate">
+                                            Mẫu {item.template_id.replace('template_', '')} · {item.num_slides} trang
+                                          </p>
+                                          <p className="text-xs font-bold text-slate-400 mt-0.5">{label}</p>
+                                        </div>
+                                        <a
+                                          href={`${API_BASE_URL}${item.download_url}`}
+                                          download
+                                          className="shrink-0 px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center gap-1.5"
+                                        >
+                                          <Download size={14} />
+                                          Tải về
+                                        </a>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Right: Preview and Config */}
+                          <div className="w-full lg:w-1/3 flex flex-col space-y-6 bg-slate-50 p-6 rounded-[32px] border border-slate-100">
+                            <div className="aspect-video rounded-2xl border-4 border-white overflow-hidden relative shadow-lg">
+                              <img src={`${API_BASE_URL}/api/videos/templates/${selectedTemplate}/thumbnail`} alt="Template Preview" className="absolute inset-0 w-full h-full object-cover" />
+                            </div>
+
+                            <div className="space-y-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                              <div className="flex justify-between items-center mb-2">
+                                <label className="text-xs font-extrabold text-slate-600 uppercase tracking-widest block">Số lượng slide</label>
+                              </div>
+                              <div className="flex items-center justify-center gap-6">
+                                <button onClick={() => setNumSlides(Math.max(10, numSlides - 1))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#FF4F6E] hover:text-white transition-colors">
+                                  <Minus size={16} />
+                                </button>
+                                <div className="w-16 text-center">
+                                  <span className="text-2xl font-extrabold text-[#FF4F6E]">{numSlides}</span>
+                                </div>
+                                <button onClick={() => setNumSlides(Math.min(20, numSlides + 1))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#FF4F6E] hover:text-white transition-colors">
+                                  <Plus size={16} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={handleGenerateSlides}
+                              disabled={isGeneratingSlides}
+                              className="w-full py-5 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-sm uppercase tracking-wider shadow-xl shadow-[#FF4F6E]/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+                            >
+                              {isGeneratingSlides ? (
+                                <>
+                                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                                  <span>ĐANG VẼ SLIDE...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Presentation size={20} className="shrink-0" />
+                                  <span>BẮT ĐẦU TẠO PPTX</span>
+                                </>
+                              )}
+                            </button>
+
+                            {slideDownloadUrl && (
+                              <div className="animate-in fade-in slide-in-from-top-2">
+                                <a
+                                  href={slideDownloadUrl}
+                                  download
+                                  className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                >
+                                  <Download size={16} className="shrink-0" />
+                                  LƯU VỀ MÁY
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'mindmap' && (
+                    isLoadingMindmap ? renderPanelState('Đang kiến tạo sơ đồ tư duy...') : !mindmapData ? (
+                      <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-[32px] border border-slate-100">
+                        <Network className="w-16 h-16 text-slate-300 mb-6" />
+                        <h4 className="text-xl font-extrabold text-slate-700 mb-3">Chưa có sơ đồ tư duy</h4>
+                        <p className="text-slate-500 mb-8 max-w-md">Sơ đồ tư duy giúp bạn hình dung toàn bộ cấu trúc bài học. Hệ thống AI có thể tự động phân tích và tạo sơ đồ tư duy cho video này.</p>
+                        <button
+                          onClick={handleGenerateMindmap}
+                          disabled={isGeneratingMindmap}
+                          className="px-8 py-4 bg-[#FF4F6E] text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-xl hover:bg-[#ff3b5c] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[#FF4F6E]/30"
+                        >
+                          {isGeneratingMindmap ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Đang tạo sơ đồ...
+                            </>
+                          ) : (
+                            <>
+                              <Zap size={18} fill="currentColor" />
+                              Tạo Sơ Đồ Tư Duy Bằng AI
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : (() => {
+                      // Normalize data format
+                      const topic = mindmapData.topic || mindmapData.name || 'Sơ đồ tư duy';
+                      const branches = mindmapData.branches || (mindmapData.children ? mindmapData.children.map((c: any) => ({
+                        name: c.name,
+                        points: c.children ? c.children.map((cc: any) => ({ text: cc.name, timestamp: null })) : []
+                      })) : []);
+
+                      const rootNode = { topic, branches };
+
+                      return (
+                        <div className="space-y-12 py-10 overflow-x-auto min-h-[400px]">
+                          <div className="min-w-max pr-8">
+                            <RecursiveMindmapNode node={rootNode} isRoot={true} seekTo={seekTo} />
+                          </div>
+                        </div>
+                      );
+                    })()
                   )}
 
                   {activeTab === 'highlights' && (
@@ -1402,7 +1953,7 @@ export default function VideoLessonPage() {
                                   <button
                                     onClick={handleSubmitQuiz}
                                     disabled={isSubmittingQuiz}
-                                    className="w-full md:w-auto px-10 py-4 rounded-2xl bg-[#FF4F6E] text-white text-sm font-black uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                                    className="w-full md:w-auto px-10 py-4 rounded-2xl bg-[#FF4F6E] text-white text-sm font-extrabold uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
                                   >
                                     {isSubmittingQuiz ? (
                                       <div className="flex items-center gap-2">
@@ -1448,7 +1999,7 @@ export default function VideoLessonPage() {
                                         setQuizSubmitResult(null);
                                         setQuizAnswers({});
                                       }}
-                                      className="w-full py-4 bg-white border-2 border-red-200 rounded-2xl text-red-600 text-sm font-black uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-all shadow-sm"
+                                      className="w-full py-4 bg-white border-2 border-red-200 rounded-2xl text-red-600 text-sm font-extrabold uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-all shadow-sm"
                                     >
                                       LÀM LẠI
                                     </button>
@@ -1671,7 +2222,7 @@ export default function VideoLessonPage() {
                             </p>
                             <button
                               type="button"
-                              onClick={() => {}}
+                              onClick={() => { }}
                               className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white text-xs font-extrabold text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
                             >
                               <Download size={14} />
@@ -1710,132 +2261,9 @@ export default function VideoLessonPage() {
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Right Column: Dynamic Panel (Transcript or Lessons) */}
-          <div className="lg:col-span-5 relative">
-            <div className="sticky top-28 bg-white/95 backdrop-blur-md border border-white/20 rounded-[40px] shadow-2xl shadow-slate-200/40 h-[calc(100vh-140px)] flex flex-col overflow-hidden">
-
-              {/* Panel Tabs */}
-              <div className="flex border-b border-slate-50" role="tablist" aria-label="Bảng nội dung bên phải">
-                <button
-                  onClick={() => setRightPanelTab('transcript')}
-                  role="tab"
-                  aria-selected={rightPanelTab === 'transcript'}
-                  className={cn(
-                    "flex-1 py-8 flex items-center justify-center gap-3 transition-all",
-                    rightPanelTab === 'transcript' ? "bg-white text-slate-900" : "bg-slate-50 text-slate-400 hover:text-slate-600"
-                  )}
-                >
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", rightPanelTab === 'transcript' ? "bg-slate-900 text-white shadow-lg" : "bg-slate-200 text-slate-500")}>
-                    <FileText size={20} />
-                  </div>
-                  <span className="text-sm font-extrabold uppercase tracking-widest">Phụ đề</span>
-                </button>
-                <button
-                  onClick={() => setRightPanelTab('lessons')}
-                  role="tab"
-                  aria-selected={rightPanelTab === 'lessons'}
-                  className={cn(
-                    "flex-1 py-8 flex items-center justify-center gap-3 transition-all",
-                    rightPanelTab === 'lessons' ? "bg-white text-slate-900" : "bg-slate-50 text-slate-400 hover:text-slate-600"
-                  )}
-                >
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-all", rightPanelTab === 'lessons' ? "bg-slate-900 text-white shadow-lg" : "bg-slate-200 text-slate-500")}>
-                    <List size={20} />
-                  </div>
-                  <span className="text-sm font-extrabold uppercase tracking-widest">Bài học</span>
-                </button>
-              </div>
-
-
-              <div ref={transcriptPanelRef} className="flex-1 overflow-y-auto p-10 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-                {rightPanelTab === 'transcript' ? (
-                  <>
-                    {isLoadingTranscript && renderPanelState('Đang tải phụ đề...')}
-                    {!isLoadingTranscript && segments.length === 0 && renderPanelState('Chưa có phụ đề.')}
-                    {segments.map((s, i) => {
-                      const isActive = currentTime >= s.start && currentTime <= s.end;
-                      return (
-                        <button
-                          type="button"
-                          ref={(node) => {
-                            transcriptItemRefs.current[i] = node;
-                          }}
-                          key={i}
-                          onClick={() => seekTo(formatTime(s.start))}
-                          aria-current={isActive ? 'true' : undefined}
-                          className={cn(
-                            "block w-full p-6 rounded-[32px] transition-all cursor-pointer group relative text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FF4F6E]/35",
-                            isActive ? "bg-[#FF4F6E] text-white shadow-2xl shadow-[#FF4F6E]/30 scale-[1.02]" : "hover:bg-slate-50 border border-transparent hover:border-slate-100 text-slate-600"
-                          )}
-                        >
-                          <span className={cn(
-                            "text-[10px] font-extrabold uppercase tracking-[0.2em] mb-3 block",
-                            isActive ? "text-white/70" : "text-[#FF4F6E]"
-                          )}>
-                            {formatTime(s.start)}
-                          </span>
-                          <p className={cn(
-                            "text-base leading-relaxed",
-                            isActive ? "font-extrabold" : "font-bold"
-                          )}>
-                            {s.text}
-                          </p>
-                          {isActive && !reducedMotion && (
-                            <div className="absolute top-8 right-8 animate-ping w-3 h-3 bg-white rounded-full" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </>
-                ) : (
-                  <div className="space-y-4">
-                    {isLoadingModuleLessons && renderPanelState('Đang tải danh sách bài học...')}
-                    {!isLoadingModuleLessons && moduleLessons.length === 0 && renderPanelState('Chưa có video trong chương này.')}
-                    {!isLoadingModuleLessons && moduleLessons.map((lesson, idx) => (
-                      <div
-                        key={lesson.id}
-                        onClick={() => {
-                          router.push(`/student/videos/${lesson.id}`);
-                        }}
-                        className={cn(
-                          "flex items-center gap-4 p-4 rounded-3xl cursor-pointer transition-all border-2",
-                          videoId === lesson.id ? "border-[#FF4F6E] bg-white shadow-lg" : "border-transparent hover:bg-slate-50"
-                        )}
-                      >
-                        <div className="relative w-24 h-14 rounded-xl overflow-hidden shrink-0 shadow-sm">
-                          <Image src={lesson.thumb} alt={lesson.title} fill className="object-cover" unoptimized={true} />
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Play size={16} className="text-white" fill="currentColor" />
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className={cn("text-xs font-black leading-tight", videoId === lesson.id ? "text-slate-900" : "text-slate-500")}>
-                            {idx + 1}. {lesson.title}
-                          </h4>
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                            <Clock size={10} />
-                            {lesson.duration}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="p-8 bg-slate-50 border-t border-slate-100 text-center">
-                <div className="inline-flex items-center gap-3 px-6 py-2 bg-white rounded-full border border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] shadow-sm">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Đồng bộ trực tiếp: {language.toUpperCase()}
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
       </div>
+
     </div>
   );
 }

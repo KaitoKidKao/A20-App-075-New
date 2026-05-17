@@ -1,0 +1,11 @@
+Sorted Titles:
+1. #1 Django tutorials ｜ What is Django？ ｜ Python Web Framework.mp4
+2. #2 Django tutorials ｜ Setup.mp4
+3. #3 Django tutorials ｜ First App in Django - part 1.mp4
+4. #4 Django tutorials ｜ First App Django - part 2.mp4
+5. #5 Django tutorials ｜ Django Template Language ｜ DTL.mp4
+6. #6 Django tutorials ｜ Django Template Language - part 2.mp4
+7. #7 Django tutorials ｜ Addition of Two Numbers in Django.mp4
+8. #8 Django tutorials ｜ GET vs POST ｜ HTTP Methods.mp4
+9. #9 Django tutorials ｜ Model View Template in Django ｜ MVT.mp4
+10. #10 Django tutorials ｜ Static Files - 1.mp4

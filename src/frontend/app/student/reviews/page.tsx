@@ -27,7 +27,7 @@ export default function StudentReviewsPage() {
     <div className="min-h-screen bg-bg-main">
       <div className="mx-auto max-w-6xl space-y-6 px-6 py-10 md:px-10">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Đánh giá của tôi</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900 md:text-3xl">Đánh giá của tôi</h1>
           <p className="mt-2 text-sm font-semibold text-slate-600">Danh sách đánh giá bạn đã gửi cho các khóa học.</p>
         </div>
 
@@ -43,7 +43,7 @@ export default function StudentReviewsPage() {
             {items.map((item) => (
               <div key={item.id} className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
-                  <Link href={`/student/courses/${item.course_id}`} className="text-sm font-black text-slate-900 hover:text-[#FF4F6E]">
+                  <Link href={`/student/courses/${item.course_id}`} className="text-sm font-extrabold text-slate-900 hover:text-[#FF4F6E]">
                     {item.course_title}
                   </Link>
                   <span className="text-xs font-bold text-slate-400">{new Date(item.updated_at).toLocaleString('vi-VN')}</span>
