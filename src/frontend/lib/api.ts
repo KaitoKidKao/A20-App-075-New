@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface AuthUser {
   name: string;
@@ -612,6 +612,18 @@ export const api = {
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
         throw new Error(error.detail || "Failed to generate slides.");
+      }
+      return res.json();
+    },
+
+    async generateMindmap(videoId: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/generate-mindmap`, {
+        method: "POST",
+        headers: buildHeaders(),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to generate mindmap.");
       }
       return res.json();
     },

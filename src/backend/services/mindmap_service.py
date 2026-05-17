@@ -79,18 +79,27 @@ class MindmapService:
 
         prompt = f"""
         Bạn là một chuyên gia tóm tắt kiến thức dưới dạng sơ đồ tư duy (Mindmap). 
-        Dựa trên nội dung bài giảng dưới đây, hãy trích xuất một cấu trúc cây (Hierarchical JSON) phản ánh logic bài học.
+        Dựa trên nội dung bài giảng dưới đây, hãy trích xuất một cấu trúc cây phản ánh logic bài học.
 
         Yêu cầu:
-        1. Node gốc (Root) là tiêu đề bài giảng hoặc chủ đề chính.
-        2. Các node con (Children) là các ý chính, khái niệm quan trọng hoặc các phần của bài giảng.
-        3. Phân cấp tối đa 3-4 tầng để đảm bảo tính trực quan.
+        1. Node gốc (topic) là tiêu đề bài giảng hoặc chủ đề chính.
+        2. Các node con (branches) là các ý chính hoặc khái niệm quan trọng.
+        3. Mỗi nhánh (branch) chứa một mảng các điểm (points) đi sâu vào chi tiết. Mỗi point bao gồm nội dung tóm tắt (text) và mốc thời gian xuất hiện (timestamp, định dạng MM:SS nếu có thể trích xuất, hoặc null nếu không rõ).
         4. Trả về DUY NHẤT một đối tượng JSON theo cấu trúc:
            {{
-             "name": "Tên node",
-             "children": [ {{ "name": "...", "children": [...] }}, ... ]
+             "topic": "Tên chủ đề chính",
+             "branches": [
+               {{
+                 "name": "Tên nhánh",
+                 "points": [
+                   {{ "text": "Nội dung chi tiết 1", "timestamp": "01:23" }},
+                   {{ "text": "Nội dung chi tiết 2", "timestamp": "02:45" }}
+                 ]
+               }}
+             ]
            }}
         5. TẤT CẢ NỘI DUNG PHẢI BẰNG TIẾNG VIỆT.
+
 
         Nội dung bài giảng:
         {truncated_text}
