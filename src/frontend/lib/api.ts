@@ -465,23 +465,32 @@ export const api = {
       }
       const data = await res.json();
       let fullName = "";
+      let email = credentials.email;
+      let role = data.role || "student";
       try {
-        const meRes = await apiFetch("/api/auth/me", { headers: buildHeaders() });
+        const meRes = await apiFetch("/api/auth/me", {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${data.access_token}`,
+          },
+        });
         if (meRes.ok) {
           const me = (await meRes.json()) as SessionUser;
           fullName = (me.full_name || "").trim();
+          email = me.email || email;
+          role = me.role || role;
         }
       } catch {
         // ignore and fallback to email prefix
       }
 
-      const fallbackName = credentials.email.split("@")[0] || "User";
+      const fallbackName = email.split("@")[0] || "User";
       return {
         ...data,
         user: {
           name: fullName || fallbackName,
-          email: credentials.email,
-          role: data.role || "student",
+          email,
+          role,
         },
       };
     },
