@@ -670,9 +670,8 @@ async def get_questions(
 ):
     check_video_access(video_id, current_user, session)
     ai_analysis = _get_ai_analysis(video_id, session)
-    if "questions" not in ai_analysis:
-        return {"video_id": video_id, "questions": []}
-    return {"video_id": video_id, "questions": ai_analysis["questions"]}
+    questions = ai_analysis.get("questions") or ai_analysis.get("quizzes", [])
+    return {"video_id": video_id, "questions": questions}
 
 
 @router.get("/{video_id}/briefing")
@@ -695,8 +694,8 @@ async def get_flashcards(
     session: Session = Depends(get_session),
 ):
     check_video_access(video_id, current_user, session)
-    statement = select(Flashcard).where(Flashcard.lesson_id == _parse_lesson_id(video_id))
-    return {"video_id": video_id, "flashcards": session.exec(statement).all()}
+    ai_analysis = _get_ai_analysis(video_id, session)
+    return {"video_id": video_id, "flashcards": ai_analysis.get("flashcards", [])}
 
 
 @router.get("/{video_id}/viz-data")
