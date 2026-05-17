@@ -148,6 +148,21 @@ def _get_content_metadata(video_id: str, session: Session) -> ContentMetadata | 
     ).first()
 
 
+def _presign_cover_url(cover_image_url: str | None) -> str | None:
+    cover = (cover_image_url or "").strip()
+    if not cover:
+        return None
+
+    normalized = cover if cover.startswith("/") else f"/{cover}"
+    if normalized.startswith("/uploads/covers/"):
+        s3_key = normalized.lstrip("/")
+        if s3_object_exists(s3_key):
+            presigned = generate_presigned_url(s3_key, expires_in=7200)
+            if presigned:
+                return presigned
+    return cover
+
+
 def _ensure_handsign_editor(video_id: str, current_user: User, session: Session) -> Lesson:
     lesson = check_video_access(video_id, current_user, session)
     role_name = (current_user.role.name if current_user.role else "student").lower()
@@ -771,7 +786,7 @@ async def get_viz_data(
     check_video_access(video_id, current_user, session)
     ai_analysis = _get_ai_analysis(video_id, session)
     visual_data = ai_analysis.get("visual_data", {})
-    cover_image_url = ai_analysis.get("cover_image_url")
+    cover_image_url = _presign_cover_url(ai_analysis.get("cover_image_url"))
 
     # Read notebook.json from S3 for the correct cover and visual_data
     notebook_key = f"uploads/ai_results/{video_id}/notebook.json"
@@ -785,11 +800,9 @@ async def get_viz_data(
                 if not visual_data and notebook.get("visual_data"):
                     visual_data = notebook["visual_data"]
                 nb_cover = notebook.get("cover_image_url", "")
-                if nb_cover and nb_cover.startswith("/uploads/covers/"):
-                    cover_s3_key = nb_cover.lstrip("/")
-                    presigned = generate_presigned_url(cover_s3_key, expires_in=7200)
-                    if presigned:
-                        cover_image_url = presigned
+                presigned_cover = _presign_cover_url(nb_cover)
+                if presigned_cover:
+                    cover_image_url = presigned_cover
         except Exception:
             pass
 
