@@ -634,7 +634,7 @@ export default function VideoLessonPage() {
     setIsLoadingMetadata(true);
     setMetadataError('');
     try {
-      const [timelineRes, highlightsRes, questionsRes, briefingRes, flashcardsRes, vizDataRes] = await Promise.all([
+      const [timelineRes, highlightsRes, questionsRes, briefingRes, flashcardsRes, vizDataRes] = await Promise.allSettled([
         api.videos.getTimeline(videoId),
         api.videos.getHighlights(videoId),
         api.videos.getQuestions(videoId),
@@ -643,14 +643,15 @@ export default function VideoLessonPage() {
         api.videos.getVizData(videoId),
       ]);
 
-      setTimeline(timelineRes.timeline || []);
-      setHighlights(highlightsRes.highlights || []);
-      setQuestions(questionsRes.questions || []);
-      setBriefing(briefingRes.briefing || null);
-      setFlashcards(flashcardsRes.flashcards || []);
-      const nextVisualData = vizDataRes.visual_data || null;
-      if (nextVisualData?.infographic && vizDataRes.cover_image_url) {
-        nextVisualData.infographic.cover_image_url = vizDataRes.cover_image_url;
+      const v = <T,>(r: PromiseSettledResult<T>) => r.status === 'fulfilled' ? r.value : null;
+      setTimeline(v(timelineRes)?.timeline || []);
+      setHighlights(v(highlightsRes)?.highlights || []);
+      setQuestions(v(questionsRes)?.questions || []);
+      setBriefing(v(briefingRes)?.briefing || null);
+      setFlashcards(v(flashcardsRes)?.flashcards || []);
+      const nextVisualData = v(vizDataRes)?.visual_data || null;
+      if (nextVisualData?.infographic && v(vizDataRes)?.cover_image_url) {
+        nextVisualData.infographic.cover_image_url = v(vizDataRes)!.cover_image_url!;
       }
       setVisualData(nextVisualData);
     } catch (err) {
