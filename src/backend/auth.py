@@ -36,7 +36,11 @@ def _extract_token(request: Request) -> Optional[str]:
     if auth_header.lower().startswith("bearer "):
         return auth_header.split(" ", 1)[1].strip()
 
-    return request.cookies.get(config.AUTH_COOKIE_NAME)
+    token = request.cookies.get(config.AUTH_COOKIE_NAME)
+    if token:
+        return token
+
+    return request.query_params.get("token")
 
 
 async def get_current_user(request: Request, session: Session = Depends(get_session)):

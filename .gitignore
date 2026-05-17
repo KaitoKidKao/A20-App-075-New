@@ -1,5 +1,13 @@
 # Environment
 .env
+.env.*
+
+# Terraform — secrets must never be committed
+infra/terraform/terraform.tfvars
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.backup
 
 # Python
 __pycache__/
@@ -20,4 +28,4 @@ build/
 temp/
 data/
 .grapuco/
-
+.claude/

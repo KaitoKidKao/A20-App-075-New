@@ -81,6 +81,19 @@ async def login(
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
+    if user.email.lower() in config.ADMIN_EMAILS:
+        role_stmt = select(Role).where(Role.name == "admin")
+        admin_role = session.exec(role_stmt).first()
+        if not admin_role:
+            admin_role = Role(name="admin")
+            session.add(admin_role)
+            session.flush()
+        if user.role_id != admin_role.id:
+            user.role_id = admin_role.id
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+
     access_token = create_access_token(data={"sub": user.email})
     if response is not None:
         response.set_cookie(
