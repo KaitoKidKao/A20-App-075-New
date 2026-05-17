@@ -154,7 +154,11 @@ async def list_lessons(
     session: Session = Depends(get_session),
 ):
     _ensure_module_view_access(module_id, current_user, session)
-    return session.exec(select(Lesson).where(Lesson.module_id == module_id).order_by(Lesson.sort_order)).all()
+    lessons = session.exec(select(Lesson).where(Lesson.module_id == module_id).order_by(Lesson.sort_order)).all()
+    import re
+    def natural_sort_key(title):
+        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', title or '')]
+    return sorted(lessons, key=lambda l: (l.sort_order or 0, natural_sort_key(l.title)))
 
 @router.get("/lessons/{lesson_id}", response_model=Lesson)
 async def get_lesson(

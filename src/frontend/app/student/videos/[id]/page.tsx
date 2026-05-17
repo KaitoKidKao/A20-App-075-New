@@ -400,7 +400,11 @@ export default function VideoLessonPage() {
       try {
         const currentLesson = await api.courses.getLesson(videoId);
         const lessons = await api.courses.listLessons(currentLesson.module_id);
-        const sortedByTitle = [...lessons].sort((a, b) => naturalTitleCompare(a.title, b.title));
+        const sortedByTitle = [...lessons].sort((a, b) => {
+          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+          if (byOrder !== 0) return byOrder;
+          return naturalTitleCompare(a.title, b.title);
+        });
         const hydrated = await Promise.all(
           sortedByTitle.map(async (lesson) => {
             const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? formatDuration(lesson.duration_minutes * 60) : '--:--';
@@ -831,6 +835,9 @@ export default function VideoLessonPage() {
   const handleVideoEnded = () => {
     setIsPlaying(false);
     saveProgress(duration, "completed");
+    if (hasNext) {
+      handleNextVideo();
+    }
   };
 
 
@@ -1018,8 +1025,26 @@ export default function VideoLessonPage() {
 
                 <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-6">
+                    <button
+                      onClick={handlePrevVideo}
+                      disabled={!hasPrev}
+                      className="text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:pointer-events-none hover:scale-110 transition-transform"
+                      aria-label="Bài trước"
+                    >
+                      <SkipBack size={20} fill="currentColor" />
+                    </button>
+
                     <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform" aria-label={isPlaying ? 'Tạm dừng video' : 'Phát video'}>
                       {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+                    </button>
+
+                    <button
+                      onClick={handleNextVideo}
+                      disabled={!hasNext}
+                      className="text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:pointer-events-none hover:scale-110 transition-transform"
+                      aria-label="Bài tiếp theo"
+                    >
+                      <SkipForward size={20} fill="currentColor" />
                     </button>
 
                     <div className="flex items-center gap-2">

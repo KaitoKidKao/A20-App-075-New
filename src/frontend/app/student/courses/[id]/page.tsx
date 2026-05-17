@@ -27,6 +27,15 @@ function formatDuration(minutes: number): string {
   return `${h}h ${m}m`;
 }
 
+function naturalLessonCompare(a: any, b: any): number {
+  const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  if (byOrder !== 0) return byOrder;
+  return (a.title || '').localeCompare((b.title || ''), 'vi', {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
 export default function CourseDetailPage() {
   const params = useParams();
   const courseId = params.id as string;
@@ -197,7 +206,7 @@ export default function CourseDetailPage() {
                     </button>
                     {activeAccordion === module.id && (
                       <div id={`module-panel-${module.id}`} className="divide-y divide-slate-100 bg-white">
-                        {module.lessons.map((lesson, idx) => (
+                        {[...module.lessons].sort(naturalLessonCompare).map((lesson, idx) => (
                           <div key={lesson.id} className="p-4 flex items-center justify-between group">
                             <div className="flex items-center gap-3">
                               <MonitorPlay size={16} className="text-slate-400" />
