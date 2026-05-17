@@ -78,11 +78,12 @@ async def stream_video(
 ):
     check_video_access(video_id, current_user, session)
     for ext in (".mp4", ".mov", ".avi", ".mkv"):
-        s3_key = f"uploads/{video_id}{ext}"
-        if s3_object_exists(s3_key):
-            url = generate_presigned_url(s3_key, expires_in=7200)
-            if url:
-                return RedirectResponse(url=url, status_code=302)
+        for prefix in (f"uploads/{video_id}", f"uploads/videos/{video_id}"):
+            s3_key = f"{prefix}{ext}"
+            if s3_object_exists(s3_key):
+                url = generate_presigned_url(s3_key, expires_in=7200)
+                if url:
+                    return RedirectResponse(url=url, status_code=302)
     for ext in (".mp4", ".mov", ".avi", ".mkv"):
         candidate = VideoService.UPLOAD_DIR / f"{video_id}{ext}"
         if candidate.exists():
