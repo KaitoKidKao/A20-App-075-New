@@ -14,6 +14,63 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { api, type MyVideo } from '@/lib/api';
 
+function getVideoDisplayState(video: MyVideo) {
+  const status = (video.status || '').toLowerCase();
+  const completion = (video.completion_status || '').toLowerCase();
+
+  if (status === 'completed') {
+    return {
+      label: 'Hoàn thành',
+      percent: 100,
+      badgeClass: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+      barClass: 'bg-emerald-500',
+    };
+  }
+
+  if (status.includes('failed')) {
+    return {
+      label: 'Xử lý lỗi',
+      percent: Math.max(0, Math.min(100, video.progress_percent || 0)),
+      badgeClass: 'bg-red-50 text-red-600 border border-red-100',
+      barClass: 'bg-red-500',
+    };
+  }
+
+  if (status === 'queued' || status === 'pending_upload') {
+    return {
+      label: 'Đang chờ xử lý',
+      percent: Math.max(5, Math.min(100, video.progress_percent || 5)),
+      badgeClass: 'bg-amber-50 text-amber-600 border border-amber-100',
+      barClass: 'bg-amber-500',
+    };
+  }
+
+  if (status && status !== 'completed') {
+    return {
+      label: 'AI đang xử lý',
+      percent: Math.max(10, Math.min(95, video.progress_percent || 10)),
+      badgeClass: 'bg-rose-50 text-[#FF4F6E] border border-rose-100',
+      barClass: 'bg-[#FF4F6E]',
+    };
+  }
+
+  if (completion === 'completed') {
+    return {
+      label: 'Hoàn thành',
+      percent: 100,
+      badgeClass: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+      barClass: 'bg-emerald-500',
+    };
+  }
+
+  return {
+    label: 'Chưa học',
+    percent: Math.max(0, Math.min(100, video.progress_percent || 0)),
+    badgeClass: 'bg-slate-100 text-slate-500 border border-slate-100',
+    barClass: 'bg-slate-300',
+  };
+}
+
 export default function UploadVideo() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -288,25 +345,34 @@ export default function UploadVideo() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {myVideos.map((video) => (
-                <Link
-                  key={video.id}
-                  href={video.status === 'completed' ? `/student/videos/${video.id}` : `/student/videos/${video.id}/processing`}
-                  className="rounded-2xl border border-slate-100 p-5 transition-colors hover:border-[#FF4F6E]/30 hover:bg-rose-50/40"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-extrabold text-slate-900">{video.title}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-400">
-                        {video.completion_status} • {video.progress_percent}%
-                      </p>
+              {myVideos.map((video) => {
+                const display = getVideoDisplayState(video);
+                return (
+                  <Link
+                    key={video.id}
+                    href={video.status === 'completed' ? `/student/videos/${video.id}` : `/student/videos/${video.id}/processing`}
+                    className="rounded-2xl border border-slate-100 p-5 transition-colors hover:border-[#FF4F6E]/30 hover:bg-rose-50/40"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-extrabold text-slate-900">{video.title}</p>
+                        <p className="mt-1 text-xs font-bold text-slate-400">
+                          {display.label} • {display.percent}%
+                        </p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest ${display.badgeClass}`}>
+                        {display.label}
+                      </span>
                     </div>
-                    <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
-                      {video.status}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${display.barClass}`}
+                        style={{ width: `${display.percent}%` }}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </section>

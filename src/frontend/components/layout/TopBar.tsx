@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Bell, User, Moon, Sun, LogOut } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
+import { Bell, LogOut, Moon, Sun, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAppStore } from '@/store/useAppStore';
 
 export function TopBar() {
   const { theme, setTheme, user, logout } = useAppStore();
@@ -47,34 +47,7 @@ export function TopBar() {
 
   return (
     <header className="fixed left-0 right-0 top-0 z-50 border-b border-[var(--app-border-subtle)] bg-[var(--app-surface)] shadow-sm">
-      <div className="relative z-50 grid h-20 grid-cols-3 items-center border-b border-[var(--app-border-subtle)] bg-[var(--app-surface)] px-8">
-        <div />
-
-        <div className="hidden items-center justify-center lg:flex">
-          <div className="relative w-full max-w-md">
-            <input
-              type="text"
-              placeholder="Tìm kiếm khóa học..."
-              suppressHydrationWarning
-              className="w-full rounded-xl border border-slate-100 bg-slate-50 py-2 pl-10 pr-4 text-sm font-medium transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-          </div>
-        </div>
-
+      <div className="relative z-50 flex h-20 items-center justify-end border-b border-[var(--app-border-subtle)] bg-[var(--app-surface)] px-8">
         <div className="flex items-center justify-end gap-6">
           <div className="flex items-center gap-2">
             <button
