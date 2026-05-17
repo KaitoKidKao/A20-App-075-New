@@ -913,6 +913,36 @@ async def get_slide_history(
         for r in records
     ]
 
+
+@router.get("/slides/all-history")
+async def get_all_slide_history(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Lay tat ca slide da tao cua user, kem ten video."""
+    stmt = (
+        select(GeneratedSlide)
+        .where(GeneratedSlide.user_id == current_user.id)
+        .order_by(GeneratedSlide.created_at.desc())
+    )
+    records = session.exec(stmt).all()
+
+    results = []
+    for r in records:
+        # Lay ten video tu Lesson
+        lesson = session.get(Lesson, r.video_id)
+        results.append({
+            "id": str(r.id),
+            "video_id": r.video_id,
+            "video_title": lesson.title if lesson else r.video_id,
+            "filename": r.filename,
+            "template_id": r.template_id,
+            "num_slides": r.num_slides,
+            "download_url": f"/api/videos/slides/download/{r.filename}",
+            "created_at": r.created_at.isoformat(),
+        })
+    return results
+
 @router.get("/{video_id}/stream")
 async def stream_video(
     video_id: str,

@@ -12,6 +12,7 @@ import {
   FileText,
   LogOut,
   History,
+  Presentation,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +65,7 @@ export function AppSidebar() {
     { icon: BookOpen, label: 'Khóa học đã đăng ký', href: '/student/documents' },
     { icon: MessageSquare, label: 'Đánh giá', href: '/student/reviews' },
     { icon: FileText, label: 'Lượt làm bài quiz', href: '/student/quiz-attempts' },
+    { icon: Presentation, label: 'Slide đã tạo', href: '/student/slides' },
   ];
 
   const adminLearningItems: SidebarItem[] = [

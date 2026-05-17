@@ -631,6 +631,23 @@ export const api = {
       }[]>;
     },
 
+    async getAllSlideHistory() {
+      const res = await apiFetch(`/api/videos/slides/all-history`, {
+        headers: buildHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch all slide history.");
+      return res.json() as Promise<{
+        id: string;
+        filename: string;
+        template_id: string;
+        num_slides: number;
+        download_url: string;
+        created_at: string;
+        video_id: string;
+        video_title: string;
+      }[]>;
+    },
+
     async generateMindmap(videoId: string) {
       const res = await apiFetch(`/api/videos/${videoId}/generate-mindmap`, {
         method: "POST",
