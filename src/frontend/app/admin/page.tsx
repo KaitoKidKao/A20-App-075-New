@@ -163,6 +163,9 @@ export default function AdminDashboardPage() {
   // Course Edit Modal State
   const [isEditCourseModalOpen, setIsEditCourseModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{ id: string, title: string, description: string, is_published: boolean } | null>(null);
+  // Module Rename Modal State
+  const [isRenameModuleModalOpen, setIsRenameModuleModalOpen] = useState(false);
+  const [renamingModuleData, setRenamingModuleData] = useState<{ id: string; currentTitle: string; newTitle: string } | null>(null);
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -410,15 +413,37 @@ export default function AdminDashboardPage() {
       return;
     }
     const currentTitle = displayText(module.title);
-    const nextTitle = window.prompt('Nhập tên chương mới:', currentTitle)?.trim();
-    if (!nextTitle || nextTitle === currentTitle) return;
+    setRenamingModuleData({
+      id: selectedModuleId,
+      currentTitle: currentTitle,
+      newTitle: currentTitle
+    });
+    setIsRenameModuleModalOpen(true);
+  };
+
+  const handleSaveModuleRename = async () => {
+    if (!renamingModuleData) return;
+    const { id, currentTitle, newTitle } = renamingModuleData;
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle) {
+      setPublishMessage('Tên chương không được để trống.');
+      return;
+    }
+    if (trimmedTitle === currentTitle) {
+      setIsRenameModuleModalOpen(false);
+      return;
+    }
+    const module = (selectedCourse?.modules || []).find((item) => item.id === id);
+    if (!module) return;
+
     try {
-      await api.courses.updateModule(selectedModuleId, {
-        title: nextTitle,
+      await api.courses.updateModule(id, {
+        title: trimmedTitle,
         description: module.description || undefined,
         sort_order: module.sort_order,
       });
       setPublishMessage('Đã cập nhật tên chương.');
+      setIsRenameModuleModalOpen(false);
       await loadAdminData(currentRole);
     } catch {
       setPublishMessage('Lỗi khi cập nhật tên chương.');
@@ -1282,6 +1307,49 @@ export default function AdminDashboardPage() {
                 className="flex-1 py-4 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all"
               >
                 {updatingCourseId === editingCourse.id ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Module Modal */}
+      {isRenameModuleModalOpen && renamingModuleData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="bg-slate-900 p-8 text-white">
+              <h3 className="text-2xl font-extrabold">Đổi tên Chương</h3>
+              <p className="text-sm font-bold text-white/50">Cập nhật tên chương bài giảng</p>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Tên chương mới</label>
+                <input
+                  value={renamingModuleData.newTitle}
+                  onChange={(e) => setRenamingModuleData({ ...renamingModuleData, newTitle: e.target.value })}
+                  placeholder="Nhập tên chương bài giảng..."
+                  className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#FF4F6E]/40 focus:bg-white transition-all"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveModuleRename();
+                    if (e.key === 'Escape') setIsRenameModuleModalOpen(false);
+                  }}
+                />
+              </div>
+            </div>
+            <div className="p-8 pt-0 flex gap-4">
+              <button
+                onClick={() => setIsRenameModuleModalOpen(false)}
+                className="flex-1 py-4 rounded-2xl border border-slate-100 font-extrabold text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSaveModuleRename}
+                disabled={!renamingModuleData.newTitle.trim()}
+                className="flex-1 py-4 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all disabled:opacity-50"
+              >
+                Lưu thay đổi
               </button>
             </div>
           </div>
