@@ -4,14 +4,14 @@ Tài liệu này mô tả chi tiết thiết kế hệ thống, luồng dữ li�
 
 ---
 
-## 🔗 Quick Links
+##  Quick Links
 *   **Trang chủ Dự án:** [README.md](../README.md)
 *   **Báo cáo Đánh giá (Evaluation):** [docs/evaluation-report.md](evaluation-report.md)
 *   **Nhật ký Phát triển (Worklog):** [docs/worklog.md](worklog.md)
 
 ---
 
-## 1. 📊 Sơ đồ kiến trúc tổng quan
+## 1.  Sơ đồ kiến trúc tổng quan
 
 Kiến trúc hệ thống của Dreams được thiết kế dưới dạng phân lớp rõ ràng (Multi-tier Architecture) nhằm đảm bảo hiệu năng và khả năng bảo mật cao nhất:
 
