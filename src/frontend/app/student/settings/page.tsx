@@ -164,8 +164,8 @@ function SettingsPageContent() {
                            <stat.icon size={24} />
                         </div>
                         <div>
-                           <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                           <p className="text-2xl font-black text-slate-900">{stat.value}</p>
+                           <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+                           <p className="text-2xl font-extrabold text-slate-900">{stat.value}</p>
                         </div>
                      </div>
                    ))}
@@ -183,11 +183,11 @@ function SettingsPageContent() {
                                  <Award size={28} />
                               </div>
                               <div>
-                                 <h4 className="font-black text-slate-900">{cert.course_title}</h4>
+                                 <h4 className="font-extrabold text-slate-900">{cert.course_title}</h4>
                                  <p className="text-xs font-bold text-slate-400">ID: {cert.cert_id} • Cấp ngày: {new Date(cert.issue_date).toLocaleDateString('vi-VN')}</p>
                               </div>
                            </div>
-                           <button className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all">
+                           <button className="px-6 py-3 bg-white text-slate-900 border border-slate-200 rounded-xl font-extrabold text-xs uppercase tracking-widest hover:bg-primary hover:text-white hover:border-primary transition-all">
                               Tải xuống
                            </button>
                         </div>
@@ -217,7 +217,7 @@ function SettingsPageContent() {
 
                 <div className="grid md:grid-cols-2 gap-y-8 gap-x-10">
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tên hiển thị</p>
+                    <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">Tên hiển thị</p>
                     {isEditingProfile ? (
                       <input 
                         value={editedName}
@@ -231,13 +231,13 @@ function SettingsPageContent() {
                     )}
                   </div>
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Địa chỉ email</p>
+                    <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">Địa chỉ email</p>
                     <p className="text-[15px] font-bold text-slate-700">{user?.email}</p>
                   </div>
                 </div>
 
                 <div className="mt-10 pt-8 border-t border-slate-100">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Giới thiệu</p>
+                  <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Giới thiệu</p>
                   {isEditingProfile ? (
                     <textarea 
                       value={editedBio}
@@ -254,7 +254,7 @@ function SettingsPageContent() {
                 </div>
                 
                 <div className="mt-8">
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Mục tiêu học tập</p>
+                  <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Mục tiêu học tập</p>
                   {isEditingProfile ? (
                     <textarea 
                       value={editedGoals}
@@ -274,14 +274,14 @@ function SettingsPageContent() {
                   <div className="mt-10 pt-8 border-t border-slate-100 flex justify-end gap-3">
                     <button 
                       onClick={() => setIsEditingProfile(false)}
-                      className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                      className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl text-xs font-extrabold uppercase tracking-widest hover:bg-slate-200 transition-all"
                     >
                       Hủy
                     </button>
                     <button 
                       onClick={handleSaveProfile}
                       disabled={isSaving}
-                      className="px-8 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-50"
+                      className="px-8 py-3 bg-primary text-white rounded-xl text-xs font-extrabold uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-50"
                     >
                       {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
                     </button>

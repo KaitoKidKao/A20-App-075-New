@@ -34,7 +34,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Minus,
-  Plus
+  Plus,
+  SkipBack,
+  SkipForward
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
@@ -72,7 +74,7 @@ const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { nod
           {node.timestamp && (
             <button 
               onClick={(e) => { e.stopPropagation(); seekTo(node.timestamp); }}
-              className="text-[10px] text-[#FF4F6E] font-black w-fit bg-[#FF4F6E]/10 px-2 py-0.5 rounded-full hover:bg-[#FF4F6E]/20 transition-colors"
+              className="text-[10px] text-[#FF4F6E] font-extrabold w-fit bg-[#FF4F6E]/10 px-2 py-0.5 rounded-full hover:bg-[#FF4F6E]/20 transition-colors"
             >
               {node.timestamp}
             </button>
@@ -234,6 +236,13 @@ const captionPositionWithControlsClass = {
   high: 'top-16',
 };
 
+function naturalTitleCompare(aTitle?: string, bTitle?: string): number {
+  return (aTitle || '').localeCompare((bTitle || ''), 'vi', {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
 export default function VideoLessonPage() {
   const params = useParams();
   const router = useRouter();
@@ -317,6 +326,22 @@ export default function VideoLessonPage() {
   const [moduleLessons, setModuleLessons] = useState<ModuleLessonItem[]>([]);
   const [isLoadingModuleLessons, setIsLoadingModuleLessons] = useState(false);
 
+  const currentIndex = useMemo(() => moduleLessons.findIndex((l) => l.id === videoId), [moduleLessons, videoId]);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < moduleLessons.length - 1;
+
+  const handlePrevVideo = useCallback(() => {
+    if (hasPrev) {
+      router.push(`/student/videos/${moduleLessons[currentIndex - 1].id}`);
+    }
+  }, [hasPrev, currentIndex, moduleLessons, router]);
+
+  const handleNextVideo = useCallback(() => {
+    if (hasNext) {
+      router.push(`/student/videos/${moduleLessons[currentIndex + 1].id}`);
+    }
+  }, [hasNext, currentIndex, moduleLessons, router]);
+
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/videos/${videoId}/stream`;
   const normalizedAvatarStatus = (avatarStatus || 'not_generated').toLowerCase();
@@ -330,9 +355,14 @@ export default function VideoLessonPage() {
       : 'bg-rose-50 text-rose-700 border-rose-200';
 
   const buildLessonPreview = useCallback(async (lessonId: string, initialDuration?: string): Promise<{ duration: string; thumb: string }> => {
-    const fallbackThumb = `https://picsum.photos/seed/${lessonId}/200/120`;
+    const thumbUrl = `${backendBaseUrl}/api/videos/${lessonId}/thumbnail`;
+
     if (typeof window === 'undefined') {
-      return { duration: initialDuration || '--:--', thumb: fallbackThumb };
+      return { duration: initialDuration || '--:--', thumb: thumbUrl };
+    }
+
+    if (initialDuration && initialDuration !== '--:--') {
+      return { duration: initialDuration, thumb: thumbUrl };
     }
 
     return await new Promise((resolve) => {
@@ -340,72 +370,38 @@ export default function VideoLessonPage() {
       video.preload = 'metadata';
       video.muted = true;
       video.playsInline = true;
-      video.src = `/api/video/${lessonId}`;
+      video.src = `${backendBaseUrl}/api/videos/${lessonId}/stream`;
 
       let resolved = false;
       const timeout = window.setTimeout(() => {
         cleanup();
-        resolve({ duration: initialDuration || '--:--', thumb: fallbackThumb });
-      }, 12000);
+        resolve({ duration: '--:--', thumb: thumbUrl });
+      }, 6000);
 
       const cleanup = () => {
         if (resolved) return;
         resolved = true;
         window.clearTimeout(timeout);
         video.removeEventListener('loadedmetadata', onLoadedMetadata);
-        video.removeEventListener('seeked', onSeeked);
         video.removeEventListener('error', onError);
         video.src = '';
       };
 
       const onError = () => {
         cleanup();
-        resolve({ duration: initialDuration || '--:--', thumb: fallbackThumb });
-      };
-
-      const onSeeked = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = 200;
-          canvas.height = 120;
-          const ctx = canvas.getContext('2d');
-
-          const videoDurationFormatted = formatDuration(video.duration);
-          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
-
-          if (!ctx) {
-            cleanup();
-            resolve({ duration: finalDuration, thumb: fallbackThumb });
-            return;
-          }
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const thumb = canvas.toDataURL('image/jpeg', 0.75);
-          cleanup();
-          resolve({ duration: finalDuration, thumb });
-        } catch {
-          cleanup();
-          const videoDurationFormatted = formatDuration(video.duration);
-          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
-          resolve({ duration: finalDuration, thumb: fallbackThumb });
-        }
+        resolve({ duration: '--:--', thumb: thumbUrl });
       };
 
       const onLoadedMetadata = () => {
-        try {
-          video.currentTime = 0.05;
-        } catch {
-          cleanup();
-          const videoDurationFormatted = formatDuration(video.duration);
-          const finalDuration = videoDurationFormatted !== '--:--' ? videoDurationFormatted : (initialDuration || '--:--');
-          resolve({ duration: finalDuration, thumb: fallbackThumb });
-        }
+        cleanup();
+        const finalDuration = formatDuration(video.duration);
+        resolve({ duration: finalDuration, thumb: thumbUrl });
       };
 
       video.addEventListener('loadedmetadata', onLoadedMetadata);
-      video.addEventListener('seeked', onSeeked);
       video.addEventListener('error', onError);
     });
-  }, []);
+  }, [backendBaseUrl]);
 
   useEffect(() => {
     const fetchTranscript = async () => {
@@ -484,7 +480,11 @@ export default function VideoLessonPage() {
       try {
         const currentLesson = await api.courses.getLesson(videoId);
         const lessons = await api.courses.listLessons(currentLesson.module_id);
-        const sortedByTitle = [...lessons].sort((a, b) => a.title.localeCompare(b.title, 'vi', { sensitivity: 'base' }));
+        const sortedByTitle = [...lessons].sort((a, b) => {
+          const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
+          if (byOrder !== 0) return byOrder;
+          return naturalTitleCompare(a.title, b.title);
+        });
         const hydrated = await Promise.all(
           sortedByTitle.map(async (lesson) => {
             const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? formatDuration(lesson.duration_minutes * 60) : '--:--';
@@ -531,7 +531,7 @@ export default function VideoLessonPage() {
   useEffect(() => {
     if (moduleLessons.length === 0) return;
     const unresolved = moduleLessons.filter(
-      (item) => item.duration === '--:--' || item.thumb.includes('picsum.photos/seed/')
+      (item) => item.duration === '--:--'
     );
     if (unresolved.length === 0) return;
 
@@ -558,7 +558,7 @@ export default function VideoLessonPage() {
       );
 
       const stillUnresolved = latest.some(
-        (item) => item.duration === '--:--' || item.thumb.includes('picsum.photos/seed/')
+        (item) => item.duration === '--:--'
       );
       if (!stillUnresolved || attempts >= 6) {
         window.clearInterval(timer);
@@ -758,11 +758,21 @@ export default function VideoLessonPage() {
       setQuestions(questionsRes.questions || []);
       setBriefing(briefingRes.briefing || null);
       setFlashcards(flashcardsRes.flashcards || []);
-      const nextVisualData = vizDataRes.visual_data || null;
-      if (nextVisualData?.infographic && vizDataRes.cover_image_url) {
-        nextVisualData.infographic.cover_image_url = vizDataRes.cover_image_url;
+      const rawVisualData = vizDataRes.visual_data || null;
+      let normalizedVisualData: VisualData | null = null;
+      if (rawVisualData && typeof rawVisualData === 'object') {
+        const hasInfographic = Object.prototype.hasOwnProperty.call(rawVisualData, 'infographic');
+        if (hasInfographic) {
+          normalizedVisualData = rawVisualData as VisualData;
+        } else {
+          // Một số payload lưu trực tiếp infographic ở root visual_data.
+          normalizedVisualData = { infographic: rawVisualData as InfographicData };
+        }
       }
-      setVisualData(nextVisualData);
+      if (normalizedVisualData?.infographic && vizDataRes.cover_image_url) {
+        normalizedVisualData.infographic.cover_image_url = vizDataRes.cover_image_url;
+      }
+      setVisualData(normalizedVisualData);
     } catch (err) {
       console.error('Metadata fetch error:', err);
       setMetadataError('Tài nguyên học tập chưa sẵn sàng. Vui lòng tải lại sau khi xử lý hoàn tất.');
@@ -911,6 +921,9 @@ export default function VideoLessonPage() {
   const handleVideoEnded = () => {
     setIsPlaying(false);
     saveProgress(duration, "completed");
+    if (hasNext) {
+      handleNextVideo();
+    }
   };
 
 
@@ -1170,8 +1183,26 @@ export default function VideoLessonPage() {
 
                 <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-6">
+                    <button
+                      onClick={handlePrevVideo}
+                      disabled={!hasPrev}
+                      className="text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:pointer-events-none hover:scale-110 transition-transform"
+                      aria-label="Bài trước"
+                    >
+                      <SkipBack size={20} fill="currentColor" />
+                    </button>
+
                     <button onClick={togglePlay} className="text-white hover:scale-110 transition-transform" aria-label={isPlaying ? 'Tạm dừng video' : 'Phát video'}>
                       {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+                    </button>
+
+                    <button
+                      onClick={handleNextVideo}
+                      disabled={!hasNext}
+                      className="text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:pointer-events-none hover:scale-110 transition-transform"
+                      aria-label="Bài tiếp theo"
+                    >
+                      <SkipForward size={20} fill="currentColor" />
                     </button>
 
                     <div className="flex items-center gap-2">
@@ -1219,7 +1250,7 @@ export default function VideoLessonPage() {
                           setCaptionBackground(!captionBackground);
                         }}
                         className={cn(
-                          "px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                          "px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase transition-all",
                           captionBackground ? "bg-white/20 text-white shadow-sm" : "text-white/40 hover:text-white/70"
                         )}
                         title="Nền phụ đề"
@@ -1238,7 +1269,7 @@ export default function VideoLessonPage() {
                             }}
                             disabled={!isEnabled}
                             className={cn(
-                              "px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                              "px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold uppercase transition-all",
                               language === l ? "bg-[#FF4F6E] text-white shadow-lg" : "text-white/40 hover:text-white/70",
                               !isEnabled && "opacity-20 cursor-not-allowed"
                             )}
@@ -1277,7 +1308,7 @@ export default function VideoLessonPage() {
                           e.stopPropagation();
                           setShowSpeedMenu(!showSpeedMenu);
                         }}
-                        className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-black text-white/90 transition-all font-heading border border-white/5"
+                        className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-extrabold text-white/90 transition-all font-heading border border-white/5"
                         aria-label="Chọn tốc độ phát"
                       >
                         {playbackSpeed === 1 ? '1x' : `${playbackSpeed}x`}
@@ -1533,7 +1564,7 @@ export default function VideoLessonPage() {
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <h4 className={cn("text-xs font-black leading-tight", videoId === lesson.id ? "text-slate-900" : "text-slate-500")}>
+                          <h4 className={cn("text-xs font-extrabold leading-tight", videoId === lesson.id ? "text-slate-900" : "text-slate-500")}>
                             {idx + 1}. {lesson.title}
                           </h4>
                           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
@@ -1548,7 +1579,7 @@ export default function VideoLessonPage() {
               </div>
 
               <div className="p-8 bg-slate-50 border-t border-slate-100 text-center">
-                <div className="inline-flex items-center gap-3 px-6 py-2 bg-white rounded-full border border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] shadow-sm">
+                <div className="inline-flex items-center gap-3 px-6 py-2 bg-white rounded-full border border-slate-200 text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] shadow-sm">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   Đồng bộ trực tiếp: {language.toUpperCase()}
                 </div>
@@ -1618,7 +1649,7 @@ export default function VideoLessonPage() {
                         <div className="flex flex-col lg:flex-row gap-8">
                           {/* Left: Template Selection */}
                           <div className="flex-1 space-y-4">
-                            <label className="text-sm font-black text-slate-700 uppercase tracking-widest block mb-4">Chọn Mẫu Slide</label>
+                            <label className="text-sm font-extrabold text-slate-700 uppercase tracking-widest block mb-4">Chọn Mẫu Slide</label>
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                               {[...Array(10)].map((_, i) => {
                                 const id = `template_${(i + 1).toString().padStart(2, '0')}`;
@@ -1634,7 +1665,7 @@ export default function VideoLessonPage() {
                                   >
                                     <img src={`${API_BASE_URL}/api/videos/templates/${id}/thumbnail`} alt={`Template ${i + 1}`} className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-500", isSelected ? "scale-110" : "group-hover:scale-110")} />
                                     <div className={cn("absolute inset-0 bg-slate-900/40 transition-opacity flex items-center justify-center", isSelected ? "opacity-0" : "opacity-100 group-hover:opacity-50")}>
-                                      <span className="text-white font-black text-lg drop-shadow-md">{i + 1}</span>
+                                      <span className="text-white font-extrabold text-lg drop-shadow-md">{i + 1}</span>
                                     </div>
                                     {isSelected && (
                                       <div className="absolute top-2 right-2 w-6 h-6 bg-[#FF4F6E] rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in-50">
@@ -1649,7 +1680,7 @@ export default function VideoLessonPage() {
                             {/* Slide History Section */}
                             <div className="mt-8">
                               <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                <h3 className="text-sm font-extrabold text-slate-700 uppercase tracking-widest flex items-center gap-2">
                                   <Download size={16} />
                                   Slide đã tạo
                                 </h3>
@@ -1687,7 +1718,7 @@ export default function VideoLessonPage() {
                                           <Presentation size={20} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-black text-slate-800 truncate">
+                                          <p className="text-sm font-extrabold text-slate-800 truncate">
                                             Mẫu {item.template_id.replace('template_', '')} · {item.num_slides} trang
                                           </p>
                                           <p className="text-xs font-bold text-slate-400 mt-0.5">{label}</p>
@@ -1716,14 +1747,14 @@ export default function VideoLessonPage() {
 
                             <div className="space-y-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
                               <div className="flex justify-between items-center mb-2">
-                                <label className="text-xs font-black text-slate-600 uppercase tracking-widest block">Số lượng slide</label>
+                                <label className="text-xs font-extrabold text-slate-600 uppercase tracking-widest block">Số lượng slide</label>
                               </div>
                               <div className="flex items-center justify-center gap-6">
                                 <button onClick={() => setNumSlides(Math.max(10, numSlides - 1))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#FF4F6E] hover:text-white transition-colors">
                                   <Minus size={16} />
                                 </button>
                                 <div className="w-16 text-center">
-                                  <span className="text-2xl font-black text-[#FF4F6E]">{numSlides}</span>
+                                  <span className="text-2xl font-extrabold text-[#FF4F6E]">{numSlides}</span>
                                 </div>
                                 <button onClick={() => setNumSlides(Math.min(20, numSlides + 1))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#FF4F6E] hover:text-white transition-colors">
                                   <Plus size={16} />
@@ -1734,7 +1765,7 @@ export default function VideoLessonPage() {
                             <button
                               onClick={handleGenerateSlides}
                               disabled={isGeneratingSlides}
-                              className="w-full py-5 bg-[#FF4F6E] text-white rounded-2xl font-black text-sm uppercase tracking-wider shadow-xl shadow-[#FF4F6E]/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+                              className="w-full py-5 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-sm uppercase tracking-wider shadow-xl shadow-[#FF4F6E]/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
                             >
                               {isGeneratingSlides ? (
                                 <>
@@ -1922,7 +1953,7 @@ export default function VideoLessonPage() {
                                   <button
                                     onClick={handleSubmitQuiz}
                                     disabled={isSubmittingQuiz}
-                                    className="w-full md:w-auto px-10 py-4 rounded-2xl bg-[#FF4F6E] text-white text-sm font-black uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                                    className="w-full md:w-auto px-10 py-4 rounded-2xl bg-[#FF4F6E] text-white text-sm font-extrabold uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
                                   >
                                     {isSubmittingQuiz ? (
                                       <div className="flex items-center gap-2">
@@ -1968,7 +1999,7 @@ export default function VideoLessonPage() {
                                         setQuizSubmitResult(null);
                                         setQuizAnswers({});
                                       }}
-                                      className="w-full py-4 bg-white border-2 border-red-200 rounded-2xl text-red-600 text-sm font-black uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-all shadow-sm"
+                                      className="w-full py-4 bg-white border-2 border-red-200 rounded-2xl text-red-600 text-sm font-extrabold uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-all shadow-sm"
                                     >
                                       LÀM LẠI
                                     </button>

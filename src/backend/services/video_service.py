@@ -189,3 +189,49 @@ class VideoService:
         except subprocess.CalledProcessError as e:
             logger.error(f"❌ Lỗi khi tách âm thanh: {e.stderr}")
             raise Exception(f"FFmpeg error: {e.stderr}")
+
+    @classmethod
+    def extract_thumbnail(cls, video_path: Path) -> Path:
+        """
+        Extracts the first frame of the video using FFmpeg and saves it as a JPEG thumbnail.
+        Returns the path to the extracted thumbnail file.
+        """
+        cls.ensure_dirs()
+        thumbnails_dir = Path("data/uploads/thumbnails")
+        thumbnails_dir.mkdir(parents=True, exist_ok=True)
+        thumbnail_path = thumbnails_dir / f"{video_path.stem}.jpg"
+        
+        # Command to extract first frame
+        # -ss 00:00:00: seek to the beginning
+        # -i: input file
+        # -vframes 1: extract 1 frame
+        # -f image2: output format
+        # -y: overwrite output
+        command = [
+            "ffmpeg", "-y",
+            "-ss", "00:00:00",
+            "-i", str(video_path),
+            "-vframes", "1",
+            "-f", "image2",
+            str(thumbnail_path)
+        ]
+        
+        # Set LD_LIBRARY_PATH to fix potential library issues on this system
+        env = os.environ.copy()
+        env["LD_LIBRARY_PATH"] = "/usr/lib/x86_64-linux-gnu"
+        
+        try:
+            logger.info(f"🎬 Đang trích xuất ảnh thumb từ: {video_path}")
+            subprocess.run(
+                command, 
+                capture_output=True, 
+                text=True, 
+                check=True,
+                env=env
+            )
+            logger.info(f"✅ Trích xuất ảnh thumb thành công: {thumbnail_path}")
+            return thumbnail_path
+        except subprocess.CalledProcessError as e:
+            logger.error(f"❌ Lỗi khi trích xuất ảnh thumb: {e.stderr}")
+            raise Exception(f"FFmpeg error: {e.stderr}")
+

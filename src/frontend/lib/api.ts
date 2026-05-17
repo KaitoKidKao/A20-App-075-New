@@ -764,7 +764,16 @@ export const api = {
       });
       if (!res.ok) throw new Error("Failed to create module.");
       return res.json();
-    }
+    },
+    async updateModule(moduleId: string, data: { title: string; description?: string; sort_order?: number }) {
+      const res = await apiFetch(`/api/courses/modules/${moduleId}`, {
+        method: "PATCH",
+        headers: buildHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update module.");
+      return res.json();
+    },
   },
 
   student: {

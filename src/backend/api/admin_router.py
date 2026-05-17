@@ -13,6 +13,7 @@ import uuid
 from src.backend.models import (
     ContentMetadata,
     Course,
+    CourseReview,
     DeletionAudit,
     Enrollment,
     Flashcard,
@@ -37,6 +38,40 @@ from src.backend.services.settings_service import (
 from src.backend.utils.datetime_utils import utc_now
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+def _repair_text(value: str | None) -> str:
+    raw = (value or "").replace("\x00", "").strip()
+    if not raw:
+        return ""
+    # Keep valid Vietnamese text unchanged.
+    if re.search(r"[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]", raw, flags=re.IGNORECASE):
+        return raw
+    # Only attempt mojibake repair when suspicious markers exist.
+    suspicious = any(mark in raw for mark in ("Ã", "Ä", "�", "¦"))
+    if not suspicious:
+        return raw
+    try:
+        repaired = raw.encode("latin1").decode("utf-8").strip()
+    except Exception:
+        repaired = raw
+    candidate = repaired or raw
+    slug = (
+        candidate.lower()
+        .replace("đ", "d")
+    )
+    slug = re.sub(r"[^\w\s]", " ", slug)
+    slug = re.sub(r"\s+", " ", slug).strip()
+    if slug in {"bi ging", "bai giang"}:
+        return "Bài giảng"
+    if "�" in candidate or "|" in candidate:
+        lowered = candidate.lower()
+        if "gi" in lowered:
+            return "Bài giảng"
+        if "course" in lowered or "khoa" in lowered:
+            return "Khóa học"
+        return "Nội dung đang được cập nhật"
+    return candidate
 
 
 def _require_teacher_or_admin(user: User) -> None:
@@ -609,6 +644,7 @@ async def delete_course(
     if module_ids:
         session.exec(delete(Module).where(Module.id.in_(module_ids)))
 
+    session.exec(delete(CourseReview).where(CourseReview.course_id == course.id))
     session.exec(delete(Enrollment).where(Enrollment.course_id == course.id))
     _create_deletion_audit(
         session=session,

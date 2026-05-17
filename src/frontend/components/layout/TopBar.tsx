@@ -106,7 +106,7 @@ export function TopBar() {
               {notifOpen && (
                 <div className="absolute right-0 z-50 mt-2 w-[320px] rounded-2xl border border-slate-100 bg-white p-3 shadow-xl">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Thông báo</p>
+                    <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Thông báo</p>
                     <button
                       className="text-[11px] font-bold text-slate-500 hover:text-primary"
                       onClick={markAllRead}
@@ -143,7 +143,7 @@ export function TopBar() {
               <p className="text-sm font-bold text-slate-900 transition-colors group-hover:text-primary">
                 {user?.name || 'Khách'}
               </p>
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">
+              <p className="text-xs font-extrabold uppercase tracking-widest text-slate-400">
                 {user?.role || 'Khách'}
               </p>
             </div>

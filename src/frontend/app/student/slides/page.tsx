@@ -53,7 +53,7 @@ export default function StudentSlidesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 md:text-3xl tracking-tight">Slide đã tạo</h1>
+            <h1 className="text-2xl font-extrabold text-slate-900 md:text-3xl tracking-tight">Slide đã tạo</h1>
             <p className="mt-1 text-sm font-bold text-slate-400">
               Tất cả các file PPTX bạn đã tạo bằng AI, được lưu trữ để tải về bất cứ lúc nào.
             </p>
@@ -86,7 +86,7 @@ export default function StudentSlidesPage() {
             </p>
             <Link
               href="/student/library"
-              className="flex items-center gap-2 px-6 py-3 bg-[#FF4F6E] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-[#FF4F6E]/30 hover:scale-[1.03] transition-all"
+              className="flex items-center gap-2 px-6 py-3 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-sm uppercase tracking-widest shadow-lg shadow-[#FF4F6E]/30 hover:scale-[1.03] transition-all"
             >
               Vào thư viện bài học
               <ArrowRight size={16} />
@@ -104,13 +104,13 @@ export default function StudentSlidesPage() {
                   <Presentation size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-black text-slate-800 leading-tight">{group.title}</p>
+                  <p className="text-sm font-extrabold text-slate-800 leading-tight">{group.title}</p>
                   <p className="text-xs font-bold text-slate-400 mt-0.5">{group.items.length} slide đã tạo</p>
                 </div>
               </div>
               <Link
                 href={`/student/videos/${videoId}`}
-                className="flex items-center gap-1.5 text-xs font-black text-[#FF4F6E] uppercase tracking-wider hover:underline"
+                className="flex items-center gap-1.5 text-xs font-extrabold text-[#FF4F6E] uppercase tracking-wider hover:underline"
               >
                 Xem bài học
                 <ArrowRight size={14} />
@@ -125,7 +125,7 @@ export default function StudentSlidesPage() {
                 return (
                   <div key={item.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors group">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-slate-700">
+                      <p className="text-sm font-extrabold text-slate-700">
                         Mẫu {item.template_id.replace('template_', '')}
                         <span className="ml-2 text-xs font-bold text-slate-400">· {item.num_slides} trang</span>
                       </p>

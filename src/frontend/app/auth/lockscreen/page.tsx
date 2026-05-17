@@ -22,7 +22,7 @@ export default function LockscreenPage() {
   return (
     <div className="space-y-10 text-center animate-in fade-in zoom-in duration-700">
       <div className="space-y-6 flex flex-col items-center">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Chào mừng quay lại</h1>
+        <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Chào mừng quay lại</h1>
         
         {/* User Profile Avatar */}
         <div className="relative group">
@@ -68,7 +68,7 @@ export default function LockscreenPage() {
 
         <button
           disabled={isSubmitting}
-          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+          className="w-full py-4 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Đăng nhập'}
           {!isSubmitting && (

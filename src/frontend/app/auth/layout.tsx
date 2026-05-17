@@ -36,7 +36,7 @@ export default function AuthLayout({
                      <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
                   </svg>
                </div>
-               <span className="text-2xl font-black text-slate-900 tracking-tight">Dreams</span>
+               <span className="text-2xl font-extrabold text-slate-900 tracking-tight">Dreams</span>
             </div>
             {children}
          </div>
@@ -61,7 +61,7 @@ export default function AuthLayout({
                   <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
                </svg>
             </div>
-            <span className="text-2xl font-black text-slate-900 tracking-tight">
+            <span className="text-2xl font-extrabold text-slate-900 tracking-tight">
                Dreams
             </span>
           </div>
@@ -85,7 +85,7 @@ export default function AuthLayout({
           </div>
 
           <div className="text-center space-y-4">
-            <h2 className="text-3xl font-black text-slate-900 leading-tight">Chào mừng đến với <br /> <span className="text-[#FF4F6E]">Dreams</span> Courses.</h2>
+            <h2 className="text-3xl font-extrabold text-slate-900 leading-tight">Chào mừng đến với <br /> <span className="text-[#FF4F6E]">Dreams</span> Courses.</h2>
             <p className="text-slate-500 font-medium leading-relaxed px-4">
               Nền tảng giúp tổ chức, giảng viên và người học quản lý, triển khai và theo dõi hoạt động học tập, đào tạo.
             </p>

@@ -3,6 +3,7 @@ import threading
 import time
 from collections import OrderedDict
 from pathlib import Path
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func
@@ -41,6 +42,23 @@ _COURSE_DETAIL_CACHE_MAX_KEYS = 500
 _course_detail_cache_lock = threading.Lock()
 _course_detail_cache: "OrderedDict[tuple[str, str], tuple[float, dict]]" = OrderedDict()
 _course_detail_cache_stats = {"hit": 0, "miss": 0, "invalidate": 0, "evict": 0}
+
+
+def _fix_mojibake_text(value: str | None) -> str:
+    raw = (value or "").replace("\x00", "").strip()
+    if not raw:
+        return ""
+    # Keep likely-valid Vietnamese unchanged.
+    if re.search(r"[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]", raw, flags=re.IGNORECASE):
+        return raw
+    suspicious = any(m in raw for m in ("Ã", "Â", "ï¿½", "�"))
+    if not suspicious:
+        return raw
+    try:
+        repaired = raw.encode("latin1").decode("utf-8")
+    except Exception:
+        repaired = raw
+    return repaired.replace("\x00", "").strip()
 
 
 def _cache_key(course_id: uuid.UUID, user_id: uuid.UUID) -> tuple[str, str]:
@@ -146,7 +164,15 @@ async def enroll_in_course(course_id: uuid.UUID, current_user: User = Depends(ge
 
 @router.get("/my-courses", response_model=List[Enrollment])
 async def list_my_enrollments(current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
-    return session.exec(select(Enrollment).where(Enrollment.user_id == current_user.id)).all()
+    enrollments = session.exec(select(Enrollment).where(Enrollment.user_id == current_user.id)).all()
+    if not enrollments:
+        return []
+    course_ids = [enrollment.course_id for enrollment in enrollments]
+    valid_courses = session.exec(
+        select(Course).where(Course.id.in_(course_ids), Course.is_deleted == False)  # noqa: E712
+    ).all()
+    valid_course_ids = {course.id for course in valid_courses}
+    return [enrollment for enrollment in enrollments if enrollment.course_id in valid_course_ids]
 
 # --- Progress Tracking ---
 @router.post("/lessons/{lesson_id}/progress")
@@ -216,7 +242,7 @@ async def get_student_dashboard(
     course_cards = []
     for enrollment in enrollments:
         course = session.get(Course, enrollment.course_id)
-        if not course:
+        if not course or course.is_deleted:
             continue
         modules = session.exec(select(Module).where(Module.course_id == course.id)).all()
         module_ids = [m.id for m in modules]
@@ -619,13 +645,13 @@ async def list_lesson_quizzes(
                 "questions": [
                     {
                         "id": str(question.id),
-                        "question_text": question.question_text,
-                        "explanation": question.explanation,
-                        "difficulty": question.difficulty,
+                        "question_text": _fix_mojibake_text(question.question_text),
+                        "explanation": _fix_mojibake_text(question.explanation),
+                        "difficulty": _fix_mojibake_text(question.difficulty),
                         "options": [
                             {
                                 "id": str(option.id),
-                                "option_text": option.option_text,
+                                "option_text": _fix_mojibake_text(option.option_text),
                             }
                             for option in session.exec(
                                 select(QuestionOption).where(QuestionOption.question_id == question.id)

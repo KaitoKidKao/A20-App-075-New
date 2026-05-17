@@ -27,7 +27,7 @@ export default function StudentQuizAttemptsPage() {
     <div className="min-h-screen bg-bg-main">
       <div className="mx-auto max-w-6xl space-y-6 px-6 py-10 md:px-10">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 md:text-3xl">Lượt làm bài quiz</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900 md:text-3xl">Lượt làm bài quiz</h1>
           <p className="mt-2 text-sm font-semibold text-slate-600">Theo dõi lịch sử quiz gần đây và điểm số đạt được.</p>
         </div>
 
@@ -41,7 +41,7 @@ export default function StudentQuizAttemptsPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm">
-            <div className="grid grid-cols-12 bg-slate-50 px-6 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">
+            <div className="grid grid-cols-12 bg-slate-50 px-6 py-3 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
               <div className="col-span-6">Quiz</div>
               <div className="col-span-2">Trạng thái</div>
               <div className="col-span-2">Điểm</div>
@@ -51,12 +51,12 @@ export default function StudentQuizAttemptsPage() {
               {dashboard.quiz_scores.map((q, idx) => (
                 <div key={`${q.quiz_id}-${q.created_at}-${idx}`} className="grid grid-cols-12 items-center px-6 py-4">
                   <div className="col-span-6 min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">{q.title}</p>
+                    <p className="truncate text-sm font-extrabold text-slate-900">{q.title}</p>
                     <p className="text-xs font-bold text-slate-400">{q.quiz_id}</p>
                   </div>
                   <div className="col-span-2 text-xs font-bold text-slate-600">{q.status}</div>
                   <div className="col-span-2">
-                    <span className="inline-flex items-center gap-1 text-sm font-black text-[#FF4F6E]">
+                    <span className="inline-flex items-center gap-1 text-sm font-extrabold text-[#FF4F6E]">
                       <Trophy size={14} />
                       {q.score}%
                     </span>
@@ -71,7 +71,7 @@ export default function StudentQuizAttemptsPage() {
         )}
 
         <div>
-          <Link href="/student/library" className="text-xs font-black uppercase tracking-wider text-[#FF4F6E] hover:underline">
+          <Link href="/student/library" className="text-xs font-extrabold uppercase tracking-wider text-[#FF4F6E] hover:underline">
             Quay lại tổng quan
           </Link>
         </div>

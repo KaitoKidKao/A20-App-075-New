@@ -42,7 +42,7 @@ export function AppSidebar() {
   const isAdminArea = pathname.startsWith('/admin');
 
   const sectionLabelClass = cn(
-    'font-heading mb-3 ml-3 inline-block rounded-lg bg-primary/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary'
+    'font-heading mb-3 ml-3 inline-block rounded-lg bg-primary/5 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-primary'
   );
 
   const itemClass = (isActive: boolean) =>
@@ -50,7 +50,7 @@ export function AppSidebar() {
       'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
       isActive
-        ? 'font-heading font-black text-primary'
+        ? 'font-heading font-extrabold text-primary'
         : 'font-heading font-bold text-[var(--app-text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--app-text)]'
     );
 

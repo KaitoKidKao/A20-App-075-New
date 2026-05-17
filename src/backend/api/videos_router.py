@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from pathlib import Path
 
@@ -52,6 +53,22 @@ class SlideGenerateRequest(BaseModel):
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 
+def _fix_mojibake_text(value: str | None) -> str:
+    raw = (value or "").replace("\x00", "").strip()
+    if not raw:
+        return ""
+    if re.search(r"[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]", raw, flags=re.IGNORECASE):
+        return raw
+    suspicious = any(m in raw for m in ("Ã", "Â", "ï¿½", "�"))
+    if not suspicious:
+        return raw
+    try:
+        repaired = raw.encode("latin1").decode("utf-8")
+    except Exception:
+        repaired = raw
+    return repaired.replace("\x00", "").strip()
+
+
 def _create_deletion_audit(
     *,
     session: Session,
@@ -84,9 +101,25 @@ def _find_existing_video_path(lesson_id: str, session: Session) -> Path | None:
     lesson_uuid = _parse_lesson_id(lesson_id)
     content = session.exec(select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)).first()
     if content and content.video_url:
-        candidate = Path(content.video_url)
-        if candidate.exists() and candidate.is_file():
-            return candidate
+        raw_path = str(content.video_url).strip()
+        normalized = raw_path.replace("\\", "/")
+        candidates = []
+
+        # 1) direct as-is
+        candidates.append(Path(raw_path))
+        # 2) normalized slash path
+        candidates.append(Path(normalized))
+        # 3) relative-to-app fallback for values like data/uploads/videos/xxx.mp4
+        if normalized.startswith("data/uploads/"):
+            candidates.append(Path("/app") / normalized)
+        elif normalized.startswith("./data/uploads/"):
+            candidates.append(Path("/app") / normalized[2:])
+        # 4) basename fallback inside uploads dir
+        candidates.append(VideoService.UPLOAD_DIR / Path(normalized).name)
+
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_file():
+                return candidate
 
     for candidate in VideoService.UPLOAD_DIR.glob(f"{lesson_id}.*"):
         if candidate.is_file():
@@ -606,7 +639,21 @@ async def get_flashcards(
 ):
     check_video_access(video_id, current_user, session)
     statement = select(Flashcard).where(Flashcard.lesson_id == _parse_lesson_id(video_id))
-    return {"video_id": video_id, "flashcards": session.exec(statement).all()}
+    cards = session.exec(statement).all()
+    return {
+        "video_id": video_id,
+        "flashcards": [
+            {
+                "id": str(card.id),
+                "lesson_id": str(card.lesson_id),
+                "front": _fix_mojibake_text(card.front),
+                "back": _fix_mojibake_text(card.back),
+                "hint": _fix_mojibake_text(card.hint) if card.hint else None,
+                "created_at": card.created_at,
+            }
+            for card in cards
+        ],
+    }
 
 
 @router.get("/{video_id}/viz-data")
@@ -942,6 +989,29 @@ async def get_all_slide_history(
             "created_at": r.created_at.isoformat(),
         })
     return results
+
+@router.get("/{video_id}/thumbnail")
+async def get_video_thumbnail(
+    video_id: str,
+    session: Session = Depends(get_session),
+):
+    """
+    Extract the first frame of the video using FFmpeg and serve it as a JPEG image.
+    """
+    video_path = _find_existing_video_path(video_id, session)
+    if not video_path:
+        raise HTTPException(status_code=404, detail="Video file not found.")
+
+    try:
+        thumbnail_path = VideoService.extract_thumbnail(video_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to extract video thumbnail: {e}")
+
+    return FileResponse(
+        path=str(thumbnail_path),
+        media_type="image/jpeg",
+    )
+
 
 @router.get("/{video_id}/stream")
 async def stream_video(

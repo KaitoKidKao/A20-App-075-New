@@ -47,7 +47,7 @@ export default function OTPPage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="space-y-2 text-center lg:text-left">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Email OTP</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Email OTP</h1>
         <p className="text-slate-500 font-medium leading-relaxed">OTP sent to your Email Address ending ******doe@example.com</p>
       </div>
 
@@ -64,7 +64,7 @@ export default function OTPPage() {
               value={data}
               onChange={(e) => handleChange(e.target, index)}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              className="w-16 h-20 text-center text-3xl font-black text-slate-900 bg-white border-2 border-slate-100 rounded-2xl focus:border-[#FF4F6E] focus:ring-4 focus:ring-[#FF4F6E]/5 outline-none transition-all"
+              className="w-16 h-20 text-center text-3xl font-extrabold text-slate-900 bg-white border-2 border-slate-100 rounded-2xl focus:border-[#FF4F6E] focus:ring-4 focus:ring-[#FF4F6E]/5 outline-none transition-all"
             />
           ))}
         </div>
@@ -81,7 +81,7 @@ export default function OTPPage() {
 
         <button
           disabled={isSubmitting || otp.some(v => v === '')}
-          className="w-full py-4 bg-[#FF4F6E] text-white font-black rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+          className="w-full py-4 bg-[#FF4F6E] text-white font-extrabold rounded-2xl shadow-xl shadow-[#FF4F6E]/20 hover:bg-[#e64663] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : 'Verify & Proceed'}
           {!isSubmitting && (

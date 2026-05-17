@@ -104,8 +104,8 @@ export default function CourseDetailPage() {
     return { label: 'Start Learning', href: nextLessonUrl, enrolled: true };
   }, [detail, nextLessonUrl]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-black text-slate-400">Loading course...</div>;
-  if (!detail) return <div className="min-h-screen flex items-center justify-center font-black text-rose-500">Course not found.</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-extrabold text-slate-400">Loading course...</div>;
+  if (!detail) return <div className="min-h-screen flex items-center justify-center font-extrabold text-rose-500">Course not found.</div>;
 
   const { course, stats, user_context, modules } = detail;
   const courseImage = getFullImageUrl(course.thumbnail_url) || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop';
@@ -137,9 +137,9 @@ export default function CourseDetailPage() {
             <div className="w-20 h-20 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle size={40} fill="currentColor" className="text-white" />
             </div>
-            <h3 className="text-2xl font-black text-slate-900 mb-2">Enrolled Successfully!</h3>
+            <h3 className="text-2xl font-extrabold text-slate-900 mb-2">Enrolled Successfully!</h3>
             <p className="text-sm font-bold text-slate-500 mb-8">Bạn đã đăng ký khóa học <strong>{course.title}</strong>.</p>
-            <button onClick={() => setShowEnrollModal(false)} className="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest">
+            <button onClick={() => setShowEnrollModal(false)} className="w-full bg-slate-900 text-white py-4 rounded-xl font-extrabold text-sm uppercase tracking-widest">
               Continue
             </button>
           </div>
@@ -154,7 +154,7 @@ export default function CourseDetailPage() {
               <ArrowRight size={14} />
               <span className="text-white/60">Khóa học</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black leading-tight tracking-tight">{course.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold leading-tight tracking-tight">{course.title}</h1>
             <p className="text-lg text-white/80 font-medium max-w-2xl">{course.description || `Nội dung khóa học ${course.title}`}</p>
             <div className="flex flex-wrap items-center gap-6 text-sm font-bold text-white/80">
               <div>{stats.students_enrolled} students enrolled</div>
@@ -173,7 +173,7 @@ export default function CourseDetailPage() {
         <div className="grid lg:grid-cols-12 gap-12">
           <div className="lg:col-span-8 space-y-10">
             <div className="border-2 border-slate-100 rounded-2xl p-8 space-y-4">
-              <h2 className="text-xl font-black text-slate-900">Tóm tắt khóa học</h2>
+              <h2 className="text-xl font-extrabold text-slate-900">Tóm tắt khóa học</h2>
               <div className="grid md:grid-cols-2 gap-4 text-sm font-bold text-slate-600">
                 <div className="flex gap-3"><CheckCircle size={18} className="text-slate-400 shrink-0" />{stats.total_modules} chương</div>
                 <div className="flex gap-3"><CheckCircle size={18} className="text-slate-400 shrink-0" />{stats.total_lessons} bài học</div>
@@ -184,7 +184,7 @@ export default function CourseDetailPage() {
 
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-black text-slate-900">Course content</h2>
+                  <h2 className="text-xl font-extrabold text-slate-900">Course content</h2>
                 <div className="text-sm font-bold text-slate-500">
                   {stats.total_lessons} lectures • {formatDuration(stats.total_duration_minutes)} • {user_context.completed_lessons}/{stats.total_lessons} completed
                 </div>
@@ -198,7 +198,7 @@ export default function CourseDetailPage() {
                       aria-controls={`module-panel-${module.id}`}
                       className="w-full flex items-center justify-between p-5 bg-slate-50 hover:bg-slate-100 transition-colors"
                     >
-                      <div className="flex items-center gap-3 font-black text-slate-900 text-sm">
+                      <div className="flex items-center gap-3 font-extrabold text-slate-900 text-sm">
                         <ChevronDown size={18} className={activeAccordion === module.id ? 'rotate-180 transition-transform' : 'transition-transform'} />
                         {module.title}
                       </div>
@@ -231,11 +231,11 @@ export default function CourseDetailPage() {
             </div>
 
             <div className="space-y-6 border-t border-slate-100 pt-10">
-              <h2 className="text-xl font-black text-slate-900">Student feedback</h2>
+              <h2 className="text-xl font-extrabold text-slate-900">Student feedback</h2>
               <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-4">
-                    <div className="text-4xl font-black text-primary">{stats.rating_avg.toFixed(1)}</div>
+                    <div className="text-4xl font-extrabold text-primary">{stats.rating_avg.toFixed(1)}</div>
                     <div>
                       <div className="flex text-amber-400">
                         {[1, 2, 3, 4, 5].map((i) => (
@@ -253,7 +253,7 @@ export default function CourseDetailPage() {
                     const percent = stats.rating_count > 0 ? Math.round((count / stats.rating_count) * 100) : 0;
                     return (
                       <div key={star} className="flex items-center gap-3">
-                        <div className="w-10 text-xs font-black text-slate-500">{star}★</div>
+                        <div className="w-10 text-xs font-extrabold text-slate-500">{star}★</div>
                         <div className="flex-1 h-2 bg-white rounded-full overflow-hidden border border-slate-200">
                           <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
                         </div>
@@ -266,7 +266,7 @@ export default function CourseDetailPage() {
 
               {user_context.is_enrolled && (
                 <div className="border border-slate-100 rounded-2xl p-6 space-y-4">
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Gửi đánh giá của bạn</h3>
+                  <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Gửi đánh giá của bạn</h3>
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((s) => (
                       <button key={s} type="button" aria-label={`Chon ${s} sao`} onClick={() => setReviewRating(s)} className="text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 rounded">
@@ -284,7 +284,7 @@ export default function CourseDetailPage() {
                   <button
                     onClick={handleSubmitReview}
                     disabled={savingReview}
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-wider disabled:opacity-60"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white text-xs font-extrabold uppercase tracking-wider disabled:opacity-60"
                   >
                     <MessageSquare size={14} />
                     {savingReview ? 'Đang gửi...' : 'Gửi đánh giá'}
@@ -299,7 +299,7 @@ export default function CourseDetailPage() {
                   reviews.map((review) => (
                     <div key={review.id} className="border-b border-slate-100 pb-4 last:border-0">
                       <div className="flex items-center justify-between">
-                        <div className="text-sm font-black text-slate-900">{review.user_name}</div>
+                        <div className="text-sm font-extrabold text-slate-900">{review.user_name}</div>
                         <div className="text-xs font-bold text-slate-400">{new Date(review.updated_at).toLocaleDateString('vi-VN')}</div>
                       </div>
                       <div className="flex items-center gap-1 text-amber-400 my-1">
@@ -327,22 +327,22 @@ export default function CourseDetailPage() {
               <div className="p-8 space-y-6">
                 {cta.enrolled ? (
                   cta.href ? (
-                    <Link href={cta.href} aria-label={cta.label} className="block w-full py-4 rounded-xl bg-emerald-500 text-white font-black text-sm text-center uppercase tracking-widest focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300">
+                    <Link href={cta.href} aria-label={cta.label} className="block w-full py-4 rounded-xl bg-emerald-500 text-white font-extrabold text-sm text-center uppercase tracking-widest focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300">
                       {cta.label}
                     </Link>
                   ) : (
-                    <div className="block w-full py-4 rounded-xl bg-slate-200 text-slate-500 font-black text-sm text-center uppercase tracking-widest">
+                    <div className="block w-full py-4 rounded-xl bg-slate-200 text-slate-500 font-extrabold text-sm text-center uppercase tracking-widest">
                       No lesson yet
                     </div>
                   )
                 ) : (
-                  <button onClick={handleEnroll} aria-label="Dang ky khoa hoc" className="block w-full py-4 rounded-xl bg-slate-900 text-white font-black text-sm text-center uppercase tracking-widest focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300">
+                  <button onClick={handleEnroll} aria-label="Dang ky khoa hoc" className="block w-full py-4 rounded-xl bg-slate-900 text-white font-extrabold text-sm text-center uppercase tracking-widest focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300">
                     Enroll Now
                   </button>
                 )}
 
                 <div className="space-y-4">
-                  <h4 className="text-sm font-black text-slate-900">This course includes:</h4>
+                  <h4 className="text-sm font-extrabold text-slate-900">This course includes:</h4>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-600"><MonitorPlay size={16} className="text-slate-400" />{stats.total_lessons} on-demand lessons</div>
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-600"><Clock size={16} className="text-slate-400" />Full lifetime access</div>
@@ -352,7 +352,7 @@ export default function CourseDetailPage() {
                 </div>
 
                 <div className="pt-6 border-t border-slate-100 space-y-4">
-                  <h4 className="text-sm font-black text-slate-900">Course Features:</h4>
+                  <h4 className="text-sm font-extrabold text-slate-900">Course Features:</h4>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-500"><Users size={16} className="text-primary" />Enrolled: {stats.students_enrolled}</div>
                     <div className="flex items-center gap-3 text-xs font-bold text-slate-500"><Clock size={16} className="text-primary" />Duration: {formatDuration(stats.total_duration_minutes)}</div>

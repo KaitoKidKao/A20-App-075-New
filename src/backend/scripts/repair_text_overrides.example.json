@@ -1,0 +1,19 @@
+{
+  "courses": {
+    "4aae8c58-fb60-446c-b90c-8fc9dfe68db8": {
+      "title": "Machine Learning",
+      "description": "Khóa học được tạo từ quản trị viên."
+    }
+  },
+  "modules": {
+    "26ef17ce-bd67-4233-86a6-2c22223bf6eb": {
+      "title": "Image Formation"
+    }
+  },
+  "lessons": {
+    "6941d4aa-4a06-41af-8654-7ac47be4a8c7": {
+      "title": "#1 Django tutorials | What is Django? | Python Web Framework.mp4"
+    }
+  }
+}
+

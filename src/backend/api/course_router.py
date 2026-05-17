@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select
 from typing import List
 import uuid
@@ -8,6 +9,12 @@ from src.backend.models import Category, Course, Module, Lesson, User, Enrollmen
 from src.backend.utils.datetime_utils import utc_now
 
 router = APIRouter(prefix="/api/courses", tags=["courses"])
+
+
+class ModuleUpdatePayload(BaseModel):
+    title: str
+    description: str | None = None
+    sort_order: int | None = None
 
 
 def _role_name(user: User) -> str:
@@ -141,6 +148,36 @@ async def create_module(
         module.sort_order = _resolve_next_module_sort_order(course_id, session)
     if module.sort_order > 2_147_483_647:
         raise HTTPException(status_code=422, detail="sort_order exceeds max INTEGER range.")
+    session.add(module)
+    session.commit()
+    session.refresh(module)
+    return module
+
+
+@router.patch("/modules/{module_id}", response_model=Module)
+async def update_module(
+    module_id: uuid.UUID,
+    payload: ModuleUpdatePayload,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    module = session.get(Module, module_id)
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    _ensure_course_owner_or_admin(module.course_id, current_user, session)
+
+    title = (payload.title or "").strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="Module title is required.")
+
+    module.title = title
+    if payload.description is not None:
+        module.description = payload.description.strip() or None
+    if payload.sort_order is not None:
+        if payload.sort_order < 0 or payload.sort_order > 2_147_483_647:
+            raise HTTPException(status_code=422, detail="sort_order out of range.")
+        module.sort_order = payload.sort_order
+
     session.add(module)
     session.commit()
     session.refresh(module)

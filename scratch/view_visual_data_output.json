@@ -1,0 +1,47 @@
+{
+  "lesson_id": "08b61eab-2694-40f0-910f-155c2f278972",
+  "keys": [
+    "transcript",
+    "summary",
+    "timeline",
+    "highlights",
+    "questions",
+    "briefing",
+    "visual_data",
+    "cover_image_url",
+    "handsign_data",
+    "flashcards",
+    "quizzes",
+    "artifact_status"
+  ],
+  "cover_image_url": "/uploads/covers/4e09661c-640e-49e0-b773-9fc8b9195909.png",
+  "visual_data": {
+    "infographic": {
+      "title": "Các ứng dụng của mô hình ngôn ngữ lớn",
+      "type": "info",
+      "category": "technology",
+      "chartType": "bar",
+      "sections": [
+        {
+          "icon": "Pencil",
+          "label": "Nhiệm vụ viết",
+          "value": "Viết thông cáo báo chí",
+          "description": "Mô hình có thể viết thông cáo báo chí khi được cung cấp bối cảnh rõ ràng.",
+          "advanced_detail": "Thực hiện viết nội dung cụ thể dựa trên thông tin chi tiết về công ty."
+        },
+        {
+          "icon": "Translate",
+          "label": "Nhiệm vụ dịch thuật",
+          "value": "Dịch văn bản sang nhiều ngôn ngữ",
+          "description": "Mô hình hỗ trợ dịch thuật các văn bản, đặc biệt cho các ngôn ngữ có nhiều dữ liệu.",
+          "advanced_detail": "Thực hiện tốt hơn với các ngôn ngữ phổ biến và cần có điều chỉnh cho các ngôn ngữ ít tài nguyên."
+        }
+      ],
+      "key_takeaways": [
+        "Mô hình ngôn ngữ lớn cải thiện với bối cảnh chi tiết.",
+        "Dịch thuật có thể gặp khó khăn với ngôn ngữ nguồn lực thấp."
+      ],
+      "image_prompt": "Visual representation of the tasks of large language models in writing and translation, technology theme, engaging and informative design"
+    }
+  }
+}
