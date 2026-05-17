@@ -1,0 +1,68 @@
+flowchart TB
+    User(["👤 Người dùng\n(Student / Admin)"]):::user
+
+    subgraph FE["🖥️ Frontend — Next.js 14 + TypeScript"]
+        direction TB
+        FE_Auth["🔐 Trang Đăng nhập / Đăng ký"]:::frontend
+        FE_Dashboard["📊 Dashboard học sinh"]:::frontend
+        FE_Video["🎬 Video Player\n(Range Streaming + Phụ đề)"]:::frontend
+        FE_AI["🧠 AI Tools\n(Mindmap · Timeline · Briefing)"]:::frontend
+        FE_Slide["🎨 Slide Generator\n(10 template · Lịch sử tải)"]:::frontend
+        FE_Quiz["✍️ Quiz & Flashcard"]:::frontend
+        FE_Admin["⚙️ Admin Dashboard"]:::frontend
+    end
+
+    subgraph BE["⚡ Backend — FastAPI + Python 3.12"]
+        direction TB
+        BE_Auth["🔑 JWT Auth\n+ Rate Limiter"]:::backend
+        BE_API["📡 REST API Router\n(/api/videos · /api/courses · /api/student)"]:::backend
+        BE_Upload["📤 Upload Handler\n(Validate + Lưu video)"]:::backend
+        BE_Worker["📬 Job Dispatcher\n(Đẩy job vào Redis Queue)"]:::backend
+    end
+
+    subgraph DATA["🗄️ Data Layer"]
+        direction LR
+        DB[("🐘 PostgreSQL\nUsers · Courses · Lessons\nContent Metadata · Slides")]:::database
+        REDIS[("⚡ Redis Queue\n(RQ Jobs)")]:::redis
+        DISK[("💾 Local Disk\ndata/uploads/\n  videos/\n  audio/\n  slides/\n  covers/")]:::storage
+    end
+
+    subgraph WORKER["🔧 Python RQ Worker (Background)"]
+        direction TB
+        W_Extract["🎵 FFmpeg\nTách audio từ video"]:::worker
+        W_Transcript["🎤 OpenAI Whisper\nSpeech → Text + Timestamp"]:::worker
+        W_GPT["🤖 GPT-4o-mini\nPhân tích transcript\n→ Briefing · Timeline · Highlights\n→ Mindmap · Flashcard · Quiz"]:::worker
+        W_Slide["📊 Slide Generator\n(python-pptx)\nGPT content → PPTX file"]:::worker
+        W_Extract --> W_Transcript --> W_GPT
+        W_GPT --> W_Slide
+    end
+
+    subgraph EXTERNAL["☁️ External Services"]
+        OpenAI["🌐 OpenAI API\n(Whisper + GPT-4o-mini)"]:::external
+    end
+
+    User -->|"HTTPS"| FE
+    FE -->|"REST API / Cookie Auth"| BE_Auth
+    BE_Auth --> BE_API
+    BE_API --> BE_Upload
+    BE_API --> BE_Worker
+    BE_API <-->|"CRUD"| DB
+    BE_Upload -->|"Lưu file"| DISK
+    BE_Worker -->|"Enqueue job"| REDIS
+
+    REDIS -->|"Dequeue job"| WORKER
+    W_Extract <-->|"Đọc/Ghi"| DISK
+    W_Transcript -->|"API Call"| OpenAI
+    W_GPT -->|"API Call"| OpenAI
+    W_Slide -->|"Ghi .pptx"| DISK
+    WORKER -->|"Cập nhật kết quả AI"| DB
+
+    %% Color Styles
+    classDef user fill:#FFE082,stroke:#F9A825,color:#000,stroke-width:2px;
+    classDef frontend fill:#BBDEFB,stroke:#1E88E5,color:#000,stroke-width:2px;
+    classDef backend fill:#C8E6C9,stroke:#43A047,color:#000,stroke-width:2px;
+    classDef database fill:#D1C4E9,stroke:#5E35B1,color:#000,stroke-width:2px;
+    classDef redis fill:#FFCDD2,stroke:#E53935,color:#000,stroke-width:2px;
+    classDef storage fill:#CFD8DC,stroke:#546E7A,color:#000,stroke-width:2px;
+    classDef worker fill:#FFE0B2,stroke:#FB8C00,color:#000,stroke-width:2px;
+    classDef external fill:#B2EBF2,stroke:#00ACC1,color:#000,stroke-width:2px;
