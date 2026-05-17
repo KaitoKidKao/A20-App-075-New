@@ -26,6 +26,8 @@ import {
   Lightbulb,
   Rocket,
   Download,
+  SkipBack,
+  SkipForward,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useParams, useRouter } from 'next/navigation';
@@ -123,6 +125,13 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function naturalTitleCompare(aTitle?: string, bTitle?: string): number {
+  return (aTitle || '').localeCompare((bTitle || ''), 'vi', {
+    sensitivity: 'base',
+    numeric: true,
+  });
+}
+
 const captionPositionClass = {
   low: 'bottom-12',
   middle: 'bottom-1/3',
@@ -205,6 +214,23 @@ export default function VideoLessonPage() {
   const [savedProgress, setSavedProgress] = useState<UserProgress | null>(null);
   const [moduleLessons, setModuleLessons] = useState<ModuleLessonItem[]>([]);
   const [isLoadingModuleLessons, setIsLoadingModuleLessons] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  const currentIndex = useMemo(() => moduleLessons.findIndex((l) => l.id === videoId), [moduleLessons, videoId]);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < moduleLessons.length - 1;
+
+  const handlePrevVideo = useCallback(() => {
+    if (hasPrev) {
+      router.push(`/student/videos/${moduleLessons[currentIndex - 1].id}`);
+    }
+  }, [hasPrev, currentIndex, moduleLessons, router]);
+
+  const handleNextVideo = useCallback(() => {
+    if (hasNext) {
+      router.push(`/student/videos/${moduleLessons[currentIndex + 1].id}`);
+    }
+  }, [hasNext, currentIndex, moduleLessons, router]);
 
   const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `/api/video/${videoId}`;
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -217,6 +243,7 @@ export default function VideoLessonPage() {
     : isAvatarProcessing
       ? 'bg-amber-50 text-amber-700 border-amber-200'
       : 'bg-rose-50 text-rose-700 border-rose-200';
+  const briefingKeyTerms = Array.isArray(briefing?.key_terms) ? briefing.key_terms : [];
 
   const buildLessonPreview = useCallback(async (lessonId: string, initialDuration?: string): Promise<{ duration: string; thumb: string }> => {
     const fallbackThumb = `https://picsum.photos/seed/${lessonId}/200/120`;
@@ -373,7 +400,7 @@ export default function VideoLessonPage() {
       try {
         const currentLesson = await api.courses.getLesson(videoId);
         const lessons = await api.courses.listLessons(currentLesson.module_id);
-        const sortedByTitle = [...lessons].sort((a, b) => a.title.localeCompare(b.title, 'vi', { sensitivity: 'base' }));
+        const sortedByTitle = [...lessons].sort((a, b) => naturalTitleCompare(a.title, b.title));
         const hydrated = await Promise.all(
           sortedByTitle.map(async (lesson) => {
             const durationFromDb = lesson.duration_minutes && lesson.duration_minutes > 0 ? formatDuration(lesson.duration_minutes * 60) : '--:--';
@@ -513,6 +540,10 @@ export default function VideoLessonPage() {
     updateMotion();
     mediaQuery.addEventListener('change', updateMotion);
     return () => mediaQuery.removeEventListener('change', updateMotion);
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   // Video Control Handlers
@@ -867,6 +898,10 @@ export default function VideoLessonPage() {
       {message}
     </div>
   );
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-bg-main" suppressHydrationWarning />;
+  }
 
   return (
     <div className="min-h-screen bg-transparent relative overflow-hidden">
@@ -1229,10 +1264,10 @@ export default function VideoLessonPage() {
                       <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">MỤC TIÊU BÀI GIẢNG</h3>
                     </div>
                     <p className="text-base md:text-lg font-bold text-slate-600 leading-relaxed italic mb-6 max-w-3xl">
-                      &ldquo;{briefing.objective}&rdquo;
+                      &ldquo;{briefing.objective || 'Mục tiêu bài giảng sẽ được cập nhật sau khi AI phân tích xong.'}&rdquo;
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {briefing.key_terms.map((term, i) => (
+                      {briefingKeyTerms.map((term, i) => (
                         <span key={i} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-extrabold text-slate-500 uppercase tracking-widest shadow-sm">
                           {term}
                         </span>
@@ -1686,7 +1721,7 @@ export default function VideoLessonPage() {
                                   <button
                                     key={`${g.time}-${g.word}-${i}`}
                                     type="button"
-                                    onClick={() => seekToSeconds(g.time)}
+                                    onClick={() => handleSeek(g.time)}
                                     className={cn(
                                       'text-xs font-bold px-3 py-2 rounded-2xl border transition-all',
                                       isGlossActive

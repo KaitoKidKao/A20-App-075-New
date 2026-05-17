@@ -75,7 +75,6 @@ function SettingsPageContent() {
       await api.student.updateProfile({ 
         bio: editedBio.trim(),
         learning_goals: editedGoals.trim(),
-        // @ts-expect-error - full_name is handled by the same endpoint in backend
         full_name: editedName.trim(),
       } as Parameters<typeof api.student.updateProfile>[0]);
       

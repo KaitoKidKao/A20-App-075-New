@@ -5,7 +5,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_API_KEY_BACKUP_1 = os.getenv("OPENAI_API_KEY_BACKUP_1", "")
+OPENAI_API_KEY_BACKUP_2 = os.getenv("OPENAI_API_KEY_BACKUP_2", "")
+OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1.5")
+OPENAI_IMAGE_QUALITY = os.getenv("OPENAI_IMAGE_QUALITY", "low")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "")
+REPLICATE_API_TOKEN_BACKUP_1 = os.getenv("REPLICATE_API_TOKEN_BACKUP_1", "")
+REPLICATE_API_TOKEN_BACKUP_2 = os.getenv("REPLICATE_API_TOKEN_BACKUP_2", "")
+REPLICATE_IMAGE_MODEL = os.getenv("REPLICATE_IMAGE_MODEL", "black-forest-labs/flux-1.1-pro")
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 JSON_LOGS = os.getenv("JSON_LOGS", "false").lower() == "true"

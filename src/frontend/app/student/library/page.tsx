@@ -5,6 +5,7 @@ import { BookOpen, CheckCircle, Clock, Library, RotateCcw, Trophy } from 'lucide
 import Image from 'next/image';
 import Link from 'next/link';
 import { api, type Course, type StudentDashboard } from '@/lib/api';
+import { getFullImageUrl } from '@/lib/utils';
 
 function normalizeCourseDescription(description?: string | null): string {
   const raw = (description || '').trim();
@@ -23,6 +24,8 @@ export default function StudentDashboardPage() {
   const [dashboard, setDashboard] = useState<StudentDashboard | null>(null);
   const [publicCourses, setPublicCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllIncomplete, setShowAllIncomplete] = useState(false);
+  const [showAllQuizScores, setShowAllQuizScores] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,7 +116,7 @@ export default function StudentDashboardPage() {
                   <div key={course.course_id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
                     <div className="relative aspect-video">
                       <Image
-                        src={course.thumbnail_url || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop'}
+                        src={getFullImageUrl(course.thumbnail_url) || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200&auto=format&fit=crop'}
                         alt={course.title}
                         fill
                         unoptimized
@@ -157,14 +160,24 @@ export default function StudentDashboardPage() {
                 <div className="space-y-4">
                   {dashboard.incomplete_lessons.length === 0 ? (
                     <p className="text-sm font-bold text-slate-400">Không có bài đang dở.</p>
-                  ) : dashboard.incomplete_lessons.map((lesson) => (
-                    <Link key={lesson.lesson_id} href={`/student/videos/${lesson.lesson_id}`} className="block rounded-xl border border-slate-100 p-4 transition-colors hover:border-[#FF4F6E]/30 hover:bg-rose-50/40">
-                      <p className="line-clamp-1 text-sm font-black text-slate-900">{lesson.title}</p>
-                      <p className="mt-1 text-xs font-bold text-slate-500">
-                        {lesson.progress_percent}% - tiếp tục tại {Math.round(lesson.last_position_seconds)}s
-                      </p>
-                    </Link>
-                  ))}
+                  ) : (
+                    (showAllIncomplete ? dashboard.incomplete_lessons : dashboard.incomplete_lessons.slice(0, 3)).map((lesson) => (
+                      <Link key={lesson.lesson_id} href={`/student/videos/${lesson.lesson_id}`} className="block rounded-xl border border-slate-100 p-4 transition-colors hover:border-[#FF4F6E]/30 hover:bg-rose-50/40">
+                        <p className="line-clamp-1 text-sm font-black text-slate-900">{lesson.title}</p>
+                        <p className="mt-1 text-xs font-bold text-slate-500">
+                          {lesson.progress_percent}% - tiếp tục tại {Math.round(lesson.last_position_seconds)}s
+                        </p>
+                      </Link>
+                    ))
+                  )}
+                  {dashboard.incomplete_lessons.length > 3 && (
+                    <button
+                      onClick={() => setShowAllIncomplete(!showAllIncomplete)}
+                      className="mt-2 w-full text-center text-xs font-black text-[#FF4F6E] hover:underline"
+                    >
+                      {showAllIncomplete ? 'Thu gọn' : `Xem thêm (${dashboard.incomplete_lessons.length - 3} bài khác)`}
+                    </button>
+                  )}
                 </div>
               </section>
 
@@ -176,15 +189,25 @@ export default function StudentDashboardPage() {
                 <div className="space-y-4">
                   {dashboard.quiz_scores.length === 0 ? (
                     <p className="text-sm font-bold text-slate-400">Chưa có kết quả quiz.</p>
-                  ) : dashboard.quiz_scores.map((quiz) => (
-                    <div key={`${quiz.quiz_id}-${quiz.created_at}`} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-slate-900">{quiz.title}</p>
-                        <p className="text-xs font-bold text-slate-500">{quiz.status}</p>
+                  ) : (
+                    (showAllQuizScores ? dashboard.quiz_scores : dashboard.quiz_scores.slice(0, 3)).map((quiz) => (
+                      <div key={`${quiz.quiz_id}-${quiz.created_at}`} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black text-slate-900">{quiz.title}</p>
+                          <p className="text-xs font-bold text-slate-500">{quiz.status}</p>
+                        </div>
+                        <span className="text-sm font-black text-[#FF4F6E]">{quiz.score}%</span>
                       </div>
-                      <span className="text-sm font-black text-[#FF4F6E]">{quiz.score}%</span>
-                    </div>
-                  ))}
+                    ))
+                  )}
+                  {dashboard.quiz_scores.length > 3 && (
+                    <button
+                      onClick={() => setShowAllQuizScores(!showAllQuizScores)}
+                      className="mt-2 w-full text-center text-xs font-black text-[#FF4F6E] hover:underline"
+                    >
+                      {showAllQuizScores ? 'Thu gọn' : `Xem thêm (${dashboard.quiz_scores.length - 3} quiz khác)`}
+                    </button>
+                  )}
                 </div>
               </section>
             </aside>
@@ -205,7 +228,7 @@ export default function StudentDashboardPage() {
                 <div key={course.id} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
                   <div className="relative aspect-video">
                     <Image
-                      src={course.thumbnail_url || course.cover_image_url || course.thumb || fallbackCourseImage}
+                      src={getFullImageUrl(course.thumbnail_url || course.cover_image_url || course.thumb) || fallbackCourseImage}
                       alt={course.title}
                       fill
                       unoptimized

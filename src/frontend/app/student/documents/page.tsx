@@ -5,7 +5,7 @@ import { Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { api, type Course, type StudentDashboard } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { cn, getFullImageUrl } from '@/lib/utils';
 
 type CourseTab = 'enrolled' | 'active' | 'completed';
 
@@ -36,12 +36,12 @@ function normalizeCourseCards(dashboard: StudentDashboard, courses: Course[]): C
       title: enrolled.title,
       instructor: DEFAULT_INSTRUCTOR,
       category: detail?.cat || DEFAULT_CATEGORY,
-      thumbnail:
+      thumbnail: getFullImageUrl(
         detail?.thumbnail_url ||
         detail?.cover_image_url ||
         detail?.thumb ||
-        enrolled.thumbnail_url ||
-        FALLBACK_THUMBNAIL,
+        enrolled.thumbnail_url
+      ) || FALLBACK_THUMBNAIL,
       progressPercent: enrolled.progress_percent,
       completedLessons: enrolled.completed_lessons,
       totalLessons: enrolled.total_lessons,
