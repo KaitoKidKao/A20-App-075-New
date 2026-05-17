@@ -7,7 +7,7 @@ Tài liệu này ghi nhận chi tiết hai phần quan trọng theo yêu cầu c
 
 ---
 
-## 🛠️ PHẦN 1: Nhật Ký Tương Tác Phát Triển (Developer AI Activity Logs)
+## PHẦN 1: Nhật Ký Tương Tác Phát Triển (Developer AI Activity Logs)
 Hệ thống log này ghi nhận toàn bộ lịch sử các câu lệnh và tóm tắt phản hồi từ AI Agent trợ giúp lập trình (`antigravity`) xuyên suốt quá trình thiết kế, sửa lỗi, và tối ưu hóa hệ thống của team.
 
 | STT | Thời gian | Thành viên | Nhánh & Commit | Yêu cầu của thành viên (Prompt) | Kết quả xử lý từ AI (Response Summary) |
@@ -187,7 +187,7 @@ Hệ thống log này ghi nhận toàn bộ lịch sử các câu lệnh và tó
 ##  PHẦN 2: Nhật Ký Hoạt Động của Core AI (Application Core AI Prompt Logs)
 Phần này mô tả chi tiết cách hệ thống **Dreams** tương tác với LLM thông qua các Prompt kỹ thuật chuyên sâu để xử lý video bài giảng.
 
-### 📝 Case 01: Nhận diện & Trích xuất Phụ Đề Bài Giảng (ASR Transcription)
+### Case 01: Nhận diện & Trích xuất Phụ Đề Bài Giảng (ASR Transcription)
 *   **Chức năng:** Trích xuất văn bản có gắn mốc thời gian (timestamp) từ âm thanh video bài giảng.
 *   **Hạ tầng sử dụng:** OpenAI Whisper API / `faster-whisper` (Local setup).
 *   **Dữ liệu Input:** Tệp âm thanh trích xuất từ video dạng `.wav` hoặc `.mp3` (Tần số lấy mẫu 16kHz, mono).
