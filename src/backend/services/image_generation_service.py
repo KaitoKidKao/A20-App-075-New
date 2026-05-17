@@ -80,7 +80,10 @@ class ImageGenerationService:
             filename = f"{uuid.uuid4()}.png"
             output_path = cls.COVERS_DIR / filename
             output_path.write_bytes(raw_bytes)
-            return f"/uploads/covers/{filename}"
+            relative_url = f"/uploads/covers/{filename}"
+            from .storage_service import upload_to_s3
+            upload_to_s3(output_path, relative_url.lstrip("/"))
+            return relative_url
         except Exception as exc:
             logger.warning("Failed to persist generated cover image: %s", exc)
             return None
