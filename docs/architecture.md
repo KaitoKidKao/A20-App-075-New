@@ -1,4 +1,4 @@
-# 🏗️ Kiến Trúc Hệ Thống & Thiết Kế Cơ Sở Dữ Liệu — Dreams
+#  Kiến Trúc Hệ Thống & Thiết Kế Cơ Sở Dữ Liệu — Dreams
 
 Tài liệu này mô tả chi tiết thiết kế hệ thống, luồng dữ liệu xử lý bất đồng bộ tích hợp các mô hình AI và cấu trúc cơ sở dữ liệu (Database Schema) của dự án **Dreams (Mã dự án: A20-App-075)**.
 
@@ -22,9 +22,9 @@ Kiến trúc hệ thống của Dreams được thiết kế dưới dạng phâ
 
 ---
 
-## 🔄 2. Các luồng dữ liệu chính (Data Flow)
+##  2. Các luồng dữ liệu chính (Data Flow)
 
-### 🌊 Luồng 1: Xử lý Video Bài giảng & Tự động tạo Tài nguyên AI (Video Processing Flow)
+###  Luồng 1: Xử lý Video Bài giảng & Tự động tạo Tài nguyên AI (Video Processing Flow)
 Đây là luồng cốt lõi, chạy hoàn toàn bất đồng bộ (Asynchronous) thông qua hàng đợi Redis Queue (RQ) nhằm tránh nghẽn luồng chính của FastAPI:
 
 ![Luồng xử lý video bài giảng](video-processing-flow.png)
@@ -32,14 +32,14 @@ Kiến trúc hệ thống của Dreams được thiết kế dưới dạng phâ
 
 ---
 
-### 🌊 Luồng 2: Sinh Slide Tự động & Lưu trữ Lịch sử (AI Slide Generation Flow)
+###  Luồng 2: Sinh Slide Tự động & Lưu trữ Lịch sử (AI Slide Generation Flow)
 Tối ưu hóa khả năng tương tác bằng cách cho phép sinh slide tức thì dựa trên transcript học thuật và lưu vết lịch sử:
 
 ![Luồng sinh slide AI](slide-generation-flow.png)
 
 ---
 
-## 🗄️ 3. Thiết kế cơ sở dữ liệu (Database Schema)
+##  3. Thiết kế cơ sở dữ liệu (Database Schema)
 
 Cơ sở dữ liệu của Dreams được chuẩn hóa ở dạng quan hệ (Relational Database) và cấu hình qua các model **SQLModel (SQLAlchemy)**:
 
@@ -103,29 +103,26 @@ Bảo toàn lịch sử tạo giáo án bằng AI của người học để ph�
 ## ☁️ 4. Sơ đồ hạ tầng AWS & Triển khai Đám mây (AWS Cloud Infrastructure Diagram)
 
 Dưới đây là sơ đồ hạ tầng triển khai đám mây AWS thực tế của hệ thống Dreams:
+## 4.1 Luồng hoạt động chi tiết
 
 ![Sơ đồ hạ tầng AWS](aws-infrastructure.png)
-
-### 4.1 Tổng quan kiến trúc
-
-> **Region**: ap-southeast-1 (Singapore)  
 
 Hệ thống là một **nền tảng học tập video với AI**, gồm 3 tầng chính:
 
 | Tầng | Công nghệ | Nơi chạy |
 |---|---|---|
-| Frontend | Next.js + React | AWS Amplify |
+| Frontend | Next.js  + React  | AWS Amplify |
 | Backend API | FastAPI (Python 3.12) + RQ Worker | EC2 t3.micro (Docker) |
-| Data | PostgreSQL + Redis | RDS + ElastiCache |
+| Data | PostgreSQL  + Redis  | RDS + ElastiCache |
 | Storage | Video, Audio, Transcript, Slides | S3 |
 
 ---
 
-### 4.2 Luồng hoạt động chi tiết
+## 4.2 Luồng hoạt động chi tiết
 
-#### Luồng 1 — CI/CD Deploy (GitHub Action)
+### Luồng 1 — CI/CD Deploy (GitHub Action)
 
-```text
+```
 Developer push code lên GitHub
   └─► GitHub Action trigger
 
@@ -142,9 +139,11 @@ GitHub Action thực hiện 2 việc song song:
 
 **Kết quả**: Code mới được deploy tự động, không cần SSH vào server.
 
-#### Luồng 2 — User truy cập Frontend
+---
 
-```text
+### Luồng 2 — User truy cập Frontend
+
+```
 User mở trình duyệt
   └─► HTTPS → AWS Amplify (CDN toàn cầu)
         └─► Trả về Next.js app (HTML/JS/CSS)
@@ -152,7 +151,7 @@ User mở trình duyệt
 ```
 
 **Chi tiết authentication**:
-```text
+```
 User nhập email + password
   └─► POST /api/auth/login → EC2 FastAPI
         ├─► Bcrypt verify password với hash trong RDS
@@ -166,9 +165,11 @@ Mọi request tiếp theo:
               └─► admin    → /admin/*
 ```
 
-#### Luồng 3 — User upload Video / YouTube URL
+---
 
-```text
+### Luồng 3 — User upload Video / YouTube URL
+
+```
 User chọn file hoặc paste YouTube URL
   └─► POST /api/videos → EC2 FastAPI
 
@@ -213,9 +214,11 @@ Trạng thái job:
   → translating → ai_processing → completed / failed
 ```
 
-#### Luồng 4 — EC2 đọc Secrets khi khởi động
+---
 
-```text
+### Luồng 4.3 — EC2 đọc Secrets khi khởi động
+
+```
 EC2 instance start (từ ECR image)
   └─► User Data script chạy docker-compose
         └─► FastAPI container khởi động
@@ -229,9 +232,11 @@ EC2 instance start (từ ECR image)
 **Lý do dùng SSM**: Không hardcode secrets trong code hoặc environment file.  
 IAM Role của EC2 có quyền `ssm:GetParameter` — không cần access key/secret key.
 
-#### Luồng 5 — EC2 kết nối các Managed Services
+---
 
-```text
+### Luồng 4.4 — EC2 kết nối các Managed Services
+
+```
 EC2 (FastAPI + RQ Worker)
   │
   ├─► RDS PostgreSQL          (Port 5432, Private Subnet)
@@ -254,37 +259,38 @@ EC2 (FastAPI + RQ Worker)
 
 ---
 
-### 4.3 Chi phí AWS — ap-southeast-1 (Singapore)
+## 5. Chi phí AWS — ap-southeast-1 (Singapore)
 
-#### 4.3.1 Chi phí từng service
+### 5.1 Chi phí từng service (AWS Pricing Calculator — thực tế)
 
-| Service | Loại instance/tier | Đơn giá | Giờ/tháng | Chi phí/tháng |
-|---|---|---|---|---|
-| **EC2** | t3.micro (24/7) | $0.0104/giờ | 730h | **~$7.60** |
-| **RDS PostgreSQL** | db.t3.micro (24/7) | $0.022/giờ | 730h | **~$16.06** |
-| **RDS Storage** | 20GB gp2 | $0.115/GB/tháng | — | **~$2.30** |
-| **ElastiCache Redis** | cache.t3.micro (24/7) | $0.017/giờ | 730h | **~$12.41** |
-| **S3 Storage** | 10GB | $0.025/GB/tháng | — | **~$0.25** |
-| **S3 Requests** | PUT + GET | $0.005/1,000 PUT | — | **~$0.50** |
-| **ECR** | 2GB images (5 versions) | $0.10/GB/tháng | — | **~$0.20** |
-| **AWS Amplify** | Hosting + Build | $0.023/GB served | — | **~$1–3** |
-| **SSM Parameter Store** | Standard params | Free | — | **$0** |
-| **Data Transfer Out** | ~10GB/tháng | $0.09/GB | — | **~$0.90** |
+| Service | Config | Chi phí/tháng (Calculator) |
+|---|---|---|
+| **EC2** | t3a.micro, 100% utilization, Linux | **~$8.61** |
+| **RDS PostgreSQL** | db.t3.micro, 20GB gp2, Single-AZ | **$23.20** |
+| **ElastiCache Redis** | cache.t3.micro, 1 node, Redis | **$18.25** |
+| **S3** | 10GB Standard + 10K PUT + 50K GET | **$0.32** |
+| **AWS Amplify** | 100 build phút, 1GB stored, 5GB served, 50 SSR req/h | **~$2–3** |
+| **ECR** | 2GB images | **$0.20** |
+| **SSM Parameter Store** | Standard params | **$0** |
+| **Data Transfer Out** | ~10GB/tháng | **~$0.90** |
+| **Tổng** | | **~$54–56/tháng** |
 
-#### 4.3.2 Tổng chi phí ước tính
+> **Lưu ý**: AWS Pricing Calculator export ngày 05/17/2026 cho tổng **$65.96/month** do Amplify. Với 50 req/h thực tế ~$54/tháng.
+
+### 5.2 Tổng chi phí ước tính
 
 | Scenario | Mô tả | Chi phí/tháng |
 |---|---|---|
-| **Minimal** | Ít user (<20), ít video upload | ~**$41/tháng** |
+| **Production** | EC2 t3.micro + RDS + ElastiCache riêng | ~**$54–56/tháng** |
 | **Moderate** | 50–100 user, 20–50 video/tháng | ~**$55–70/tháng** |
-| **Tối ưu** | Redis chạy trên EC2 (Docker), không dùng ElastiCache riêng | ~**$29/tháng** |
+| **Tối ưu** | Redis chạy trên EC2 (Docker), không dùng ElastiCache riêng | ~**$36/tháng** |
 
-> **Gợi ý tiết kiệm**: Với dự án nhỏ/demo, chạy Redis như Docker container trên cùng EC2 thay vì dùng ElastiCache độc lập → **tiết kiệm ~$12.41/tháng**.  
+> **Gợi ý tiết kiệm**: Với dự án nhỏ/demo, chạy Redis như Docker container trên cùng EC2 thay vì dùng ElastiCache độc lập → **tiết kiệm ~$18/tháng**.  
 > ElastiCache chỉ cần thiết khi cần high availability hoặc >1 EC2 instance.
 
 ---
 
-### 4.4 AWS Free Tier (12 tháng đầu)
+## 5.3 AWS Free Tier (12 tháng đầu)
 
 | Service | Free Tier hàng tháng | Chi phí với Free Tier |
 |---|---|---|
@@ -294,10 +300,10 @@ EC2 (FastAPI + RQ Worker)
 | AWS Amplify | 1,000 build phút + 15GB served + 5GB storage | **~$0** |
 | ECR | 500MB/tháng | **~$0** (nếu image < 500MB) |
 | SSM Parameter Store | Unlimited standard params | **$0** |
-| **ElastiCache** | Không có Free Tier | **~$12.41** |
+| **ElastiCache** |  Không có Free Tier | **~$12.41** |
 | **Data Transfer** | 1GB/tháng miễn phí, sau đó $0.09/GB | **~$0.81** (9GB tính phí) |
 
-#### Tổng với Free Tier
+### Tổng với Free Tier
 
 | Tháng | Chi phí ước tính |
 |---|---|
@@ -308,7 +314,7 @@ EC2 (FastAPI + RQ Worker)
 
 ---
 
-### 4.5 So sánh kịch bản triển khai
+## 5.4 So sánh kịch bản triển khai
 
 | Kịch bản | Cấu hình | Chi phí/tháng | Phù hợp |
 |---|---|---|---|
@@ -320,9 +326,9 @@ EC2 (FastAPI + RQ Worker)
 
 ---
 
-### 4.6 Cấu trúc S3 Bucket
+## 6. Cấu trúc S3 Bucket
 
-```text
+```
 s3://{project}-{env}-uploads-{account-id}/
   ├── videos/           # Video gốc (không tự xóa)
   ├── audio/            # Audio extract từ video (tự xóa sau 30 ngày)
@@ -340,7 +346,7 @@ s3://{project}-{env}-uploads-{account-id}/
 
 ---
 
-### 4.7 Security Architecture
+## 7. Security Architecture
 
 | Lớp bảo mật | Cơ chế |
 |---|---|
