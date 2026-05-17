@@ -207,7 +207,8 @@ export default function VideoLessonPage() {
   const [isLoadingModuleLessons, setIsLoadingModuleLessons] = useState(false);
 
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/video/${videoId}`;
+  const videoToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/video/${videoId}${videoToken ? `?token=${videoToken}` : ''}`;
   const normalizedAvatarStatus = (avatarStatus || 'not_generated').toLowerCase();
   const isAvatarReady = normalizedAvatarStatus === 'ready' || normalizedAvatarStatus === 'generated' || normalizedAvatarStatus === 'completed';
   const isAvatarProcessing = normalizedAvatarStatus === 'processing' || normalizedAvatarStatus === 'queued' || normalizedAvatarStatus === 'running';
