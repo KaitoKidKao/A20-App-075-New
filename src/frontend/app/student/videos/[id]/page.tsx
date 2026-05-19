@@ -28,11 +28,8 @@ import {
   Download,
   Presentation,
   Network,
-  Layout,
-  X,
   ChevronDown,
   ChevronRight,
-  ChevronLeft,
   Minus,
   Plus,
   SkipBack,
@@ -44,13 +41,24 @@ import Image from 'next/image';
 import { api, API_BASE_URL, type HandsSignGloss, type UserProgress } from '@/lib/api';
 import { InfographicViewer, type InfographicData } from '@/components/infographic/InfographicViewer';
 
-const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { node: any, isRoot?: boolean, depth?: number, seekTo: (time: string) => void }) => {
+type MindmapPoint = { text: string; timestamp?: string | null };
+type MindmapNode = {
+  topic?: string;
+  name?: string;
+  text?: string;
+  timestamp?: string | null;
+  branches?: MindmapNode[];
+  points?: MindmapPoint[];
+  children?: MindmapNode[];
+};
+
+const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { node: MindmapNode; isRoot?: boolean; depth?: number; seekTo: (time: string) => void }) => {
   // Mức 1 (Root = depth 0) và Mức 2 (Branches = depth 1) được mở rộng mặc định
   const [expanded, setExpanded] = useState(depth < 2);
   
   const childrenList = [
     ...(node.branches || []),
-    ...(node.points ? node.points.map((p: any) => ({ text: p.text, timestamp: p.timestamp })) : [])
+    ...(node.points ? node.points.map((p: MindmapPoint) => ({ text: p.text, timestamp: p.timestamp })) : [])
   ];
   const hasChildren = childrenList.length > 0;
 
@@ -95,7 +103,7 @@ const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { nod
           <div className="w-6 h-[2px] bg-slate-200 shrink-0" />
           
           <div className="flex flex-col justify-center gap-2 relative">
-             {childrenList.map((child: any, i: number) => {
+             {childrenList.map((child: MindmapNode, i: number) => {
                 const isFirst = i === 0;
                 const isLast = i === childrenList.length - 1;
                 const isOnly = childrenList.length === 1;
@@ -284,7 +292,7 @@ export default function VideoLessonPage() {
   const [isLoadingSlideHistory, setIsLoadingSlideHistory] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('template_08');
   const [numSlides, setNumSlides] = useState(15);
-  const [mindmapData, setMindmapData] = useState<any>(null);
+  const [mindmapData, setMindmapData] = useState<MindmapNode | null>(null);
   const [isLoadingMindmap, setIsLoadingMindmap] = useState(false);
   const [isGeneratingMindmap, setIsGeneratingMindmap] = useState(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
@@ -1663,7 +1671,16 @@ export default function VideoLessonPage() {
                                       isSelected ? "border-[#FF4F6E] shadow-xl scale-105 z-10" : "border-slate-100 hover:border-[#FF4F6E]/50"
                                     )}
                                   >
-                                    <img src={`${API_BASE_URL}/api/videos/templates/${id}/thumbnail`} alt={`Template ${i + 1}`} className={cn("absolute inset-0 w-full h-full object-cover transition-transform duration-500", isSelected ? "scale-110" : "group-hover:scale-110")} />
+                                    <Image
+                                      src={`${API_BASE_URL}/api/videos/templates/${id}/thumbnail`}
+                                      alt={`Template ${i + 1}`}
+                                      fill
+                                      sizes="(max-width: 640px) 50vw, 20vw"
+                                      className={cn(
+                                        "absolute inset-0 w-full h-full object-cover transition-transform duration-500",
+                                        isSelected ? "scale-110" : "group-hover:scale-110"
+                                      )}
+                                    />
                                     <div className={cn("absolute inset-0 bg-slate-900/40 transition-opacity flex items-center justify-center", isSelected ? "opacity-0" : "opacity-100 group-hover:opacity-50")}>
                                       <span className="text-white font-extrabold text-lg drop-shadow-md">{i + 1}</span>
                                     </div>
@@ -1742,7 +1759,13 @@ export default function VideoLessonPage() {
                           {/* Right: Preview and Config */}
                           <div className="w-full lg:w-1/3 flex flex-col space-y-6 bg-slate-50 p-6 rounded-[32px] border border-slate-100">
                             <div className="aspect-video rounded-2xl border-4 border-white overflow-hidden relative shadow-lg">
-                              <img src={`${API_BASE_URL}/api/videos/templates/${selectedTemplate}/thumbnail`} alt="Template Preview" className="absolute inset-0 w-full h-full object-cover" />
+                              <Image
+                                src={`${API_BASE_URL}/api/videos/templates/${selectedTemplate}/thumbnail`}
+                                alt="Template Preview"
+                                fill
+                                sizes="(max-width: 1024px) 100vw, 33vw"
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
                             </div>
 
                             <div className="space-y-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
@@ -1825,9 +1848,9 @@ export default function VideoLessonPage() {
                     ) : (() => {
                       // Normalize data format
                       const topic = mindmapData.topic || mindmapData.name || 'Sơ đồ tư duy';
-                      const branches = mindmapData.branches || (mindmapData.children ? mindmapData.children.map((c: any) => ({
+                      const branches = mindmapData.branches || (mindmapData.children ? mindmapData.children.map((c: MindmapNode) => ({
                         name: c.name,
-                        points: c.children ? c.children.map((cc: any) => ({ text: cc.name, timestamp: null })) : []
+                        points: c.children ? c.children.map((cc: MindmapNode) => ({ text: cc.name || '', timestamp: null })) : []
                       })) : []);
 
                       const rootNode = { topic, branches };

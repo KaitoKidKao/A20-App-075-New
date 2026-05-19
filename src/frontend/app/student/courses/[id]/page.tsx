@@ -27,7 +27,9 @@ function formatDuration(minutes: number): string {
   return `${h}h ${m}m`;
 }
 
-function naturalLessonCompare(a: any, b: any): number {
+type LessonSortable = { sort_order?: number; title?: string };
+
+function naturalLessonCompare(a: LessonSortable, b: LessonSortable): number {
   const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0);
   if (byOrder !== 0) return byOrder;
   return (a.title || '').localeCompare((b.title || ''), 'vi', {

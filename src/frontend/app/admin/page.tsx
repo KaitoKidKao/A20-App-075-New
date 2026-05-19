@@ -407,12 +407,12 @@ export default function AdminDashboardPage() {
       setPublishMessage('Vui lòng chọn khóa học và chương trước khi đổi tên.');
       return;
     }
-    const module = (selectedCourse?.modules || []).find((item) => item.id === selectedModuleId);
-    if (!module) {
+    const selectedModule = (selectedCourse?.modules || []).find((item) => item.id === selectedModuleId);
+    if (!selectedModule) {
       setPublishMessage('Không tìm thấy chương để đổi tên.');
       return;
     }
-    const currentTitle = displayText(module.title);
+    const currentTitle = displayText(selectedModule.title);
     setRenamingModuleData({
       id: selectedModuleId,
       currentTitle: currentTitle,
@@ -433,14 +433,14 @@ export default function AdminDashboardPage() {
       setIsRenameModuleModalOpen(false);
       return;
     }
-    const module = (selectedCourse?.modules || []).find((item) => item.id === id);
-    if (!module) return;
+    const selectedModule = (selectedCourse?.modules || []).find((item) => item.id === id);
+    if (!selectedModule) return;
 
     try {
       await api.courses.updateModule(id, {
         title: trimmedTitle,
-        description: module.description || undefined,
-        sort_order: module.sort_order,
+        description: selectedModule.description || undefined,
+        sort_order: selectedModule.sort_order,
       });
       setPublishMessage('Đã cập nhật tên chương.');
       setIsRenameModuleModalOpen(false);
