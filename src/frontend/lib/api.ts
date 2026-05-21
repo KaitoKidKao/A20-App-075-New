@@ -401,6 +401,10 @@ export interface BatchUploadResponse {
 const buildHeaders = (isMultipart = false): HeadersInit => {
   const headers: HeadersInit = {};
   if (!isMultipart) headers["Content-Type"] = "application/json";
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('auth_token');
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
   return headers;
 };
 
@@ -461,23 +465,32 @@ export const api = {
       }
       const data = await res.json();
       let fullName = "";
+      let email = credentials.email;
+      let role = data.role || "student";
       try {
-        const meRes = await apiFetch("/api/auth/me", { headers: buildHeaders() });
+        const meRes = await apiFetch("/api/auth/me", {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${data.access_token}`,
+          },
+        });
         if (meRes.ok) {
           const me = (await meRes.json()) as SessionUser;
           fullName = (me.full_name || "").trim();
+          email = me.email || email;
+          role = me.role || role;
         }
       } catch {
         // ignore and fallback to email prefix
       }
 
-      const fallbackName = credentials.email.split("@")[0] || "User";
+      const fallbackName = email.split("@")[0] || "User";
       return {
         ...data,
         user: {
           name: fullName || fallbackName,
-          email: credentials.email,
-          role: data.role || "student",
+          email,
+          role,
         },
       };
     },
@@ -693,6 +706,37 @@ export const api = {
       if (!res.ok) {
         const error = await res.json().catch(() => ({}));
         throw new Error(error.detail || "Video upload failed.");
+      }
+      return res.json();
+    },
+
+    async presignUpload(params: {
+      filename: string;
+      content_type: string;
+      video_title?: string;
+      module_id?: string;
+    }): Promise<{ video_id: string; upload_url: string; s3_key: string; expires_in: number }> {
+      const res = await apiFetch("/api/videos/presign-upload", {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to get upload URL.");
+      }
+      return res.json();
+    },
+
+    async confirmUpload(videoId: string, s3Key: string) {
+      const res = await apiFetch(`/api/videos/${videoId}/confirm-upload`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({ s3_key: s3Key }),
+      });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.detail || "Failed to confirm upload.");
       }
       return res.json();
     },

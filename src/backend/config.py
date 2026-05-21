@@ -14,6 +14,13 @@ REPLICATE_API_TOKEN_BACKUP_1 = os.getenv("REPLICATE_API_TOKEN_BACKUP_1", "")
 REPLICATE_API_TOKEN_BACKUP_2 = os.getenv("REPLICATE_API_TOKEN_BACKUP_2", "")
 REPLICATE_IMAGE_MODEL = os.getenv("REPLICATE_IMAGE_MODEL", "black-forest-labs/flux-1.1-pro")
 
+# AWS
+AWS_REGION = os.getenv("AWS_REGION", "ap-southeast-1")
+AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "").strip()
+
+# Whisper — use "tiny" or "base" on free-tier EC2 (1GB RAM), "small" on t3.small+
+WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "base")
+
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 JSON_LOGS = os.getenv("JSON_LOGS", "false").lower() == "true"
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
@@ -52,6 +59,11 @@ LOGIN_RATE_LIMIT = os.getenv("LOGIN_RATE_LIMIT", "10/minute")
 UPLOAD_RATE_LIMIT = os.getenv("UPLOAD_RATE_LIMIT", "20/hour")
 AVATAR_RATE_LIMIT = os.getenv("AVATAR_RATE_LIMIT", "10/hour")
 ALLOW_PUBLIC_ROLE_REGISTRATION = os.getenv("ALLOW_PUBLIC_ROLE_REGISTRATION", "false").lower() == "true"
+ADMIN_EMAILS: set[str] = {
+    e.strip().lower()
+    for e in os.getenv("ADMIN_EMAILS", "").split(",")
+    if e.strip()
+}
 
 
 def _parse_cors_origins(raw: str) -> list[str]:

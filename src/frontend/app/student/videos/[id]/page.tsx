@@ -351,7 +351,9 @@ export default function VideoLessonPage() {
   }, [hasNext, currentIndex, moduleLessons, router]);
 
   const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/videos/${videoId}/stream`;
+  const _authToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const _tokenParam = _authToken ? `?token=${encodeURIComponent(_authToken)}` : '';
+  const videoSrc = videoSourceMode === 'demo' ? '/demo-video.mp4' : `${backendBaseUrl}/api/videos/${videoId}/stream${_tokenParam}`;
   const normalizedAvatarStatus = (avatarStatus || 'not_generated').toLowerCase();
   const isAvatarReady = normalizedAvatarStatus === 'ready' || normalizedAvatarStatus === 'generated' || normalizedAvatarStatus === 'completed';
   const isAvatarProcessing = normalizedAvatarStatus === 'processing' || normalizedAvatarStatus === 'queued' || normalizedAvatarStatus === 'running';
@@ -378,7 +380,8 @@ export default function VideoLessonPage() {
       video.preload = 'metadata';
       video.muted = true;
       video.playsInline = true;
-      video.src = `${backendBaseUrl}/api/videos/${lessonId}/stream`;
+      const tok = localStorage.getItem('auth_token');
+      video.src = `${backendBaseUrl}/api/videos/${lessonId}/stream${tok ? `?token=${encodeURIComponent(tok)}` : ''}`;
 
       let resolved = false;
       const timeout = window.setTimeout(() => {
@@ -752,7 +755,7 @@ export default function VideoLessonPage() {
     setIsLoadingMetadata(true);
     setMetadataError('');
     try {
-      const [timelineRes, highlightsRes, questionsRes, briefingRes, flashcardsRes, vizDataRes] = await Promise.all([
+      const [timelineRes, highlightsRes, questionsRes, briefingRes, flashcardsRes, vizDataRes] = await Promise.allSettled([
         api.videos.getTimeline(videoId),
         api.videos.getHighlights(videoId),
         api.videos.getQuestions(videoId),
@@ -761,12 +764,14 @@ export default function VideoLessonPage() {
         api.videos.getVizData(videoId),
       ]);
 
-      setTimeline(timelineRes.timeline || []);
-      setHighlights(highlightsRes.highlights || []);
-      setQuestions(questionsRes.questions || []);
-      setBriefing(briefingRes.briefing || null);
-      setFlashcards(flashcardsRes.flashcards || []);
-      const rawVisualData = vizDataRes.visual_data || null;
+      const v = <T,>(r: PromiseSettledResult<T>) => r.status === 'fulfilled' ? r.value : null;
+
+      setTimeline(v(timelineRes)?.timeline || []);
+      setHighlights(v(highlightsRes)?.highlights || []);
+      setQuestions(v(questionsRes)?.questions || []);
+      setBriefing(v(briefingRes)?.briefing || null);
+      setFlashcards(v(flashcardsRes)?.flashcards || []);
+      const rawVisualData = v(vizDataRes)?.visual_data || null;
       let normalizedVisualData: VisualData | null = null;
       if (rawVisualData && typeof rawVisualData === 'object') {
         const hasInfographic = Object.prototype.hasOwnProperty.call(rawVisualData, 'infographic');
@@ -777,8 +782,8 @@ export default function VideoLessonPage() {
           normalizedVisualData = { infographic: rawVisualData as InfographicData };
         }
       }
-      if (normalizedVisualData?.infographic && vizDataRes.cover_image_url) {
-        normalizedVisualData.infographic.cover_image_url = vizDataRes.cover_image_url;
+      if (normalizedVisualData?.infographic && v(vizDataRes)?.cover_image_url) {
+        normalizedVisualData.infographic.cover_image_url = v(vizDataRes)!.cover_image_url!;
       }
       setVisualData(normalizedVisualData);
     } catch (err) {
@@ -1462,7 +1467,7 @@ export default function VideoLessonPage() {
                       &ldquo;{briefing.objective}&rdquo;
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {briefing.key_terms.map((term, i) => (
+                      {(briefing.key_terms ?? []).map((term, i) => (
                         <span key={i} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-extrabold text-slate-500 uppercase tracking-widest shadow-sm">
                           {term}
                         </span>
@@ -1951,11 +1956,11 @@ export default function VideoLessonPage() {
                                 <p className="text-xs font-bold text-slate-500 mt-1">Điểm đạt: {activeQuiz.passing_score}%</p>
                               </div>
 
-                              {activeQuiz.questions.map((question, qIdx) => (
+                              {(activeQuiz.questions ?? []).map((question, qIdx) => (
                                 <div key={question.id} className="rounded-2xl border border-slate-100 p-5 bg-white">
                                   <p className="text-sm font-extrabold text-slate-900 mb-4">{qIdx + 1}. {question.question_text}</p>
                                   <div className="space-y-2">
-                                    {question.options.map((opt) => (
+                                    {(question.options ?? []).map((opt) => (
                                       <label key={opt.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 hover:bg-slate-50 cursor-pointer">
                                         <input
                                           type="radio"
@@ -2262,7 +2267,7 @@ export default function VideoLessonPage() {
                                   <button
                                     key={`${g.time}-${g.word}-${i}`}
                                     type="button"
-                                    onClick={() => seekToSeconds(g.time)}
+                                    onClick={() => handleSeek(g.time)}
                                     className={cn(
                                       'text-xs font-bold px-3 py-2 rounded-2xl border transition-all',
                                       isGlossActive

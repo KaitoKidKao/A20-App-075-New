@@ -31,8 +31,8 @@ export default function StudentDashboardPage() {
     const fetchData = async () => {
       try {
         const [dashboardData, coursesData] = await Promise.all([
-          api.student.getDashboard(),
-          api.courses.listCourses(),
+          api.student.getDashboard().catch(() => null),
+          api.courses.listCourses().catch(() => []),
         ]);
         setDashboard(dashboardData);
         setPublicCourses(coursesData);

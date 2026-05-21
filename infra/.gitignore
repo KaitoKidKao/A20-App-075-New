@@ -1,0 +1,8 @@
+# Terraform state — contains real resource IDs, never commit to public repos
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform.lock.hcl
+
+# Secrets — use terraform.tfvars.example as template instead
+terraform/terraform.tfvars

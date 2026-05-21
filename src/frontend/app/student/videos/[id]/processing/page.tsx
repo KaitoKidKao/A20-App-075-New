@@ -128,7 +128,7 @@ export default function VideoProcessingPage() {
                    <p className="text-sm font-bold text-slate-400 max-w-md">
                      {isComplete ? 'Hệ thống đã hoàn tất trích xuất và tối ưu bài giảng của bạn.'
                        : isFailed ? 'Có lỗi xảy ra khi xử lý video. Vui lòng xem thông báo lỗi bên dưới.'
-                       : 'Hệ thống đang dùng AI để tạo phụ đề, tóm tắt và tài nguyên học tập. Bạn có thể rời trang trong khi tiến trình vẫn chạy.'}
+                       : 'Hệ thống đang dùng AI để tạo phụ đề, tóm tắt và tài nguyên học tập. Bạn có thể đóng trình duyệt, tiến trình vẫn ở BE.'}
                    </p>
                 </div>
 
@@ -234,7 +234,7 @@ export default function VideoProcessingPage() {
                  </button>
                ) : (
                  <div className="w-full flex items-center justify-center gap-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                    <Info size={14} /> Bạn có thể đóng trình duyệt. Tiến trình vẫn tiếp tục ở backend.
+                    <Info size={14} /> Bạn có thể đóng trình duyệt, tiến trình vẫn ở BE.
                  </div>
                )}
             </div>

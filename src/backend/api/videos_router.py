@@ -42,6 +42,7 @@ from src.backend.services.handsign_animation_service import (
 from src.backend.services.job_service import upsert_job_status
 from src.backend.services.queue_service import enqueue_download_and_pipeline, enqueue_pipeline_job
 from src.backend.services.rate_limit_service import rate_limit
+from src.backend.services.storage_service import generate_presigned_upload_url, generate_presigned_url, download_from_s3, s3_object_exists
 from src.backend.services.video_service import VideoService
 from src.backend.services.slide_service import SlideService
 from src.backend.services.mindmap_service import MindmapService
@@ -145,6 +146,21 @@ def _get_content_metadata(video_id: str, session: Session) -> ContentMetadata | 
     return session.exec(
         select(ContentMetadata).where(ContentMetadata.lesson_id == lesson_uuid)
     ).first()
+
+
+def _presign_cover_url(cover_image_url: str | None) -> str | None:
+    cover = (cover_image_url or "").strip()
+    if not cover:
+        return None
+
+    normalized = cover if cover.startswith("/") else f"/{cover}"
+    if normalized.startswith("/uploads/covers/"):
+        s3_key = normalized.lstrip("/")
+        if s3_object_exists(s3_key):
+            presigned = generate_presigned_url(s3_key, expires_in=7200)
+            if presigned:
+                return presigned
+    return cover
 
 
 def _ensure_handsign_editor(video_id: str, current_user: User, session: Session) -> Lesson:
@@ -316,6 +332,104 @@ async def _create_lesson_and_enqueue(
         "message": "Video uploaded and queued for processing.",
         "filename": file.filename,
     }
+
+@router.post("/presign-upload")
+async def presign_upload(
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Create lesson record and return a presigned S3 PUT URL for direct browser upload."""
+    filename = data.get("filename", "video.mp4")
+    content_type = data.get("content_type", "video/mp4")
+    module_id = data.get("module_id")
+    video_title = (data.get("video_title") or "").strip() or filename
+
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in config.ALLOWED_VIDEO_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported file format: {filename}")
+    if content_type.lower() not in config.ALLOWED_VIDEO_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Unsupported video MIME type.")
+
+    lesson_uuid = uuid.uuid4()
+    lesson_id = str(lesson_uuid)
+    s3_key = f"uploads/{lesson_id}{ext}"
+
+    upload_url = generate_presigned_upload_url(s3_key, content_type)
+    if not upload_url:
+        raise HTTPException(status_code=503, detail="S3 not configured. Use /upload instead.")
+
+    target_module = _ensure_teacher_module(module_id, current_user, session)
+    module = target_module or await get_or_create_default_hierarchy(session, current_user)
+
+    lesson = Lesson(
+        id=lesson_uuid,
+        module_id=module.id,
+        title=video_title,
+        content_type="video",
+        status="pending_upload",
+        duration_minutes=0,
+        sort_order=0,
+    )
+    session.add(lesson)
+
+    if target_module is None and _role_name(current_user) == "student":
+        existing = session.exec(
+            select(Enrollment).where(
+                Enrollment.user_id == current_user.id,
+                Enrollment.course_id == module.course_id,
+            )
+        ).first()
+        if not existing:
+            session.add(Enrollment(user_id=current_user.id, course_id=module.course_id))
+
+    session.commit()
+    return {"video_id": lesson_id, "upload_url": upload_url, "s3_key": s3_key, "expires_in": 3600}
+
+
+@router.post("/{video_id}/confirm-upload")
+async def confirm_upload(
+    video_id: str,
+    background_tasks: BackgroundTasks,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Called after browser finishes uploading to S3. Downloads file and enqueues pipeline."""
+    lesson = check_video_access(video_id, current_user, session)
+    s3_key = data.get("s3_key", "")
+    if not s3_key:
+        raise HTTPException(status_code=400, detail="s3_key is required.")
+
+    ext = os.path.splitext(s3_key)[1].lower()
+    local_path = VideoService.UPLOAD_DIR / f"{video_id}{ext}"
+    VideoService.ensure_dirs()
+
+    if not download_from_s3(s3_key, local_path):
+        raise HTTPException(status_code=502, detail="Failed to download video from S3.")
+
+    VideoService.validate_video_duration(local_path)
+
+    duration_seconds = VideoService.get_video_duration_seconds(local_path)
+    if duration_seconds:
+        lesson.duration_minutes = max(1, int(round(duration_seconds / 60)))
+    lesson.status = "queued"
+    session.add(lesson)
+    session.commit()
+
+    upsert_job_status(session, lesson_id=video_id, status="queued", progress=0)
+    mode = enqueue_pipeline_job(
+        video_id=video_id,
+        video_path=str(local_path),
+        fallback_task_adder=background_tasks.add_task,
+    )
+    return {
+        "video_id": video_id,
+        "status": "processing",
+        "queue_mode": mode,
+        "message": "Video upload confirmed and queued for processing.",
+    }
+
 
 @router.post("/upload")
 async def upload_video(
@@ -618,9 +732,8 @@ async def get_questions(
 ):
     check_video_access(video_id, current_user, session)
     ai_analysis = _get_ai_analysis(video_id, session)
-    if "questions" not in ai_analysis:
-        return {"video_id": video_id, "questions": []}
-    return {"video_id": video_id, "questions": ai_analysis["questions"]}
+    questions = ai_analysis.get("questions") or ai_analysis.get("quizzes", [])
+    return {"video_id": video_id, "questions": questions}
 
 
 @router.get("/{video_id}/briefing")
@@ -667,14 +780,38 @@ async def get_viz_data(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
+    import json, tempfile
+    from pathlib import Path as _Path
+
     check_video_access(video_id, current_user, session)
     ai_analysis = _get_ai_analysis(video_id, session)
-    if "visual_data" not in ai_analysis:
-        return {"video_id": video_id, "visual_data": {}, "cover_image_url": None}
+    visual_data = ai_analysis.get("visual_data", {})
+    cover_image_url = _presign_cover_url(ai_analysis.get("cover_image_url"))
+
+    # Read notebook.json from S3 for the correct cover and visual_data
+    notebook_key = f"uploads/ai_results/{video_id}/notebook.json"
+    if s3_object_exists(notebook_key):
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+                tmp_path = _Path(tmp.name)
+            if download_from_s3(notebook_key, tmp_path):
+                notebook = json.loads(tmp_path.read_text(encoding="utf-8"))
+                tmp_path.unlink(missing_ok=True)
+                if not visual_data and notebook.get("visual_data"):
+                    visual_data = notebook["visual_data"]
+                nb_cover = notebook.get("cover_image_url", "")
+                presigned_cover = _presign_cover_url(nb_cover)
+                if presigned_cover:
+                    cover_image_url = presigned_cover
+        except Exception:
+            pass
+
+    if not visual_data:
+        return {"video_id": video_id, "visual_data": {}, "cover_image_url": cover_image_url}
     return {
         "video_id": video_id,
-        "visual_data": ai_analysis["visual_data"],
-        "cover_image_url": ai_analysis.get("cover_image_url"),
+        "visual_data": visual_data,
+        "cover_image_url": cover_image_url,
     }
 
 
@@ -924,15 +1061,25 @@ async def generate_slides_endpoint(
 
 @router.get("/slides/download/{filename}")
 async def download_slides(filename: str):
+    # Validate filename to prevent path traversal
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Tên file không hợp lệ.")
+
     file_path = SlideService.OUTPUT_DIR / filename
     if not file_path.exists():
+        # Try to restore from S3
+        s3_key = f"{SlideService.S3_SLIDES_PREFIX}/{filename}"
+        from src.backend.services.storage_service import ensure_local
+        ensure_local(s3_key, file_path)
+
+    if not file_path.exists():
         raise HTTPException(status_code=404, detail="File không tồn tại.")
-    
+
     from fastapi.responses import FileResponse
     return FileResponse(
         path=file_path,
         filename=filename,
-        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
     )
 
 
@@ -1001,21 +1148,26 @@ async def get_video_thumbnail(
     session: Session = Depends(get_session),
 ):
     """
-    Extract the first frame of the video using FFmpeg and serve it as a JPEG image.
+    Serve video thumbnail. Checks S3 uploads/thumbnails/ first, then falls back to local extraction.
     """
+    from fastapi.responses import RedirectResponse
+    for ext in (".jpg", ".jpeg", ".png"):
+        s3_key = f"uploads/thumbnails/{video_id}{ext}"
+        if s3_object_exists(s3_key):
+            url = generate_presigned_url(s3_key, expires_in=7200)
+            if url:
+                return RedirectResponse(url=url, status_code=302)
+
     video_path = _find_existing_video_path(video_id, session)
     if not video_path:
-        raise HTTPException(status_code=404, detail="Video file not found.")
+        raise HTTPException(status_code=404, detail="Thumbnail not found.")
 
     try:
         thumbnail_path = VideoService.extract_thumbnail(video_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to extract video thumbnail: {e}")
 
-    return FileResponse(
-        path=str(thumbnail_path),
-        media_type="image/jpeg",
-    )
+    return FileResponse(path=str(thumbnail_path), media_type="image/jpeg")
 
 
 @router.get("/{video_id}/stream")
@@ -1025,14 +1177,18 @@ async def stream_video(
     session: Session = Depends(get_session),
 ):
     """
-    Serve the video file directly with support for Range requests (seeking).
+    Serve the video file directly. Falls back to S3 presigned URL when not cached locally.
     """
+    from fastapi.responses import RedirectResponse
     check_video_access(video_id, current_user, session)
     video_path = _find_existing_video_path(video_id, session)
-    if not video_path:
-        raise HTTPException(status_code=404, detail="Video file not found.")
-    
-    return FileResponse(
-        path=str(video_path),
-        media_type="video/mp4",
-    )
+    if video_path:
+        return FileResponse(path=str(video_path), media_type="video/mp4")
+
+    for ext in (".mp4", ".mov", ".avi", ".mkv"):
+        s3_key = f"uploads/videos/{video_id}{ext}"
+        if s3_object_exists(s3_key):
+            url = generate_presigned_url(s3_key, expires_in=7200)
+            if url:
+                return RedirectResponse(url=url, status_code=302)
+    raise HTTPException(status_code=404, detail="Video file not found.")

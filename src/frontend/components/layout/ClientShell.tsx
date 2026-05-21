@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
 import { ProfileHeader } from './ProfileHeader';
+import { api } from '@/lib/api';
+import { useAppStore } from '@/store/useAppStore';
 
 const Footer = dynamic(
   () => import('./Footer').then((mod) => mod.Footer),
@@ -15,11 +17,41 @@ const Footer = dynamic(
 
 export function ClientShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const login = useAppStore((state) => state.login);
+  const logout = useAppStore((state) => state.logout);
   const isLandingPage = pathname === '/';
   const isAuthPage = pathname.startsWith('/auth/');
   const isAdminPage = pathname.startsWith('/admin');
   const isVideoProcessingPage =
     pathname.startsWith('/student/videos/') && pathname.includes('/processing');
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const token = window.localStorage.getItem('auth_token');
+    if (!token) return;
+
+    let cancelled = false;
+    api.auth.me()
+      .then((me) => {
+        if (cancelled) return;
+        const displayName = (me.full_name || '').trim() || me.email.split('@')[0] || 'User';
+        login(
+          {
+            name: displayName,
+            email: me.email,
+            role: me.role,
+          },
+          token
+        );
+      })
+      .catch(() => {
+        if (!cancelled) logout();
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [login, logout]);
 
   if (isLandingPage || isAuthPage) {
     return (

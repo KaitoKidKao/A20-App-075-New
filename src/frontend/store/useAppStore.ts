@@ -43,7 +43,10 @@ export const useAppStore = create<AppState>()(
       // Auth
       user: null,
       isAuthenticated: false,
-      login: (user) => {
+      login: (user, token) => {
+        if (token && typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', token);
+        }
         set({
           user,
           isAuthenticated: true,
@@ -51,6 +54,9 @@ export const useAppStore = create<AppState>()(
         });
       },
       logout: () => {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token');
+        }
         set({ user: null, isAuthenticated: false });
       },
 

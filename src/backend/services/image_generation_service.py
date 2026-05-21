@@ -5,6 +5,7 @@ import uuid
 from pathlib import Path
 
 from openai import OpenAI
+import requests
 
 from src.backend import config
 
@@ -64,10 +65,17 @@ class ImageGenerationService:
             )
             data = response.data[0] if response.data else None
             b64 = getattr(data, "b64_json", None) if data else None
-            if not b64:
-                logger.warning("OpenAI image generation returned empty b64_json.")
-                return None
-            return b64
+            if b64:
+                return b64
+
+            image_url = getattr(data, "url", None) if data else None
+            if image_url:
+                url_response = requests.get(image_url, timeout=30)
+                url_response.raise_for_status()
+                return base64.b64encode(url_response.content).decode("ascii")
+
+            logger.warning("OpenAI image generation returned no image payload.")
+            return None
         except Exception as exc:
             logger.warning("OpenAI image generation failed: %s", exc)
             return None
@@ -80,7 +88,10 @@ class ImageGenerationService:
             filename = f"{uuid.uuid4()}.png"
             output_path = cls.COVERS_DIR / filename
             output_path.write_bytes(raw_bytes)
-            return f"/uploads/covers/{filename}"
+            relative_url = f"/uploads/covers/{filename}"
+            from .storage_service import upload_to_s3
+            upload_to_s3(output_path, relative_url.lstrip("/"))
+            return relative_url
         except Exception as exc:
             logger.warning("Failed to persist generated cover image: %s", exc)
             return None

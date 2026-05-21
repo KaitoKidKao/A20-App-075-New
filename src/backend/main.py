@@ -1,10 +1,12 @@
 import logging
+import mimetypes
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import text
 from sqlmodel import Session
 
@@ -16,7 +18,11 @@ from src.backend.api.videos_router import router as videos_router
 from src.backend.api.template_router import router as template_router
 from src.backend.api.course_router import router as course_router
 from src.backend.api.student_router import router as student_router
-from src.backend.database import create_db_and_tables, engine
+from src.backend.api.deps import check_video_access
+from src.backend.services.storage_service import generate_presigned_url, s3_object_exists
+from src.backend.auth import get_current_user
+from src.backend.database import create_db_and_tables, engine, get_session
+from src.backend.models import User
 from src.backend.services.job_service import mark_stale_jobs_as_failed
 from src.backend.services.observability_service import configure_logging, runtime_metrics
 from src.backend.services.pipeline_service import shutdown_pipeline_executor
@@ -67,6 +73,28 @@ app.include_router(avatar_router)
 app.include_router(course_router)
 app.include_router(student_router)
 app.mount("/uploads", StaticFiles(directory=config.UPLOADS_DIR), name="uploads")
+
+@app.get("/api/video/{video_id}")
+async def stream_video(
+    video_id: str,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    check_video_access(video_id, current_user, session)
+    for ext in (".mp4", ".mov", ".avi", ".mkv"):
+        for prefix in (f"uploads/{video_id}", f"uploads/videos/{video_id}"):
+            s3_key = f"{prefix}{ext}"
+            if s3_object_exists(s3_key):
+                url = generate_presigned_url(s3_key, expires_in=7200)
+                if url:
+                    return RedirectResponse(url=url, status_code=302)
+    for ext in (".mp4", ".mov", ".avi", ".mkv"):
+        candidate = VideoService.UPLOAD_DIR / f"{video_id}{ext}"
+        if candidate.exists():
+            media_type = mimetypes.guess_type(str(candidate))[0] or "video/mp4"
+            return FileResponse(str(candidate), media_type=media_type)
+    raise HTTPException(status_code=404, detail="Video file not found.")
+
 
 @app.get("/api/health")
 def health_check():

@@ -16,8 +16,7 @@ class AIService:
     
     _vsl_data = None
 
-    # Sử dụng bản 'base' hoặc 'small' để tối ưu cho CPU
-    MODEL_SIZE = "small"
+    MODEL_SIZE = config.WHISPER_MODEL_SIZE
     
     # Khởi tạo Whisper Model (Lazy Loading)
     _whisper_model = None
@@ -534,10 +533,14 @@ class AIService:
             video_id = transcript_data["video_id"]
             result_dir = cls.AI_RESULTS_DIR / video_id
             result_dir.mkdir(parents=True, exist_ok=True)
-            
-            with open(result_dir / "notebook.json", "w", encoding="utf-8") as f:
+
+            notebook_path = result_dir / "notebook.json"
+            with open(notebook_path, "w", encoding="utf-8") as f:
                 json.dump(result, f, ensure_ascii=False, indent=2)
-                
+
+            from .storage_service import upload_to_s3
+            upload_to_s3(notebook_path, f"uploads/ai_results/{video_id}/notebook.json")
+
             return result
         except Exception as e:
             logger.error(f"❌ Lỗi khi tạo dữ liệu Notebook: {e}")
