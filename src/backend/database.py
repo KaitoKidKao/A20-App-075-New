@@ -18,6 +18,8 @@ if is_sqlite:
 elif database_url.startswith("postgresql"):
     # Ensure postgres client session uses UTF-8 consistently.
     engine_kwargs["connect_args"] = {"options": "-c client_encoding=UTF8"}
+    engine_kwargs["pool_size"] = 20
+    engine_kwargs["max_overflow"] = 30
 
 engine = create_engine(database_url, **engine_kwargs)
 

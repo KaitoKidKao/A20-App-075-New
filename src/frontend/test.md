@@ -1,3 +1,0 @@
-- Clone Project
-- Setup UV
-- Setup Next FE

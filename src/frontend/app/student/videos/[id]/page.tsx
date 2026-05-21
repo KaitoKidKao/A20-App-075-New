@@ -55,7 +55,7 @@ type MindmapNode = {
 const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { node: MindmapNode; isRoot?: boolean; depth?: number; seekTo: (time: string) => void }) => {
   // Mức 1 (Root = depth 0) và Mức 2 (Branches = depth 1) được mở rộng mặc định
   const [expanded, setExpanded] = useState(depth < 2);
-  
+
   const childrenList = [
     ...(node.branches || []),
     ...(node.points ? node.points.map((p: MindmapPoint) => ({ text: p.text, timestamp: p.timestamp })) : [])
@@ -65,7 +65,7 @@ const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { nod
   return (
     <div className="flex items-center">
       {/* Node Content */}
-      <div 
+      <div
         className={cn(
           "relative group p-4 rounded-[24px] border bg-white transition-all shadow-sm flex items-center gap-3 z-10 shrink-0",
           isRoot ? "border-[#FF4F6E] border-2 bg-[#FF4F6E]/5" : "border-slate-200 hover:border-[#FF4F6E]",
@@ -80,7 +80,7 @@ const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { nod
             {node.topic || node.name || node.text}
           </span>
           {node.timestamp && (
-            <button 
+            <button
               onClick={(e) => { e.stopPropagation(); seekTo(node.timestamp); }}
               className="text-[10px] text-[#FF4F6E] font-extrabold w-fit bg-[#FF4F6E]/10 px-2 py-0.5 rounded-full hover:bg-[#FF4F6E]/20 transition-colors"
             >
@@ -88,7 +88,7 @@ const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { nod
             </button>
           )}
         </div>
-        
+
         {hasChildren && (
           <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-[#FF4F6E] group-hover:text-white transition-colors shrink-0 ml-2">
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -101,40 +101,40 @@ const RecursiveMindmapNode = ({ node, isRoot = false, depth = 0, seekTo }: { nod
         <div className="flex items-center">
           {/* Horizontal trunk from parent */}
           <div className="w-6 h-[2px] bg-slate-200 shrink-0" />
-          
-          <div className="flex flex-col justify-center gap-2 relative">
-             {childrenList.map((child: MindmapNode, i: number) => {
-                const isFirst = i === 0;
-                const isLast = i === childrenList.length - 1;
-                const isOnly = childrenList.length === 1;
 
-                return (
-                  <div key={i} className="relative flex items-center py-2 pl-6">
-                    {/* The curved connecting lines directly from parent */}
-                    {!isOnly && (
-                      <>
-                        {isFirst && (
-                          <div className="absolute left-0 top-1/2 bottom-0 w-6 border-l-2 border-t-2 border-slate-200 rounded-tl-[16px]" />
-                        )}
-                        {isLast && (
-                          <div className="absolute left-0 top-0 bottom-1/2 w-6 border-l-2 border-b-2 border-slate-200 rounded-bl-[16px]" />
-                        )}
-                        {!isFirst && !isLast && (
-                          <>
-                            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-slate-200" />
-                            <div className="absolute left-0 top-1/2 w-6 h-[2px] bg-slate-200" />
-                          </>
-                        )}
-                      </>
-                    )}
-                    {isOnly && (
-                      <div className="absolute left-0 w-6 h-[2px] bg-slate-200" />
-                    )}
-                    
-                    <RecursiveMindmapNode node={child} depth={depth + 1} seekTo={seekTo} />
-                  </div>
-                );
-             })}
+          <div className="flex flex-col justify-center gap-2 relative">
+            {childrenList.map((child: MindmapNode, i: number) => {
+              const isFirst = i === 0;
+              const isLast = i === childrenList.length - 1;
+              const isOnly = childrenList.length === 1;
+
+              return (
+                <div key={i} className="relative flex items-center py-2 pl-6">
+                  {/* The curved connecting lines directly from parent */}
+                  {!isOnly && (
+                    <>
+                      {isFirst && (
+                        <div className="absolute left-0 top-1/2 bottom-0 w-6 border-l-2 border-t-2 border-slate-200 rounded-tl-[16px]" />
+                      )}
+                      {isLast && (
+                        <div className="absolute left-0 top-0 bottom-1/2 w-6 border-l-2 border-b-2 border-slate-200 rounded-bl-[16px]" />
+                      )}
+                      {!isFirst && !isLast && (
+                        <>
+                          <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-slate-200" />
+                          <div className="absolute left-0 top-1/2 w-6 h-[2px] bg-slate-200" />
+                        </>
+                      )}
+                    </>
+                  )}
+                  {isOnly && (
+                    <div className="absolute left-0 w-6 h-[2px] bg-slate-200" />
+                  )}
+
+                  <RecursiveMindmapNode node={child} depth={depth + 1} seekTo={seekTo} />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -950,12 +950,7 @@ export default function VideoLessonPage() {
     }
   };
 
-  const seekToSeconds = (seconds: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = seconds;
-      videoRef.current.play();
-    }
-  };
+
 
   const handleGetSummary = async () => {
     if (summaryPoints.length > 0) return;
@@ -1450,32 +1445,32 @@ export default function VideoLessonPage() {
               )}
             </div>
 
-              {/* Full Width Briefing Banner */}
-              {briefing && (
-                <div className="bg-slate-50 rounded-[32px] p-8 md:p-10 border border-slate-100 shadow-sm relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-10 opacity-5">
-                    <Target size={150} />
+            {/* Full Width Briefing Banner */}
+            {briefing && (
+              <div className="bg-slate-50 rounded-[32px] p-8 md:p-10 border border-slate-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-10 opacity-5">
+                  <Target size={150} />
+                </div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-900 shadow-sm">
+                      <Target size={24} />
+                    </div>
+                    <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">MỤC TIÊU BÀI GIẢNG</h3>
                   </div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-900 shadow-sm">
-                        <Target size={24} />
-                      </div>
-                      <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">MỤC TIÊU BÀI GIẢNG</h3>
-                    </div>
-                    <p className="text-base md:text-lg font-bold text-slate-600 leading-relaxed italic mb-6 max-w-3xl">
-                      &ldquo;{briefing.objective}&rdquo;
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {(briefing.key_terms ?? []).map((term, i) => (
-                        <span key={i} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-extrabold text-slate-500 uppercase tracking-widest shadow-sm">
-                          {term}
-                        </span>
-                      ))}
-                    </div>
+                  <p className="text-base md:text-lg font-bold text-slate-600 leading-relaxed italic mb-6 max-w-3xl">
+                    &ldquo;{briefing.objective}&rdquo;
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(briefing.key_terms ?? []).map((term, i) => (
+                      <span key={i} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-extrabold text-slate-500 uppercase tracking-widest shadow-sm">
+                        {term}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              )}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Dynamic Panel (Transcript or Lessons) */}
@@ -1602,693 +1597,693 @@ export default function VideoLessonPage() {
 
         </div>
 
-            {/* Smart Content Section - Expanded Layout */}
-            <div className="space-y-6 mt-10 lg:mt-16">
+        {/* Smart Content Section - Expanded Layout */}
+        <div className="space-y-6 mt-10 lg:mt-16">
 
-              {/* Visual Tabs Section */}
-              <div className="bg-white/95 backdrop-blur-md rounded-[40px] p-8 md:p-10 border border-white/20 shadow-xl shadow-slate-200/20">
-                <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-b border-slate-100 mb-10 pb-2">
-                  {[
-                    { id: 'timeline', label: 'Cấu trúc thời gian', icon: Clock },
-                    { id: 'mindmap', label: 'Sơ đồ tư duy', icon: Network },
-                    { id: 'highlights', label: 'Điểm nhấn chính', icon: Zap },
-                    { id: 'questions', label: 'Làm rõ khái niệm', icon: HelpCircle },
-                    { id: 'quiz', label: 'Làm bài quiz', icon: ClipboardCheck },
-                    { id: 'flashcards', label: 'Thẻ ghi nhớ', icon: BookOpen },
-                    { id: 'visuals', label: 'Trực quan hóa', icon: Eye },
-                    { id: 'handsign', label: 'Avatar VSL', icon: Hand },
-                    { id: 'slide', label: 'Tạo Slide AI', icon: Presentation },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={cn(
-                        "pb-6 text-[12px] font-extrabold uppercase tracking-[0.15em] transition-all relative flex items-center gap-3 shrink-0",
-                        activeTab === tab.id ? "text-[#FF4F6E]" : "text-slate-400 hover:text-slate-600"
-                      )}
-                    >
-                      <tab.icon size={18} />
-                      {tab.label}
-                      {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-1.5 bg-[#FF4F6E] rounded-t-full" />}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="min-h-[350px]">
-                  {activeTab === 'timeline' && (
-                    isLoadingMetadata ? renderPanelState('Đang tải mốc thời gian...') : metadataError ? renderPanelState(metadataError) : timeline.length === 0 ? renderPanelState('Chưa có dữ liệu mốc thời gian.') : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {timeline.map((item, i) => (
-                          <div
-                            key={i}
-                            onClick={() => seekTo(item.time)}
-                            className="flex items-start gap-5 p-6 rounded-[28px] bg-slate-50 border border-transparent hover:border-[#FF4F6E]/30 hover:bg-white hover:shadow-2xl hover:shadow-[#FF4F6E]/5 transition-all cursor-pointer group"
-                          >
-                            <div className="w-16 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-[11px] font-extrabold text-[#FF4F6E] group-hover:bg-[#FF4F6E] group-hover:text-white transition-colors shrink-0">
-                              {item.time}
-                            </div>
-                            <span className="text-base font-extrabold text-slate-700 group-hover:text-slate-900 leading-snug pt-1">{item.title}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )
+          {/* Visual Tabs Section */}
+          <div className="bg-white/95 backdrop-blur-md rounded-[40px] p-8 md:p-10 border border-white/20 shadow-xl shadow-slate-200/20">
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-b border-slate-100 mb-10 pb-2">
+              {[
+                { id: 'timeline', label: 'Cấu trúc thời gian', icon: Clock },
+                { id: 'mindmap', label: 'Sơ đồ tư duy', icon: Network },
+                { id: 'highlights', label: 'Điểm nhấn chính', icon: Zap },
+                { id: 'questions', label: 'Làm rõ khái niệm', icon: HelpCircle },
+                { id: 'quiz', label: 'Làm bài quiz', icon: ClipboardCheck },
+                { id: 'flashcards', label: 'Thẻ ghi nhớ', icon: BookOpen },
+                { id: 'visuals', label: 'Trực quan hóa', icon: Eye },
+                { id: 'handsign', label: 'Avatar VSL', icon: Hand },
+                { id: 'slide', label: 'Tạo Slide AI', icon: Presentation },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "pb-6 text-[12px] font-extrabold uppercase tracking-[0.15em] transition-all relative flex items-center gap-3 shrink-0",
+                    activeTab === tab.id ? "text-[#FF4F6E]" : "text-slate-400 hover:text-slate-600"
                   )}
+                >
+                  <tab.icon size={18} />
+                  {tab.label}
+                  {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-1.5 bg-[#FF4F6E] rounded-t-full" />}
+                </button>
+              ))}
+            </div>
 
-                  {activeTab === 'slide' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                      {/* useEffect trigger via render: fetch once when tab opens */}
-                      {(() => { return null; })()}
-                      <div className="flex flex-col gap-6">
-                        <div className="flex flex-col lg:flex-row gap-8">
-                          {/* Left: Template Selection */}
-                          <div className="flex-1 space-y-4">
-                            <label className="text-sm font-extrabold text-slate-700 uppercase tracking-widest block mb-4">Chọn Mẫu Slide</label>
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                              {[...Array(10)].map((_, i) => {
-                                const id = `template_${(i + 1).toString().padStart(2, '0')}`;
-                                const isSelected = selectedTemplate === id;
+            <div className="min-h-[350px]">
+              {activeTab === 'timeline' && (
+                isLoadingMetadata ? renderPanelState('Đang tải mốc thời gian...') : metadataError ? renderPanelState(metadataError) : timeline.length === 0 ? renderPanelState('Chưa có dữ liệu mốc thời gian.') : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {timeline.map((item, i) => (
+                      <div
+                        key={i}
+                        onClick={() => seekTo(item.time)}
+                        className="flex items-start gap-5 p-6 rounded-[28px] bg-slate-50 border border-transparent hover:border-[#FF4F6E]/30 hover:bg-white hover:shadow-2xl hover:shadow-[#FF4F6E]/5 transition-all cursor-pointer group"
+                      >
+                        <div className="w-16 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-[11px] font-extrabold text-[#FF4F6E] group-hover:bg-[#FF4F6E] group-hover:text-white transition-colors shrink-0">
+                          {item.time}
+                        </div>
+                        <span className="text-base font-extrabold text-slate-700 group-hover:text-slate-900 leading-snug pt-1">{item.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+
+              {activeTab === 'slide' && (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  {/* useEffect trigger via render: fetch once when tab opens */}
+                  {(() => { return null; })()}
+                  <div className="flex flex-col gap-6">
+                    <div className="flex flex-col lg:flex-row gap-8">
+                      {/* Left: Template Selection */}
+                      <div className="flex-1 space-y-4">
+                        <label className="text-sm font-extrabold text-slate-700 uppercase tracking-widest block mb-4">Chọn Mẫu Slide</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                          {[...Array(10)].map((_, i) => {
+                            const id = `template_${(i + 1).toString().padStart(2, '0')}`;
+                            const isSelected = selectedTemplate === id;
+                            return (
+                              <button
+                                key={id}
+                                onClick={() => setSelectedTemplate(id)}
+                                className={cn(
+                                  "relative aspect-video rounded-xl border-4 transition-all overflow-hidden group bg-slate-50",
+                                  isSelected ? "border-[#FF4F6E] shadow-xl scale-105 z-10" : "border-slate-100 hover:border-[#FF4F6E]/50"
+                                )}
+                              >
+                                <Image
+                                  src={`${API_BASE_URL}/api/videos/templates/${id}/thumbnail`}
+                                  alt={`Template ${i + 1}`}
+                                  fill
+                                  sizes="(max-width: 640px) 50vw, 20vw"
+                                  className={cn(
+                                    "absolute inset-0 w-full h-full object-cover transition-transform duration-500",
+                                    isSelected ? "scale-110" : "group-hover:scale-110"
+                                  )}
+                                />
+                                <div className={cn("absolute inset-0 bg-slate-900/40 transition-opacity flex items-center justify-center", isSelected ? "opacity-0" : "opacity-100 group-hover:opacity-50")}>
+                                  <span className="text-white font-extrabold text-lg drop-shadow-md">{i + 1}</span>
+                                </div>
+                                {isSelected && (
+                                  <div className="absolute top-2 right-2 w-6 h-6 bg-[#FF4F6E] rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in-50">
+                                    <CheckCircle size={14} />
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Slide History Section */}
+                        <div className="mt-8">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-extrabold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                              <Download size={16} />
+                              Slide đã tạo
+                            </h3>
+                            <button
+                              onClick={fetchSlideHistory}
+                              disabled={isLoadingSlideHistory}
+                              className="text-xs font-bold text-slate-400 hover:text-[#FF4F6E] transition-colors flex items-center gap-1"
+                            >
+                              {isLoadingSlideHistory ? (
+                                <div className="w-3 h-3 border border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                              ) : (
+                                <span>↻ Làm mới</span>
+                              )}
+                            </button>
+                          </div>
+
+                          {isLoadingSlideHistory ? (
+                            <div className="flex items-center gap-3 p-5 bg-slate-50 rounded-2xl">
+                              <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                              <span className="text-sm font-bold text-slate-400">Đang tải lịch sử...</span>
+                            </div>
+                          ) : slideHistory.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400">
+                              <Presentation size={36} className="mb-3 opacity-30" />
+                              <p className="text-sm font-bold">Chưa có slide nào được tạo cho video này</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {slideHistory.map((item) => {
+                                const date = new Date(item.created_at);
+                                const label = `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
                                 return (
-                                  <button
-                                    key={id}
-                                    onClick={() => setSelectedTemplate(id)}
-                                    className={cn(
-                                      "relative aspect-video rounded-xl border-4 transition-all overflow-hidden group bg-slate-50",
-                                      isSelected ? "border-[#FF4F6E] shadow-xl scale-105 z-10" : "border-slate-100 hover:border-[#FF4F6E]/50"
-                                    )}
-                                  >
-                                    <Image
-                                      src={`${API_BASE_URL}/api/videos/templates/${id}/thumbnail`}
-                                      alt={`Template ${i + 1}`}
-                                      fill
-                                      sizes="(max-width: 640px) 50vw, 20vw"
-                                      className={cn(
-                                        "absolute inset-0 w-full h-full object-cover transition-transform duration-500",
-                                        isSelected ? "scale-110" : "group-hover:scale-110"
-                                      )}
-                                    />
-                                    <div className={cn("absolute inset-0 bg-slate-900/40 transition-opacity flex items-center justify-center", isSelected ? "opacity-0" : "opacity-100 group-hover:opacity-50")}>
-                                      <span className="text-white font-extrabold text-lg drop-shadow-md">{i + 1}</span>
+                                  <div key={item.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-[#FF4F6E]/30 hover:shadow-md transition-all group">
+                                    <div className="w-10 h-10 bg-[#FF4F6E]/10 rounded-xl flex items-center justify-center text-[#FF4F6E] shrink-0">
+                                      <Presentation size={20} />
                                     </div>
-                                    {isSelected && (
-                                      <div className="absolute top-2 right-2 w-6 h-6 bg-[#FF4F6E] rounded-full flex items-center justify-center text-white shadow-lg animate-in zoom-in-50">
-                                        <CheckCircle size={14} />
-                                      </div>
-                                    )}
-                                  </button>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-extrabold text-slate-800 truncate">
+                                        Mẫu {item.template_id.replace('template_', '')} · {item.num_slides} trang
+                                      </p>
+                                      <p className="text-xs font-bold text-slate-400 mt-0.5">{label}</p>
+                                    </div>
+                                    <a
+                                      href={`${API_BASE_URL}${item.download_url}`}
+                                      download
+                                      className="shrink-0 px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center gap-1.5"
+                                    >
+                                      <Download size={14} />
+                                      Tải về
+                                    </a>
+                                  </div>
                                 );
                               })}
                             </div>
-
-                            {/* Slide History Section */}
-                            <div className="mt-8">
-                              <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-extrabold text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                                  <Download size={16} />
-                                  Slide đã tạo
-                                </h3>
-                                <button
-                                  onClick={fetchSlideHistory}
-                                  disabled={isLoadingSlideHistory}
-                                  className="text-xs font-bold text-slate-400 hover:text-[#FF4F6E] transition-colors flex items-center gap-1"
-                                >
-                                  {isLoadingSlideHistory ? (
-                                    <div className="w-3 h-3 border border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-                                  ) : (
-                                    <span>↻ Làm mới</span>
-                                  )}
-                                </button>
-                              </div>
-
-                              {isLoadingSlideHistory ? (
-                                <div className="flex items-center gap-3 p-5 bg-slate-50 rounded-2xl">
-                                  <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
-                                  <span className="text-sm font-bold text-slate-400">Đang tải lịch sử...</span>
-                                </div>
-                              ) : slideHistory.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400">
-                                  <Presentation size={36} className="mb-3 opacity-30" />
-                                  <p className="text-sm font-bold">Chưa có slide nào được tạo cho video này</p>
-                                </div>
-                              ) : (
-                                <div className="space-y-3">
-                                  {slideHistory.map((item) => {
-                                    const date = new Date(item.created_at);
-                                    const label = `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
-                                    return (
-                                      <div key={item.id} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-[#FF4F6E]/30 hover:shadow-md transition-all group">
-                                        <div className="w-10 h-10 bg-[#FF4F6E]/10 rounded-xl flex items-center justify-center text-[#FF4F6E] shrink-0">
-                                          <Presentation size={20} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-extrabold text-slate-800 truncate">
-                                            Mẫu {item.template_id.replace('template_', '')} · {item.num_slides} trang
-                                          </p>
-                                          <p className="text-xs font-bold text-slate-400 mt-0.5">{label}</p>
-                                        </div>
-                                        <a
-                                          href={`${API_BASE_URL}${item.download_url}`}
-                                          download
-                                          className="shrink-0 px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center gap-1.5"
-                                        >
-                                          <Download size={14} />
-                                          Tải về
-                                        </a>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Right: Preview and Config */}
-                          <div className="w-full lg:w-1/3 flex flex-col space-y-6 bg-slate-50 p-6 rounded-[32px] border border-slate-100">
-                            <div className="aspect-video rounded-2xl border-4 border-white overflow-hidden relative shadow-lg">
-                              <Image
-                                src={`${API_BASE_URL}/api/videos/templates/${selectedTemplate}/thumbnail`}
-                                alt="Template Preview"
-                                fill
-                                sizes="(max-width: 1024px) 100vw, 33vw"
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-                            </div>
-
-                            <div className="space-y-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                              <div className="flex justify-between items-center mb-2">
-                                <label className="text-xs font-extrabold text-slate-600 uppercase tracking-widest block">Số lượng slide</label>
-                              </div>
-                              <div className="flex items-center justify-center gap-6">
-                                <button onClick={() => setNumSlides(Math.max(10, numSlides - 1))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#FF4F6E] hover:text-white transition-colors">
-                                  <Minus size={16} />
-                                </button>
-                                <div className="w-16 text-center">
-                                  <span className="text-2xl font-extrabold text-[#FF4F6E]">{numSlides}</span>
-                                </div>
-                                <button onClick={() => setNumSlides(Math.min(20, numSlides + 1))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#FF4F6E] hover:text-white transition-colors">
-                                  <Plus size={16} />
-                                </button>
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={handleGenerateSlides}
-                              disabled={isGeneratingSlides}
-                              className="w-full py-5 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-sm uppercase tracking-wider shadow-xl shadow-[#FF4F6E]/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
-                            >
-                              {isGeneratingSlides ? (
-                                <>
-                                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
-                                  <span>ĐANG VẼ SLIDE...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Presentation size={20} className="shrink-0" />
-                                  <span>BẮT ĐẦU TẠO PPTX</span>
-                                </>
-                              )}
-                            </button>
-
-                            {slideDownloadUrl && (
-                              <div className="animate-in fade-in slide-in-from-top-2">
-                                <a
-                                  href={slideDownloadUrl}
-                                  download
-                                  className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                >
-                                  <Download size={16} className="shrink-0" />
-                                  LƯU VỀ MÁY
-                                </a>
-                              </div>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  )}
 
-                  {activeTab === 'mindmap' && (
-                    isLoadingMindmap ? renderPanelState('Đang kiến tạo sơ đồ tư duy...') : !mindmapData ? (
-                      <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-[32px] border border-slate-100">
-                        <Network className="w-16 h-16 text-slate-300 mb-6" />
-                        <h4 className="text-xl font-extrabold text-slate-700 mb-3">Chưa có sơ đồ tư duy</h4>
-                        <p className="text-slate-500 mb-8 max-w-md">Sơ đồ tư duy giúp bạn hình dung toàn bộ cấu trúc bài học. Hệ thống AI có thể tự động phân tích và tạo sơ đồ tư duy cho video này.</p>
+                      {/* Right: Preview and Config */}
+                      <div className="w-full lg:w-1/3 flex flex-col space-y-6 bg-slate-50 p-6 rounded-[32px] border border-slate-100">
+                        <div className="aspect-video rounded-2xl border-4 border-white overflow-hidden relative shadow-lg">
+                          <Image
+                            src={`${API_BASE_URL}/api/videos/templates/${selectedTemplate}/thumbnail`}
+                            alt="Template Preview"
+                            fill
+                            sizes="(max-width: 1024px) 100vw, 33vw"
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        </div>
+
+                        <div className="space-y-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                          <div className="flex justify-between items-center mb-2">
+                            <label className="text-xs font-extrabold text-slate-600 uppercase tracking-widest block">Số lượng slide</label>
+                          </div>
+                          <div className="flex items-center justify-center gap-6">
+                            <button onClick={() => setNumSlides(Math.max(10, numSlides - 1))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#FF4F6E] hover:text-white transition-colors">
+                              <Minus size={16} />
+                            </button>
+                            <div className="w-16 text-center">
+                              <span className="text-2xl font-extrabold text-[#FF4F6E]">{numSlides}</span>
+                            </div>
+                            <button onClick={() => setNumSlides(Math.min(20, numSlides + 1))} className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#FF4F6E] hover:text-white transition-colors">
+                              <Plus size={16} />
+                            </button>
+                          </div>
+                        </div>
+
                         <button
-                          onClick={handleGenerateMindmap}
-                          disabled={isGeneratingMindmap}
-                          className="px-8 py-4 bg-[#FF4F6E] text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-xl hover:bg-[#ff3b5c] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[#FF4F6E]/30"
+                          onClick={handleGenerateSlides}
+                          disabled={isGeneratingSlides}
+                          className="w-full py-5 bg-[#FF4F6E] text-white rounded-2xl font-extrabold text-sm uppercase tracking-wider shadow-xl shadow-[#FF4F6E]/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
                         >
-                          {isGeneratingMindmap ? (
+                          {isGeneratingSlides ? (
                             <>
-                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              Đang tạo sơ đồ...
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                              <span>ĐANG VẼ SLIDE...</span>
                             </>
                           ) : (
                             <>
-                              <Zap size={18} fill="currentColor" />
-                              Tạo Sơ Đồ Tư Duy Bằng AI
+                              <Presentation size={20} className="shrink-0" />
+                              <span>BẮT ĐẦU TẠO PPTX</span>
                             </>
                           )}
                         </button>
-                      </div>
-                    ) : (() => {
-                      // Normalize data format
-                      const topic = mindmapData.topic || mindmapData.name || 'Sơ đồ tư duy';
-                      const branches = mindmapData.branches || (mindmapData.children ? mindmapData.children.map((c: MindmapNode) => ({
-                        name: c.name,
-                        points: c.children ? c.children.map((cc: MindmapNode) => ({ text: cc.name || '', timestamp: null })) : []
-                      })) : []);
 
-                      const rootNode = { topic, branches };
-
-                      return (
-                        <div className="space-y-12 py-10 overflow-x-auto min-h-[400px]">
-                          <div className="min-w-max pr-8">
-                            <RecursiveMindmapNode node={rootNode} isRoot={true} seekTo={seekTo} />
-                          </div>
-                        </div>
-                      );
-                    })()
-                  )}
-
-                  {activeTab === 'highlights' && (
-                    isLoadingMetadata ? renderPanelState('Đang tải điểm nhấn...') : metadataError ? renderPanelState(metadataError) : highlights.length === 0 ? renderPanelState('Chưa có dữ liệu điểm nhấn.') : (
-                      <div className="space-y-6">
-                        {highlights.map((item, i) => (
-                          <div key={i} className="bg-[#FF4F6E]/5 rounded-[32px] p-8 md:p-10 border border-[#FF4F6E]/10 relative group overflow-hidden transition-all hover:bg-[#FF4F6E]/10">
-                            <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-125 transition-transform duration-700">
-                              <Zap size={150} fill="currentColor" className="text-[#FF4F6E]" />
-                            </div>
-                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                              <div className="w-24 h-24 bg-white rounded-[28px] shadow-xl shadow-[#FF4F6E]/10 flex flex-col items-center justify-center shrink-0 border border-[#FF4F6E]/20">
-                                <span className="text-[10px] font-extrabold text-[#FF4F6E] uppercase tracking-widest mb-1">Trọng tâm</span>
-                                <span className="text-xl font-extrabold text-slate-900">{item.time}</span>
-                              </div>
-                              <div className="space-y-3">
-                                <h4 className="text-2xl font-extrabold text-slate-900 leading-tight">{item.reason}</h4>
-                                <p className="text-base font-bold text-slate-500 italic">&ldquo;{item.context}&rdquo;</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  )}
-
-                  {activeTab === 'questions' && (
-                    isLoadingMetadata ? renderPanelState('Đang tải phần làm rõ khái niệm...') : metadataError ? renderPanelState(metadataError) : questions.length === 0 ? renderPanelState('Chưa có dữ liệu làm rõ khái niệm.') : (
-                      <div className="space-y-8">
-                        {questions.map((item, i) => (
-                          <div key={i} className="bg-white border-2 border-slate-50 rounded-[40px] p-10 shadow-lg hover:shadow-2xl transition-all">
-                            <div className="flex items-center gap-4 mb-8">
-                              <div className="w-14 h-14 bg-amber-50 rounded-3xl flex items-center justify-center text-amber-500">
-                                <HelpCircle size={28} />
-                              </div>
-                              <span className="text-sm font-extrabold text-slate-400 uppercase tracking-[0.2em]">Công cụ làm rõ</span>
-                            </div>
-                            <div className="grid md:grid-cols-2 gap-10 items-start">
-                              <div className="opacity-50">
-                                <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Ngữ cảnh gốc</p>
-                                <p className="text-base font-bold text-slate-500 line-through leading-relaxed">{item.original}</p>
-                              </div>
-                              <div className="p-8 bg-amber-50/50 rounded-[32px] border border-amber-100 relative">
-                                <div className="absolute top-0 right-0 p-4 opacity-10">
-                                  <Sparkles size={40} className="text-amber-500" />
-                                </div>
-                                <p className="text-xs font-extrabold text-amber-600 uppercase tracking-widest mb-3">Cách hiểu trực quan</p>
-                                <p className="text-xl font-extrabold text-slate-900 leading-tight">{item.rephrased}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  )}
-
-                  {activeTab === 'quiz' && (
-                    <div className="space-y-6">
-                      {isLoadingQuizzes && renderPanelState('Đang tải quiz...')}
-                      {!isLoadingQuizzes && quizzes.length === 0 && renderPanelState('Bài học này chưa có quiz.')}
-                      {!isLoadingQuizzes && quizzes.length > 0 && (
-                        <div className="space-y-6">
-                          <div className="flex flex-wrap gap-2">
-                            {quizzes.map((quiz, idx) => (
-                              <button
-                                key={quiz.id}
-                                onClick={() => {
-                                  setSelectedQuizIdx(idx);
-                                  setQuizAnswers({});
-                                  setQuizSubmitResult(null);
-                                }}
-                                className={cn(
-                                  "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider border transition-all",
-                                  selectedQuizIdx === idx ? "bg-[#FF4F6E] text-white border-[#FF4F6E]" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
-                                )}
-                              >
-                                Quiz {idx + 1}
-                              </button>
-                            ))}
-                          </div>
-
-                          {activeQuiz && (
-                            <div className="space-y-5">
-                              <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5">
-                                <p className="text-sm font-extrabold text-slate-900">{activeQuiz.title}</p>
-                                <p className="text-xs font-bold text-slate-500 mt-1">Điểm đạt: {activeQuiz.passing_score}%</p>
-                              </div>
-
-                              {(activeQuiz.questions ?? []).map((question, qIdx) => (
-                                <div key={question.id} className="rounded-2xl border border-slate-100 p-5 bg-white">
-                                  <p className="text-sm font-extrabold text-slate-900 mb-4">{qIdx + 1}. {question.question_text}</p>
-                                  <div className="space-y-2">
-                                    {(question.options ?? []).map((opt) => (
-                                      <label key={opt.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 hover:bg-slate-50 cursor-pointer">
-                                        <input
-                                          type="radio"
-                                          name={`quiz-${question.id}`}
-                                          checked={quizAnswers[question.id] === opt.id}
-                                          onChange={() => handleSelectQuizAnswer(question.id, opt.id)}
-                                          disabled={!!quizSubmitResult}
-                                        />
-                                        <span className="text-sm font-bold text-slate-600">{opt.option_text}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-
-                              <div className="flex flex-col gap-4">
-                                {!quizSubmitResult ? (
-                                  <button
-                                    onClick={handleSubmitQuiz}
-                                    disabled={isSubmittingQuiz}
-                                    className="w-full md:w-auto px-10 py-4 rounded-2xl bg-[#FF4F6E] text-white text-sm font-extrabold uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
-                                  >
-                                    {isSubmittingQuiz ? (
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        ĐANG NỘP BÀI...
-                                      </div>
-                                    ) : 'NỘP BÀI'}
-                                  </button>
-                                ) : quizSubmitResult.status === 'passed' ? (
-                                  <div className="bg-emerald-50 border-2 border-emerald-100 p-8 rounded-[32px] flex flex-col md:flex-row items-center gap-6 animate-in fade-in zoom-in-95 duration-500">
-                                    <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
-                                      <CheckCircle size={32} />
-                                    </div>
-                                    <div className="text-center md:text-left flex-1">
-                                      <h4 className="text-xl font-extrabold text-emerald-900 tracking-tight">HOÀN THÀNH</h4>
-                                      <p className="text-sm font-bold text-emerald-600 uppercase tracking-widest mt-1">
-                                        Bạn đã vượt qua bài kiểm tra với {quizSubmitResult.score}% điểm
-                                      </p>
-                                      <p className="text-xs font-bold text-emerald-500 mt-2">
-                                        Đúng {quizSubmitResult.correct} trên tổng số {quizSubmitResult.total} câu hỏi.
-                                      </p>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="bg-red-50 border-2 border-red-100 p-8 rounded-[32px] flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <div className="flex items-center gap-6">
-                                      <div className="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-200 shrink-0">
-                                        <Zap size={32} fill="currentColor" />
-                                      </div>
-                                      <div>
-                                        <h4 className="text-xl font-extrabold text-red-900 tracking-tight">KẾT QUẢ CHƯA ĐẠT</h4>
-                                        <p className="text-sm font-bold text-red-600 uppercase tracking-widest mt-1">
-                                          Điểm của bạn: {quizSubmitResult.score}% (Cần {activeQuiz?.passing_score}%)
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="h-[1px] bg-red-100 w-full" />
-                                    <p className="text-sm font-bold text-slate-500 leading-relaxed">
-                                      Đừng bỏ cuộc! Hãy xem lại nội dung bài giảng và thử sức lại một lần nữa để củng cố kiến thức nhé.
-                                    </p>
-                                    <button
-                                      onClick={() => {
-                                        setQuizSubmitResult(null);
-                                        setQuizAnswers({});
-                                      }}
-                                      className="w-full py-4 bg-white border-2 border-red-200 rounded-2xl text-red-600 text-sm font-extrabold uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-all shadow-sm"
-                                    >
-                                      LÀM LẠI
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {activeTab === 'flashcards' && (
-                    <div className="space-y-6">
-                      {isLoadingMetadata && renderPanelState('Đang tải thẻ ghi nhớ...')}
-                      {!isLoadingMetadata && metadataError && renderPanelState(metadataError)}
-                      {!isLoadingMetadata && !metadataError && flashcards.length === 0 && renderPanelState('Chưa có thẻ ghi nhớ.')}
-                      {!isLoadingMetadata && !metadataError && flashcards.length > 0 && (
-                        <>
-                          <div className="flex items-center justify-center">
-                            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-extrabold">
-                              Thẻ {currentFlashcardIndex + 1} / {flashcards.length}
-                            </p>
-                          </div>
-
-                          <div className="relative [perspective:1200px] flex justify-center">
-                            <Sparkle className="absolute -top-5 left-[16%] w-5 h-5 text-[#FF4F6E]/65 dark:text-pink-300/70" />
-                            <Brain className="absolute top-[18%] -left-2 w-5 h-5 text-indigo-500/55 dark:text-indigo-300/70" />
-                            <Lightbulb className="absolute top-[20%] -right-2 w-5 h-5 text-amber-500/60 dark:text-amber-300/75" />
-                            <Rocket className="absolute -bottom-5 right-[14%] w-5 h-5 text-emerald-500/60 dark:text-emerald-300/70" />
-                            <button
-                              key={flashcards[currentFlashcardIndex].id || currentFlashcardIndex}
-                              onPointerDown={(e) => {
-                                dragStartXRef.current = e.clientX;
-                                dragMovedRef.current = false;
-                                (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-                              }}
-                              onPointerMove={(e) => {
-                                if (dragStartXRef.current === null) return;
-                                const delta = e.clientX - dragStartXRef.current;
-                                if (Math.abs(delta) > 4) dragMovedRef.current = true;
-                                setDragOffsetX(delta);
-                              }}
-                              onPointerUp={() => {
-                                const threshold = 70;
-                                if (dragOffsetX <= -threshold) {
-                                  setIsFlashcardFlipped(false);
-                                  setCurrentFlashcardIndex((prev) => (prev + 1) % flashcards.length);
-                                } else if (dragOffsetX >= threshold) {
-                                  setIsFlashcardFlipped(false);
-                                  setCurrentFlashcardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
-                                } else if (!dragMovedRef.current) {
-                                  setIsFlashcardFlipped((prev) => !prev);
-                                }
-                                dragStartXRef.current = null;
-                                dragMovedRef.current = false;
-                                setDragOffsetX(0);
-                              }}
-                              onPointerCancel={() => {
-                                dragStartXRef.current = null;
-                                dragMovedRef.current = false;
-                                setDragOffsetX(0);
-                              }}
-                              className="block w-full max-w-[380px] mx-auto aspect-[3/4] rounded-[32px] text-left focus:outline-none focus:ring-2 focus:ring-[#FF4F6E]/40 animate-in fade-in slide-in-from-bottom-4 duration-300 touch-pan-y select-none"
-                              aria-label="Flip flashcard"
-                              style={{
-                                transform: `translateX(${dragOffsetX}px) rotate(${dragOffsetX * 0.03}deg)`,
-                                transition: dragStartXRef.current === null ? 'transform 180ms ease-out' : 'none',
-                              }}
+                        {slideDownloadUrl && (
+                          <div className="animate-in fade-in slide-in-from-top-2">
+                            <a
+                              href={slideDownloadUrl}
+                              download
+                              className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                             >
-                              <div
-                                className={cn(
-                                  "relative w-full h-full [transform-style:preserve-3d] transition-transform duration-500",
-                                  isFlashcardFlipped ? "[transform:rotateY(180deg)]" : "[transform:rotateY(0deg)]"
-                                )}
-                              >
-                                <div className="absolute inset-0 rounded-[32px] border border-slate-200 shadow-lg [backface-visibility:hidden] overflow-hidden">
-                                  <Image
-                                    src={flashcardBackgroundImages[currentFlashcardIndex % flashcardBackgroundImages.length]}
-                                    alt="Flashcard background"
-                                    fill
-                                    className="object-cover"
-                                    unoptimized={true}
-                                  />
-                                  <div className="absolute inset-0 bg-white/52 dark:bg-slate-900/50" />
-                                  <div className="absolute inset-0 p-8 flex flex-col items-center justify-center text-center">
-                                    <div className="absolute top-4 right-4 rounded-full bg-white/55 dark:bg-slate-900/45 p-1.5 border border-white/50 dark:border-slate-400/30">
-                                      <Sparkle size={14} className="text-[#FF4F6E] dark:text-pink-300" />
-                                    </div>
-                                    <div className="absolute bottom-4 left-4 rounded-full bg-white/50 dark:bg-slate-900/45 p-1.5 border border-white/50 dark:border-slate-400/30">
-                                      <Lightbulb size={14} className="text-amber-500 dark:text-amber-300" />
-                                    </div>
-                                    <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-extrabold mb-3">Câu hỏi</p>
-                                    <p className="text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 leading-snug">
-                                      {flashcards[currentFlashcardIndex].front}
-                                    </p>
-                                    {flashcards[currentFlashcardIndex].hint ? (
-                                      <p className="absolute bottom-8 left-8 right-8 text-[11px] md:text-xs font-bold text-slate-600 dark:text-slate-200 text-center">
-                                        Gợi ý: {flashcards[currentFlashcardIndex].hint}
-                                      </p>
-                                    ) : null}
-                                  </div>
-                                </div>
-
-                                <div className="absolute inset-0 rounded-[32px] border border-slate-800 shadow-lg [transform:rotateY(180deg)] [backface-visibility:hidden] overflow-hidden">
-                                  <Image
-                                    src={flashcardBackgroundImages[currentFlashcardIndex % flashcardBackgroundImages.length]}
-                                    alt="Flashcard background back"
-                                    fill
-                                    className="object-cover"
-                                    unoptimized={true}
-                                  />
-                                  <div className="absolute inset-0 bg-slate-900/58 dark:bg-slate-950/64" />
-                                  <div className="absolute inset-0 p-8 flex flex-col items-center justify-center text-center">
-                                    <div className="absolute top-4 right-4 rounded-full bg-black/35 dark:bg-white/10 p-1.5 border border-white/25">
-                                      <Brain size={14} className="text-cyan-200 dark:text-cyan-300" />
-                                    </div>
-                                    <div className="absolute bottom-4 left-4 rounded-full bg-black/30 dark:bg-white/10 p-1.5 border border-white/25">
-                                      <Rocket size={14} className="text-emerald-200 dark:text-emerald-300" />
-                                    </div>
-                                    <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-extrabold mb-3">Đáp án</p>
-                                    <p className="text-base md:text-lg font-extrabold text-white dark:text-slate-50 leading-snug">
-                                      {flashcards[currentFlashcardIndex].back}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </button>
+                              <Download size={16} className="shrink-0" />
+                              LƯU VỀ MÁY
+                            </a>
                           </div>
-                          <p className="text-center text-[11px] text-slate-400 font-bold">
-                            Kéo trái/phải để chuyển thẻ. Chạm để lật thẻ.
-                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
+              {activeTab === 'mindmap' && (
+                isLoadingMindmap ? renderPanelState('Đang kiến tạo sơ đồ tư duy...') : !mindmapData ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-[32px] border border-slate-100">
+                    <Network className="w-16 h-16 text-slate-300 mb-6" />
+                    <h4 className="text-xl font-extrabold text-slate-700 mb-3">Chưa có sơ đồ tư duy</h4>
+                    <p className="text-slate-500 mb-8 max-w-md">Sơ đồ tư duy giúp bạn hình dung toàn bộ cấu trúc bài học. Hệ thống AI có thể tự động phân tích và tạo sơ đồ tư duy cho video này.</p>
+                    <button
+                      onClick={handleGenerateMindmap}
+                      disabled={isGeneratingMindmap}
+                      className="px-8 py-4 bg-[#FF4F6E] text-white rounded-[24px] font-extrabold text-sm uppercase tracking-widest shadow-xl hover:bg-[#ff3b5c] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[#FF4F6E]/30"
+                    >
+                      {isGeneratingMindmap ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Đang tạo sơ đồ...
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={18} fill="currentColor" />
+                          Tạo Sơ Đồ Tư Duy Bằng AI
                         </>
                       )}
+                    </button>
+                  </div>
+                ) : (() => {
+                  // Normalize data format
+                  const topic = mindmapData.topic || mindmapData.name || 'Sơ đồ tư duy';
+                  const branches = mindmapData.branches || (mindmapData.children ? mindmapData.children.map((c: MindmapNode) => ({
+                    name: c.name,
+                    points: c.children ? c.children.map((cc: MindmapNode) => ({ text: cc.name || '', timestamp: null })) : []
+                  })) : []);
+
+                  const rootNode = { topic, branches };
+
+                  return (
+                    <div className="space-y-12 py-10 overflow-x-auto min-h-[400px]">
+                      <div className="min-w-max pr-8">
+                        <RecursiveMindmapNode node={rootNode} isRoot={true} seekTo={seekTo} />
+                      </div>
                     </div>
-                  )}
+                  );
+                })()
+              )}
 
-                  {activeTab === 'visuals' && (
-                    <div className="space-y-6">
-                      {isLoadingMetadata ? renderPanelState('Đang tải infographic...') : metadataError ? renderPanelState(metadataError) : visualData?.infographic ? (
-                        <InfographicViewer data={visualData.infographic} />
-                      ) : (
-                        renderPanelState('Chưa có dữ liệu trực quan hóa.')
-                      )}
-                    </div>
-                  )}
+              {activeTab === 'highlights' && (
+                isLoadingMetadata ? renderPanelState('Đang tải điểm nhấn...') : metadataError ? renderPanelState(metadataError) : highlights.length === 0 ? renderPanelState('Chưa có dữ liệu điểm nhấn.') : (
+                  <div className="space-y-6">
+                    {highlights.map((item, i) => (
+                      <div key={i} className="bg-[#FF4F6E]/5 rounded-[32px] p-8 md:p-10 border border-[#FF4F6E]/10 relative group overflow-hidden transition-all hover:bg-[#FF4F6E]/10">
+                        <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-125 transition-transform duration-700">
+                          <Zap size={150} fill="currentColor" className="text-[#FF4F6E]" />
+                        </div>
+                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                          <div className="w-24 h-24 bg-white rounded-[28px] shadow-xl shadow-[#FF4F6E]/10 flex flex-col items-center justify-center shrink-0 border border-[#FF4F6E]/20">
+                            <span className="text-[10px] font-extrabold text-[#FF4F6E] uppercase tracking-widest mb-1">Trọng tâm</span>
+                            <span className="text-xl font-extrabold text-slate-900">{item.time}</span>
+                          </div>
+                          <div className="space-y-3">
+                            <h4 className="text-2xl font-extrabold text-slate-900 leading-tight">{item.reason}</h4>
+                            <p className="text-base font-bold text-slate-500 italic">&ldquo;{item.context}&rdquo;</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
 
-
-                  {activeTab === 'handsign' && (
-                    <div className="space-y-8">
-                      {isLoadingMetadata ? (
-                        renderPanelState('Đang tải dữ liệu avatar VSL...')
-                      ) : handsignGlosses.length === 0 ? (
-                        renderPanelState('Chưa có dữ liệu avatar VSL. Dữ liệu sẽ xuất hiện sau khi server xử lý xong video này.')
-                      ) : (
-                        <>
-                          <div className="rounded-3xl border border-slate-200 bg-white p-5">
-                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                              <div>
-                                <p className="text-sm font-extrabold text-slate-900">Tạo Video VSL</p>
-                                <div className="mt-2 flex items-center gap-2">
-                                  <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Trạng thái:</span>
-                                  <span
-                                    className={cn(
-                                      'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide',
-                                      avatarStatusClass
-                                    )}
-                                  >
-                                    {avatarStatusLabel}
-                                  </span>
-                                </div>
-                                <p className="text-xs font-bold text-slate-500">
-                                  Tính năng đang trong giai đoạn phát triển.
-                                </p>
-                                <p className="mt-1 text-xs font-bold text-slate-500">
-                                  Mục tiêu tiếp theo: tạo video 3D Avatar trực quan và tự nhiên hơn.
-                                </p>
-                                <p className="mt-1 text-xs font-bold text-slate-500">
-                                  Hiện nay công nghệ này trên thế giới vẫn còn hạn chế về chất lượng tạo video và độ phủ từ điển
-                                  ngôn ngữ ký hiệu (handsign).
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={handleGenerateAvatarVideo}
-                                disabled={isGeneratingAvatar}
-                                className={cn(
-                                  'rounded-2xl px-5 py-3 text-xs font-extrabold uppercase tracking-widest transition-all',
-                                  isGeneratingAvatar
-                                    ? 'cursor-not-allowed bg-slate-200 text-slate-500'
-                                    : 'bg-[#FF4F6E] text-white hover:bg-[#e64663]'
-                                )}
-                              >
-                                {isGeneratingAvatar ? 'Đang tạo...' : 'Tạo video'}
-                              </button>
+              {activeTab === 'questions' && (
+                isLoadingMetadata ? renderPanelState('Đang tải phần làm rõ khái niệm...') : metadataError ? renderPanelState(metadataError) : questions.length === 0 ? renderPanelState('Chưa có dữ liệu làm rõ khái niệm.') : (
+                  <div className="space-y-8">
+                    {questions.map((item, i) => (
+                      <div key={i} className="bg-white border-2 border-slate-50 rounded-[40px] p-10 shadow-lg hover:shadow-2xl transition-all">
+                        <div className="flex items-center gap-4 mb-8">
+                          <div className="w-14 h-14 bg-amber-50 rounded-3xl flex items-center justify-center text-amber-500">
+                            <HelpCircle size={28} />
+                          </div>
+                          <span className="text-sm font-extrabold text-slate-400 uppercase tracking-[0.2em]">Công cụ làm rõ</span>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-10 items-start">
+                          <div className="opacity-50">
+                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Ngữ cảnh gốc</p>
+                            <p className="text-base font-bold text-slate-500 line-through leading-relaxed">{item.original}</p>
+                          </div>
+                          <div className="p-8 bg-amber-50/50 rounded-[32px] border border-amber-100 relative">
+                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                              <Sparkles size={40} className="text-amber-500" />
                             </div>
-                            {avatarError && (
-                              <p className="mt-3 text-sm font-bold text-red-600">{avatarError}</p>
+                            <p className="text-xs font-extrabold text-amber-600 uppercase tracking-widest mb-3">Cách hiểu trực quan</p>
+                            <p className="text-xl font-extrabold text-slate-900 leading-tight">{item.rephrased}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+
+              {activeTab === 'quiz' && (
+                <div className="space-y-6">
+                  {isLoadingQuizzes && renderPanelState('Đang tải quiz...')}
+                  {!isLoadingQuizzes && quizzes.length === 0 && renderPanelState('Bài học này chưa có quiz.')}
+                  {!isLoadingQuizzes && quizzes.length > 0 && (
+                    <div className="space-y-6">
+                      <div className="flex flex-wrap gap-2">
+                        {quizzes.map((quiz, idx) => (
+                          <button
+                            key={quiz.id}
+                            onClick={() => {
+                              setSelectedQuizIdx(idx);
+                              setQuizAnswers({});
+                              setQuizSubmitResult(null);
+                            }}
+                            className={cn(
+                              "px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider border transition-all",
+                              selectedQuizIdx === idx ? "bg-[#FF4F6E] text-white border-[#FF4F6E]" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                            )}
+                          >
+                            Quiz {idx + 1}
+                          </button>
+                        ))}
+                      </div>
+
+                      {activeQuiz && (
+                        <div className="space-y-5">
+                          <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5">
+                            <p className="text-sm font-extrabold text-slate-900">{activeQuiz.title}</p>
+                            <p className="text-xs font-bold text-slate-500 mt-1">Điểm đạt: {activeQuiz.passing_score}%</p>
+                          </div>
+
+                          {(activeQuiz.questions ?? []).map((question, qIdx) => (
+                            <div key={question.id} className="rounded-2xl border border-slate-100 p-5 bg-white">
+                              <p className="text-sm font-extrabold text-slate-900 mb-4">{qIdx + 1}. {question.question_text}</p>
+                              <div className="space-y-2">
+                                {(question.options ?? []).map((opt) => (
+                                  <label key={opt.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 hover:bg-slate-50 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name={`quiz-${question.id}`}
+                                      checked={quizAnswers[question.id] === opt.id}
+                                      onChange={() => handleSelectQuizAnswer(question.id, opt.id)}
+                                      disabled={!!quizSubmitResult}
+                                    />
+                                    <span className="text-sm font-bold text-slate-600">{opt.option_text}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+
+                          <div className="flex flex-col gap-4">
+                            {!quizSubmitResult ? (
+                              <button
+                                onClick={handleSubmitQuiz}
+                                disabled={isSubmittingQuiz}
+                                className="w-full md:w-auto px-10 py-4 rounded-2xl bg-[#FF4F6E] text-white text-sm font-extrabold uppercase tracking-widest shadow-xl shadow-[#FF4F6E]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100"
+                              >
+                                {isSubmittingQuiz ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ĐANG NỘP BÀI...
+                                  </div>
+                                ) : 'NỘP BÀI'}
+                              </button>
+                            ) : quizSubmitResult.status === 'passed' ? (
+                              <div className="bg-emerald-50 border-2 border-emerald-100 p-8 rounded-[32px] flex flex-col md:flex-row items-center gap-6 animate-in fade-in zoom-in-95 duration-500">
+                                <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+                                  <CheckCircle size={32} />
+                                </div>
+                                <div className="text-center md:text-left flex-1">
+                                  <h4 className="text-xl font-extrabold text-emerald-900 tracking-tight">HOÀN THÀNH</h4>
+                                  <p className="text-sm font-bold text-emerald-600 uppercase tracking-widest mt-1">
+                                    Bạn đã vượt qua bài kiểm tra với {quizSubmitResult.score}% điểm
+                                  </p>
+                                  <p className="text-xs font-bold text-emerald-500 mt-2">
+                                    Đúng {quizSubmitResult.correct} trên tổng số {quizSubmitResult.total} câu hỏi.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-red-50 border-2 border-red-100 p-8 rounded-[32px] flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="flex items-center gap-6">
+                                  <div className="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-red-200 shrink-0">
+                                    <Zap size={32} fill="currentColor" />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-xl font-extrabold text-red-900 tracking-tight">KẾT QUẢ CHƯA ĐẠT</h4>
+                                    <p className="text-sm font-bold text-red-600 uppercase tracking-widest mt-1">
+                                      Điểm của bạn: {quizSubmitResult.score}% (Cần {activeQuiz?.passing_score}%)
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="h-[1px] bg-red-100 w-full" />
+                                <p className="text-sm font-bold text-slate-500 leading-relaxed">
+                                  Đừng bỏ cuộc! Hãy xem lại nội dung bài giảng và thử sức lại một lần nữa để củng cố kiến thức nhé.
+                                </p>
+                                <button
+                                  onClick={() => {
+                                    setQuizSubmitResult(null);
+                                    setQuizAnswers({});
+                                  }}
+                                  className="w-full py-4 bg-white border-2 border-red-200 rounded-2xl text-red-600 text-sm font-extrabold uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-all shadow-sm"
+                                >
+                                  LÀM LẠI
+                                </button>
+                              </div>
                             )}
                           </div>
-
-                          {avatarVideoUrl && (
-                            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                              <p className="mb-3 text-xs font-extrabold uppercase tracking-widest text-slate-500">
-                                Avatar Video Preview
-                              </p>
-                              <video
-                                controls
-                                className="w-full rounded-2xl bg-black"
-                                src={avatarVideoUrl}
-                              />
-                            </div>
-                          )}
-
-                          <div className="hidden flex-col items-center gap-4">
-                            <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-extrabold text-center">
-                              Đồng bộ theo thời gian phát video
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => { }}
-                              className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white text-xs font-extrabold text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
-                            >
-                              <Download size={14} />
-                              Tải manifest render (JSON)
-                            </button>
-                          </div>
-                          <div className="hidden">
-                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Chuỗi gloss</p>
-                            <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1">
-                              {handsignGlosses.map((g, i) => {
-                                const nextT = handsignGlosses[i + 1]?.time ?? Infinity;
-                                const isGlossActive = currentTime >= g.time && currentTime < nextT;
-                                return (
-                                  <button
-                                    key={`${g.time}-${g.word}-${i}`}
-                                    type="button"
-                                    onClick={() => handleSeek(g.time)}
-                                    className={cn(
-                                      'text-xs font-bold px-3 py-2 rounded-2xl border transition-all',
-                                      isGlossActive
-                                        ? 'bg-[#FF4F6E] text-white border-[#FF4F6E]'
-                                        : 'bg-white text-slate-600 border-slate-200 hover:border-[#FF4F6E]/40'
-                                    )}
-                                  >
-                                    {g.word.replace(/_/g, ' ')}
-                                    <span className="opacity-70 ml-1 tabular-nums">{formatTime(g.time)}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   )}
                 </div>
-              </div>
+              )}
+
+              {activeTab === 'flashcards' && (
+                <div className="space-y-6">
+                  {isLoadingMetadata && renderPanelState('Đang tải thẻ ghi nhớ...')}
+                  {!isLoadingMetadata && metadataError && renderPanelState(metadataError)}
+                  {!isLoadingMetadata && !metadataError && flashcards.length === 0 && renderPanelState('Chưa có thẻ ghi nhớ.')}
+                  {!isLoadingMetadata && !metadataError && flashcards.length > 0 && (
+                    <>
+                      <div className="flex items-center justify-center">
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-extrabold">
+                          Thẻ {currentFlashcardIndex + 1} / {flashcards.length}
+                        </p>
+                      </div>
+
+                      <div className="relative [perspective:1200px] flex justify-center">
+                        <Sparkle className="absolute -top-5 left-[16%] w-5 h-5 text-[#FF4F6E]/65 dark:text-pink-300/70" />
+                        <Brain className="absolute top-[18%] -left-2 w-5 h-5 text-indigo-500/55 dark:text-indigo-300/70" />
+                        <Lightbulb className="absolute top-[20%] -right-2 w-5 h-5 text-amber-500/60 dark:text-amber-300/75" />
+                        <Rocket className="absolute -bottom-5 right-[14%] w-5 h-5 text-emerald-500/60 dark:text-emerald-300/70" />
+                        <button
+                          key={flashcards[currentFlashcardIndex].id || currentFlashcardIndex}
+                          onPointerDown={(e) => {
+                            dragStartXRef.current = e.clientX;
+                            dragMovedRef.current = false;
+                            (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+                          }}
+                          onPointerMove={(e) => {
+                            if (dragStartXRef.current === null) return;
+                            const delta = e.clientX - dragStartXRef.current;
+                            if (Math.abs(delta) > 4) dragMovedRef.current = true;
+                            setDragOffsetX(delta);
+                          }}
+                          onPointerUp={() => {
+                            const threshold = 70;
+                            if (dragOffsetX <= -threshold) {
+                              setIsFlashcardFlipped(false);
+                              setCurrentFlashcardIndex((prev) => (prev + 1) % flashcards.length);
+                            } else if (dragOffsetX >= threshold) {
+                              setIsFlashcardFlipped(false);
+                              setCurrentFlashcardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
+                            } else if (!dragMovedRef.current) {
+                              setIsFlashcardFlipped((prev) => !prev);
+                            }
+                            dragStartXRef.current = null;
+                            dragMovedRef.current = false;
+                            setDragOffsetX(0);
+                          }}
+                          onPointerCancel={() => {
+                            dragStartXRef.current = null;
+                            dragMovedRef.current = false;
+                            setDragOffsetX(0);
+                          }}
+                          className="block w-full max-w-[380px] mx-auto aspect-[3/4] rounded-[32px] text-left focus:outline-none focus:ring-2 focus:ring-[#FF4F6E]/40 animate-in fade-in slide-in-from-bottom-4 duration-300 touch-pan-y select-none"
+                          aria-label="Flip flashcard"
+                          style={{
+                            transform: `translateX(${dragOffsetX}px) rotate(${dragOffsetX * 0.03}deg)`,
+                            transition: dragStartXRef.current === null ? 'transform 180ms ease-out' : 'none',
+                          }}
+                        >
+                          <div
+                            className={cn(
+                              "relative w-full h-full [transform-style:preserve-3d] transition-transform duration-500",
+                              isFlashcardFlipped ? "[transform:rotateY(180deg)]" : "[transform:rotateY(0deg)]"
+                            )}
+                          >
+                            <div className="absolute inset-0 rounded-[32px] border border-slate-200 shadow-lg [backface-visibility:hidden] overflow-hidden">
+                              <Image
+                                src={flashcardBackgroundImages[currentFlashcardIndex % flashcardBackgroundImages.length]}
+                                alt="Flashcard background"
+                                fill
+                                className="object-cover"
+                                unoptimized={true}
+                              />
+                              <div className="absolute inset-0 bg-white/52 dark:bg-slate-900/50" />
+                              <div className="absolute inset-0 p-8 flex flex-col items-center justify-center text-center">
+                                <div className="absolute top-4 right-4 rounded-full bg-white/55 dark:bg-slate-900/45 p-1.5 border border-white/50 dark:border-slate-400/30">
+                                  <Sparkle size={14} className="text-[#FF4F6E] dark:text-pink-300" />
+                                </div>
+                                <div className="absolute bottom-4 left-4 rounded-full bg-white/50 dark:bg-slate-900/45 p-1.5 border border-white/50 dark:border-slate-400/30">
+                                  <Lightbulb size={14} className="text-amber-500 dark:text-amber-300" />
+                                </div>
+                                <p className="text-xs uppercase tracking-[0.15em] text-slate-500 dark:text-slate-300 font-extrabold mb-3">Câu hỏi</p>
+                                <p className="text-lg md:text-xl font-extrabold text-slate-900 dark:text-slate-50 leading-snug">
+                                  {flashcards[currentFlashcardIndex].front}
+                                </p>
+                                {flashcards[currentFlashcardIndex].hint ? (
+                                  <p className="absolute bottom-8 left-8 right-8 text-[11px] md:text-xs font-bold text-slate-600 dark:text-slate-200 text-center">
+                                    Gợi ý: {flashcards[currentFlashcardIndex].hint}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="absolute inset-0 rounded-[32px] border border-slate-800 shadow-lg [transform:rotateY(180deg)] [backface-visibility:hidden] overflow-hidden">
+                              <Image
+                                src={flashcardBackgroundImages[currentFlashcardIndex % flashcardBackgroundImages.length]}
+                                alt="Flashcard background back"
+                                fill
+                                className="object-cover"
+                                unoptimized={true}
+                              />
+                              <div className="absolute inset-0 bg-slate-900/58 dark:bg-slate-950/64" />
+                              <div className="absolute inset-0 p-8 flex flex-col items-center justify-center text-center">
+                                <div className="absolute top-4 right-4 rounded-full bg-black/35 dark:bg-white/10 p-1.5 border border-white/25">
+                                  <Brain size={14} className="text-cyan-200 dark:text-cyan-300" />
+                                </div>
+                                <div className="absolute bottom-4 left-4 rounded-full bg-black/30 dark:bg-white/10 p-1.5 border border-white/25">
+                                  <Rocket size={14} className="text-emerald-200 dark:text-emerald-300" />
+                                </div>
+                                <p className="text-xs uppercase tracking-[0.15em] text-slate-300 font-extrabold mb-3">Đáp án</p>
+                                <p className="text-base md:text-lg font-extrabold text-white dark:text-slate-50 leading-snug">
+                                  {flashcards[currentFlashcardIndex].back}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                      <p className="text-center text-[11px] text-slate-400 font-bold">
+                        Kéo trái/phải để chuyển thẻ. Chạm để lật thẻ.
+                      </p>
+
+                    </>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'visuals' && (
+                <div className="space-y-6">
+                  {isLoadingMetadata ? renderPanelState('Đang tải infographic...') : metadataError ? renderPanelState(metadataError) : visualData?.infographic ? (
+                    <InfographicViewer data={visualData.infographic} />
+                  ) : (
+                    renderPanelState('Chưa có dữ liệu trực quan hóa.')
+                  )}
+                </div>
+              )}
+
+
+              {activeTab === 'handsign' && (
+                <div className="space-y-8">
+                  {isLoadingMetadata ? (
+                    renderPanelState('Đang tải dữ liệu avatar VSL...')
+                  ) : handsignGlosses.length === 0 ? (
+                    renderPanelState('Chưa có dữ liệu avatar VSL. Dữ liệu sẽ xuất hiện sau khi server xử lý xong video này.')
+                  ) : (
+                    <>
+                      <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="text-sm font-extrabold text-slate-900">Tạo Video VSL</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Trạng thái:</span>
+                              <span
+                                className={cn(
+                                  'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide',
+                                  avatarStatusClass
+                                )}
+                              >
+                                {avatarStatusLabel}
+                              </span>
+                            </div>
+                            <p className="text-xs font-bold text-slate-500">
+                              Tính năng đang trong giai đoạn phát triển.
+                            </p>
+                            <p className="mt-1 text-xs font-bold text-slate-500">
+                              Mục tiêu tiếp theo: tạo video 3D Avatar trực quan và tự nhiên hơn.
+                            </p>
+                            <p className="mt-1 text-xs font-bold text-slate-500">
+                              Hiện nay công nghệ này trên thế giới vẫn còn hạn chế về chất lượng tạo video và độ phủ từ điển
+                              ngôn ngữ ký hiệu (handsign).
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleGenerateAvatarVideo}
+                            disabled={isGeneratingAvatar}
+                            className={cn(
+                              'rounded-2xl px-5 py-3 text-xs font-extrabold uppercase tracking-widest transition-all',
+                              isGeneratingAvatar
+                                ? 'cursor-not-allowed bg-slate-200 text-slate-500'
+                                : 'bg-[#FF4F6E] text-white hover:bg-[#e64663]'
+                            )}
+                          >
+                            {isGeneratingAvatar ? 'Đang tạo...' : 'Tạo video'}
+                          </button>
+                        </div>
+                        {avatarError && (
+                          <p className="mt-3 text-sm font-bold text-red-600">{avatarError}</p>
+                        )}
+                      </div>
+
+                      {avatarVideoUrl && (
+                        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="mb-3 text-xs font-extrabold uppercase tracking-widest text-slate-500">
+                            Avatar Video Preview
+                          </p>
+                          <video
+                            controls
+                            className="w-full rounded-2xl bg-black"
+                            src={avatarVideoUrl}
+                          />
+                        </div>
+                      )}
+
+                      <div className="hidden flex-col items-center gap-4">
+                        <p className="text-[11px] uppercase tracking-[0.15em] text-slate-400 font-extrabold text-center">
+                          Đồng bộ theo thời gian phát video
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => { }}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border border-slate-200 bg-white text-xs font-extrabold text-slate-600 uppercase tracking-widest hover:bg-slate-50 transition-colors"
+                        >
+                          <Download size={14} />
+                          Tải manifest render (JSON)
+                        </button>
+                      </div>
+                      <div className="hidden">
+                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-3">Chuỗi gloss</p>
+                        <div className="flex flex-wrap gap-2 max-h-[220px] overflow-y-auto pr-1">
+                          {handsignGlosses.map((g, i) => {
+                            const nextT = handsignGlosses[i + 1]?.time ?? Infinity;
+                            const isGlossActive = currentTime >= g.time && currentTime < nextT;
+                            return (
+                              <button
+                                key={`${g.time}-${g.word}-${i}`}
+                                type="button"
+                                onClick={() => handleSeek(g.time)}
+                                className={cn(
+                                  'text-xs font-bold px-3 py-2 rounded-2xl border transition-all',
+                                  isGlossActive
+                                    ? 'bg-[#FF4F6E] text-white border-[#FF4F6E]'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-[#FF4F6E]/40'
+                                )}
+                              >
+                                {g.word.replace(/_/g, ' ')}
+                                <span className="opacity-70 ml-1 tabular-nums">{formatTime(g.time)}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
+          </div>
+        </div>
 
       </div>
 

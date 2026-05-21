@@ -9,7 +9,8 @@ from sqlmodel import Session, select
 @patch("src.backend.api.videos_router.VideoService.validate_video_duration")
 @patch("src.backend.api.videos_router.enqueue_pipeline_job")
 def test_upload_video_success(mock_enqueue, mock_validate, mock_save, client: TestClient, student_token, session: Session):
-    mock_save.return_value = "/path/to/video.mp4"
+    from pathlib import Path
+    mock_save.return_value = Path("/path/to/video.mp4")
     mock_validate.return_value = None
     mock_enqueue.return_value = "background_tasks"
     

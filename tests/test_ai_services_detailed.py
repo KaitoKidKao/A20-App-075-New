@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from src.backend.services.ai_service import AIService
 from src.backend import config
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @patch("src.backend.services.ai_service.AsyncOpenAI")
 async def test_summarize_success(mock_openai_class):
     mock_client = mock_openai_class.return_value
@@ -28,7 +28,7 @@ async def test_summarize_success(mock_openai_class):
     assert "Ba loại học máy" in result[1]
     mock_client.chat.completions.create.assert_called_once()
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @patch("src.backend.services.ai_service.AsyncOpenAI")
 async def test_process_all_lecture_metadata_realistic(mock_openai_class):
     mock_client = mock_openai_class.return_value
@@ -68,7 +68,7 @@ async def test_process_all_lecture_metadata_realistic(mock_openai_class):
     assert len(result["highlights"]) == 2
     assert "labeled data" in result["questions"][0]["rephrased"]
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @patch("src.backend.services.ai_service.AsyncOpenAI")
 async def test_generate_pre_lecture_briefing_realistic(mock_openai_class):
     mock_client = mock_openai_class.return_value

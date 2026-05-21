@@ -738,10 +738,10 @@ export default function AdminDashboardPage() {
                 </div>
                 <p className="text-sm font-bold text-slate-900">Chọn hoặc Kéo thả Video</p>
                 {selectedLectureFiles.length > 0 && (
-                  <div className="mt-4 px-4 py-2 bg-[#FF4F6E]/10 border border-[#FF4F6E]/20 rounded-full flex items-center gap-2 animate-in zoom-in-95 duration-300">
-                    <div className="w-2 h-2 rounded-full bg-[#FF4F6E] animate-pulse" />
-                    <p className="text-[12px] font-extrabold text-[#FF4F6E] uppercase tracking-widest">
-                      {selectedLectureFiles.length} file đã chọn
+                  <div className="mt-6 px-6 py-3 bg-[#FF4F6E]/10 border border-[#FF4F6E]/20 rounded-2xl flex items-center gap-3 animate-in zoom-in-95 duration-300 shadow-sm w-full max-w-[280px]">
+                    <div className="w-3 h-3 rounded-full bg-[#FF4F6E] animate-pulse" />
+                    <p className="text-base font-black text-[#FF4F6E] uppercase tracking-wider">
+                      {selectedLectureFiles.length} FILE ĐÃ CHỌN
                     </p>
                   </div>
                 )}

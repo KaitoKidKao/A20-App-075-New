@@ -29,3 +29,15 @@ temp/
 data/
 .grapuco/
 .claude/
+
+# Logs and binaries
+backend.log
+ffmpeg.exe
+
+# Database files
+*.sql
+*.dump
+
+# Local debug outputs in scratch
+scratch/*.json
+scratch/*.txt
